@@ -1,73 +1,39 @@
 import type { Metadata } from 'next';
-import { Inspector } from 'react-dev-inspector';
+import Link from 'next/link';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: {
-    default: '新应用 | 扣子编程',
-    template: '%s | 扣子编程',
-  },
-  description:
-    '扣子编程是一款一站式云端 Vibe Coding 开发平台。通过对话轻松构建智能体、工作流和网站，实现从创意到上线的无缝衔接。',
-  keywords: [
-    '扣子编程',
-    'Coze Code',
-    'Vibe Coding',
-    'AI 编程',
-    '智能体搭建',
-    '工作流搭建',
-    '网站搭建',
-    '网站部署',
-    '全栈开发',
-    'AI 工程师',
-  ],
-  authors: [{ name: 'Coze Code Team', url: 'https://code.coze.cn' }],
-  generator: 'Coze Code',
-  // icons: {
-  //   icon: '',
-  // },
-  openGraph: {
-    title: '扣子编程 | 你的 AI 工程师已就位',
-    description:
-      '我正在使用扣子编程 Vibe Coding，让创意瞬间上线。告别拖拽，拥抱心流。',
-    url: 'https://code.coze.cn',
-    siteName: '扣子编程',
-    locale: 'zh_CN',
-    type: 'website',
-    // images: [
-    //   {
-    //     url: '',
-    //     width: 1200,
-    //     height: 630,
-    //     alt: '扣子编程 - 你的 AI 工程师',
-    //   },
-    // ],
-  },
-  // twitter: {
-  //   card: 'summary_large_image',
-  //   title: 'Coze Code | Your AI Engineer is Here',
-  //   description:
-  //     'Build and deploy full-stack applications through AI conversation. No env setup, just flow.',
-  //   // images: [''],
-  // },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  title: '职能流程管理统计',
+  description: 'L1-L4职能流程文件清单统计分析平台',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-  const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
-
+}) {
   return (
-    <html lang="en">
-      <body className={`antialiased`}>
-        {isDev && <Inspector />}
-        {children}
+    <html lang="zh-CN">
+      <body className="min-h-screen bg-[#f8fafc] antialiased">
+        <header className="sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+          <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#1e3a5f]">
+                <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+              </div>
+              <span className="text-base font-semibold text-[#1e3a5f]">职能流程管理统计</span>
+            </div>
+            <nav className="ml-8 flex items-center gap-1">
+              <Link href="/" className="nav-link rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">统计概览</Link>
+              <Link href="/flows" className="nav-link rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">流程清单</Link>
+            </nav>
+          </div>
+        </header>
+        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+          {children}
+        </main>
       </body>
     </html>
   );
