@@ -28,6 +28,7 @@ export default function RootLayout({
             <nav className="ml-8 flex items-center gap-1">
               <Link href="/" className="nav-link rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">统计概览</Link>
               <Link href="/flows" className="nav-link rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">流程清单</Link>
+              <Link href="/revision" className="nav-link rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">流程修订计划</Link>
             </nav>
           </div>
         </header>

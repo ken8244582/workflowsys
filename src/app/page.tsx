@@ -337,8 +337,104 @@ function E2EWorkNotes() {
 }
 
 // =============================================
-// Section 3: 流程治理运营工作 (占位)
+// Section 3: 流程治理运营工作
 // =============================================
+
+interface RevisionItem {
+  计划修订时间: string;
+  流程编码: string;
+  L4流程名称: string;
+  修订前版本: string;
+  修订后版本: string;
+  修订内容: string;
+  所属部门: string;
+  修订类型: string;
+  完成时间: string;
+  完成情况: string;
+}
+
+function RevisionStatsCards({ data }: { data: RevisionItem[] }) {
+  const total = data.length;
+  const completed = data.filter((d) => d.完成情况 === '已完成').length;
+  const revision = data.filter((d) => d.修订类型 === '修订').length;
+  const newAdd = data.filter((d) => d.修订类型 === '新增').length;
+  const rate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0';
+
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <StatCard title="修订计划数" value={total} subtitle={`${data[0]?.计划修订时间 || ''}`} accent />
+      <StatCard title="修订完成率" value={`${rate}%`} subtitle={`${completed} / ${total}`} accent />
+      <StatCard title="修订类" value={revision} />
+      <StatCard title="新增类" value={newAdd} />
+    </div>
+  );
+}
+
+function RevisionDeptChart({ data }: { data: RevisionItem[] }) {
+  const deptMap = new Map<string, { 修订: number; 新增: number; 已完成: number; 未完成: number }>();
+  data.forEach((d) => {
+    if (!d.所属部门) return;
+    const entry = deptMap.get(d.所属部门) || { 修订: 0, 新增: 0, 已完成: 0, 未完成: 0 };
+    if (d.修订类型 === '修订') entry.修订++;
+    else if (d.修订类型 === '新增') entry.新增++;
+    if (d.完成情况 === '已完成') entry.已完成++;
+    else entry.未完成++;
+    deptMap.set(d.所属部门, entry);
+  });
+
+  const chartData = Array.from(deptMap.entries()).map(([name, counts]) => ({ name, ...counts }));
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">各部门修订进度</CardTitle>
+        <CardDescription>修订/新增计划数量及完成情况</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="修订" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="新增" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RevisionStatusChart({ data }: { data: RevisionItem[] }) {
+  const completed = data.filter((d) => d.完成情况 === '已完成').length;
+  const pending = data.length - completed;
+  const statusData = [
+    { name: '已完成', value: completed },
+    { name: '未完成', value: pending },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">修订完成情况</CardTitle>
+        <CardDescription>当前修订计划执行进度</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+              <Cell fill="#10b981" />
+              <Cell fill="#94a3b8" />
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
 
 function PlaceholderChart({ title, description }: { title: string; description: string }) {
   return (
@@ -367,13 +463,17 @@ function PlaceholderChart({ title, description }: { title: string; description: 
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<OverviewStats | null>(null);
+  const [revisionData, setRevisionData] = useState<RevisionItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/flow-data.json')
-      .then((res) => res.json())
-      .then((data: FlowItem[]) => {
-        setStats(computeStats(data));
+    Promise.all([
+      fetch('/flow-data.json').then((res) => res.json()),
+      fetch('/revision-plan.json').then((res) => res.json()),
+    ])
+      .then(([flowData, revData]) => {
+        setStats(computeStats(flowData as FlowItem[]));
+        setRevisionData(revData as RevisionItem[]);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -458,22 +558,36 @@ export default function DashboardPage() {
         <SectionTitle number="三、" title="流程治理运营工作情况" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <PlaceholderStatCard title="修订计划数" description="当前计划修订/新增流程数" />
-        <PlaceholderStatCard title="修订完成率" description="已完成修订占总计划比例" />
-        <PlaceholderStatCard title="流程评审数" description="待评审/已完成评审数量" />
-        <PlaceholderStatCard title="流程发布数" description="本期新发布流程数" />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <PlaceholderChart title="修订进度" description="各部门修订计划完成情况" />
-        <PlaceholderChart title="流程所有者分布" description="各负责人名下流程数量" />
-      </div>
+      {revisionData.length > 0 ? (
+        <>
+          <RevisionStatsCards data={revisionData} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <RevisionDeptChart data={revisionData} />
+            <RevisionStatusChart data={revisionData} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <PlaceholderStatCard title="修订计划数" description="当前计划修订/新增流程数" />
+            <PlaceholderStatCard title="修订完成率" description="已完成修订占总计划比例" />
+            <PlaceholderStatCard title="流程评审数" description="待评审/已完成评审数量" />
+            <PlaceholderStatCard title="流程发布数" description="本期新发布流程数" />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <PlaceholderChart title="修订进度" description="各部门修订计划完成情况" />
+            <PlaceholderChart title="流程所有者分布" description="各负责人名下流程数量" />
+          </div>
+        </>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between border-t pt-4 text-xs text-muted-foreground">
-        <span>数据来源：L1-L4流程文件清单20260515</span>
-        <Link href="/flows" className="text-[#1e3a5f] hover:underline">查看完整流程清单 →</Link>
+        <span>数据来源：L1-L4流程文件清单20260515 / 流程修订计划表</span>
+        <div className="flex items-center gap-4">
+          <Link href="/flows" className="text-[#1e3a5f] hover:underline">查看完整流程清单 →</Link>
+          <Link href="/revision" className="text-[#1e3a5f] hover:underline">查看修订计划 →</Link>
+        </div>
       </div>
     </div>
   );
