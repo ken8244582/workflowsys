@@ -14,14 +14,12 @@ interface RevisionRecord {
   revisionDate: string;
   processCode: string;
   l4Process: string;
-  versionAfter: string;
-  versionBefore: string;
+  version: string;
   l1Domain: string;
   l2Group: string;
   l3Segment: string;
   revisionType: string;
-  reason: string;
-  content: string;
+  description: string;
   operator?: string;
 }
 
@@ -64,8 +62,7 @@ export default function FunctionalRevisionPage() {
       result = result.filter(d =>
         d.l4Process.toLowerCase().includes(s) ||
         d.processCode.toLowerCase().includes(s) ||
-        d.reason.toLowerCase().includes(s) ||
-        d.content.toLowerCase().includes(s)
+        d.description.toLowerCase().includes(s)
       );
     }
     // Sort by date descending
@@ -102,16 +99,10 @@ export default function FunctionalRevisionPage() {
     return <Badge variant="outline">{val || '-'}</Badge>;
   };
 
-  const versionChange = (before: string, after: string, type: string) => {
-    if (type === '新增') return <span className="text-green-600">{after}</span>;
-    if (type === '废止') return <span className="text-red-600 line-through">{before}</span>;
-    return (
-      <span>
-        <span className="text-gray-400 line-through">{before}</span>
-        <span className="mx-1 text-gray-300">&rarr;</span>
-        <span className="text-blue-600">{after}</span>
-      </span>
-    );
+  const versionChange = (version: string, type: string) => {
+    if (type === '新增') return <span className="text-green-600">{version}</span>;
+    if (type === '废止') return <span className="text-red-600 line-through">{version}</span>;
+    return <span className="text-blue-600">{version}</span>;
   };
 
   if (loading) {
@@ -187,7 +178,7 @@ export default function FunctionalRevisionPage() {
                     <TableCell className="text-xs font-mono">{item.processCode}</TableCell>
                     <TableCell className="text-xs font-medium">{item.l4Process}</TableCell>
                     <TableCell className="text-xs">
-                      {versionChange(item.versionBefore, item.versionAfter, item.revisionType)}
+                      {versionChange(item.version, item.revisionType)}
                     </TableCell>
                     <TableCell className="text-xs">
                       <span className="text-[#1e3a5f]">{item.l1Domain}</span>
@@ -197,8 +188,8 @@ export default function FunctionalRevisionPage() {
                       <span className="text-gray-500">{item.l3Segment}</span>
                     </TableCell>
                     <TableCell className="text-xs">{typeBadge(item.revisionType)}</TableCell>
-                    <TableCell className="text-xs text-gray-500 max-w-[200px] truncate" title={item.reason || item.content}>
-                      {item.reason || item.content || '-'}
+                    <TableCell className="text-xs text-gray-500 max-w-[200px] truncate" title={item.description}>
+                      {item.description || '-'}
                     </TableCell>
                   </TableRow>
                 ))

@@ -277,7 +277,7 @@ export default function FunctionalListPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: reviseType,
+          _action: reviseType,
           reason: reviseReason,
           content: reviseContent,
         }),
