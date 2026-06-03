@@ -33,7 +33,7 @@
     "format": "集团模板",
     "category": "流程",
     "itCoverage": "",
-    "itSubCategory": ""
+    "itSubCategory": "1"
   },
   {
     "id": 3,
@@ -69,7 +69,7 @@
     "format": "集团模板",
     "category": "流程",
     "itCoverage": "",
-    "itSubCategory": ""
+    "itSubCategory": "4"
   },
   {
     "id": 5,
@@ -87,7 +87,7 @@
     "format": "集团模板",
     "category": "流程",
     "itCoverage": "",
-    "itSubCategory": ""
+    "itSubCategory": "4"
   },
   {
     "id": 6,
@@ -105,7 +105,7 @@
     "format": "集团模板",
     "category": "流程",
     "itCoverage": "",
-    "itSubCategory": ""
+    "itSubCategory": "5"
   },
   {
     "id": 7,
@@ -123,7 +123,7 @@
     "format": "集团模板",
     "category": "流程",
     "itCoverage": "",
-    "itSubCategory": ""
+    "itSubCategory": "2"
   },
   {
     "id": 8,
@@ -141,7 +141,7 @@
     "format": "集团模板",
     "category": "流程",
     "itCoverage": "",
-    "itSubCategory": ""
+    "itSubCategory": "3"
   },
   {
     "id": 9,
@@ -13730,6 +13730,24 @@
     "l4Owner": "",
     "format": "旧格式",
     "category": "办法",
+    "itCoverage": "",
+    "itSubCategory": ""
+  },
+  {
+    "id": 764,
+    "l1Domain": "测试",
+    "l1Owner": "",
+    "l2Group": "",
+    "l2Owner": "",
+    "l3Segment": "",
+    "l3Owner": "",
+    "processCode": "",
+    "l4Process": "测试流程",
+    "version": "C1.0",
+    "department": "",
+    "l4Owner": "",
+    "format": "集团模板",
+    "category": "流程",
     "itCoverage": "",
     "itSubCategory": ""
   }
