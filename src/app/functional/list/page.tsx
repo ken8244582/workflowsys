@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Download, Upload, Plus, Pencil, Trash2, ChevronDown, ChevronRight, FolderOpen, Folder, FileText, RotateCw, XCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, Download, Upload, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2 } from 'lucide-react';
 
 interface FlowItem {
   id: number;
@@ -33,12 +34,97 @@ interface FlowItem {
 }
 
 interface TreeNode {
-  key: string;
-  label: string;
-  level: string;
-  owner?: string;
+  name: string;
+  level: number;
+  owner: string;
   children: TreeNode[];
-  items?: FlowItem[];
+  items: FlowItem[];
+}
+
+/* ========== Shared Pagination Component ========== */
+function PaginationBar({
+  page, totalPages, total, pageSize, pageSizeOptions,
+  onPageChange, onPageSizeChange
+}: {
+  page: number; totalPages: number; total: number;
+  pageSize: number; pageSizeOptions: number[];
+  onPageChange: (p: number) => void;
+  onPageSizeChange: (s: number) => void;
+}) {
+  const [inputPage, setInputPage] = useState(String(page));
+  useEffect(() => { setInputPage(String(page)); }, [page]);
+
+  const handleJump = () => {
+    const p = parseInt(inputPage);
+    if (!isNaN(p) && p >= 1 && p <= totalPages) {
+      onPageChange(p);
+    } else {
+      setInputPage(String(page));
+    }
+  };
+
+  // Generate page numbers to show
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('...');
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (page < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-between py-1">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-500">共 {total} 条</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm text-gray-500">每页</span>
+          <Select value={String(pageSize)} onValueChange={v => onPageSizeChange(Number(v))}>
+            <SelectTrigger className="h-7 w-[72px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map(s => (
+                <SelectItem key={s} value={String(s)}>{s}条</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page <= 1} onClick={() => onPageChange(1)}>«</Button>
+        <Button variant="outline" size="sm" className="h-7 px-2" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>‹</Button>
+        {getPageNumbers().map((p, i) =>
+          typeof p === 'string' ? (
+            <span key={`e${i}`} className="px-1 text-gray-400 text-sm">...</span>
+          ) : (
+            <Button key={p} variant={p === page ? 'default' : 'outline'} size="sm" className="h-7 w-7 p-0 text-xs"
+              onClick={() => onPageChange(p)}
+              style={p === page ? { backgroundColor: '#1e3a5f' } : undefined}>
+              {p}
+            </Button>
+          )
+        )}
+        <Button variant="outline" size="sm" className="h-7 px-2" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>›</Button>
+        <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page >= totalPages} onClick={() => onPageChange(totalPages)}>»</Button>
+        <div className="flex items-center gap-1 ml-2">
+          <span className="text-xs text-gray-500">跳至</span>
+          <Input className="h-7 w-12 text-xs text-center" value={inputPage}
+            onChange={e => setInputPage(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleJump(); }}
+            onBlur={handleJump} />
+          <span className="text-xs text-gray-500">页</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function FunctionalListPage() {
@@ -47,8 +133,7 @@ export default function FunctionalListPage() {
   const [viewMode, setViewMode] = useState<'table' | 'tree'>('table');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const pageSizeOptions = [20, 50, 100];
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pageSizeOptions = [50, 100, 200, 500];
 
   // Filters
   const [filterL1, setFilterL1] = useState('all');
@@ -56,29 +141,23 @@ export default function FunctionalListPage() {
   const [filterL3, setFilterL3] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterFormat, setFilterFormat] = useState('all');
-  const [filterIT, setFilterIT] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterIt, setFilterIt] = useState('all');
   const [searchText, setSearchText] = useState('');
 
-  // Edit dialog
+  // Dialogs
   const [editDialog, setEditDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [reviseDialog, setReviseDialog] = useState(false);
   const [currentItem, setCurrentItem] = useState<FlowItem | null>(null);
   const [editForm, setEditForm] = useState<Partial<FlowItem>>({});
-
-  // Delete dialog
-  const [deleteDialog, setDeleteDialog] = useState(false);
-
-  // Revise dialog
-  const [reviseDialog, setReviseDialog] = useState(false);
-  const [reviseItem, setReviseItem] = useState<FlowItem | null>(null);
-  const [reviseType, setReviseType] = useState<'abolish' | 'upgrade'>('upgrade');
+  const [reviseType, setReviseType] = useState<'upgrade' | 'abolish'>('upgrade');
   const [reviseReason, setReviseReason] = useState('');
   const [reviseContent, setReviseContent] = useState('');
 
-  // Tree
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  // Tree state
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const res = await fetch('/api/flows?page=1&pageSize=10000');
       const data = await res.json();
@@ -88,131 +167,116 @@ export default function FunctionalListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Options
-  const l1Options = useMemo(() => [...new Set(allData.map(d => d.l1Domain).filter(Boolean))], [allData]);
+  // Filter options
+  const l1Options = useMemo(() => [...new Set(allData.map(d => d.l1Domain).filter(Boolean))].sort(), [allData]);
   const l2Options = useMemo(() => {
-    let filtered = allData;
-    if (filterL1 !== 'all') filtered = filtered.filter(d => d.l1Domain === filterL1);
-    return [...new Set(filtered.map(d => d.l2Group).filter(Boolean))];
+    if (filterL1 === 'all') return [...new Set(allData.map(d => d.l2Group).filter(Boolean))].sort();
+    return [...new Set(allData.filter(d => d.l1Domain === filterL1).map(d => d.l2Group).filter(Boolean))].sort();
   }, [allData, filterL1]);
   const l3Options = useMemo(() => {
-    let filtered = allData;
-    if (filterL1 !== 'all') filtered = filtered.filter(d => d.l1Domain === filterL1);
-    if (filterL2 !== 'all') filtered = filtered.filter(d => d.l2Group === filterL2);
-    return [...new Set(filtered.map(d => d.l3Segment).filter(Boolean))];
+    let base = allData;
+    if (filterL1 !== 'all') base = base.filter(d => d.l1Domain === filterL1);
+    if (filterL2 !== 'all') base = base.filter(d => d.l2Group === filterL2);
+    return [...new Set(base.map(d => d.l3Segment).filter(Boolean))].sort();
   }, [allData, filterL1, filterL2]);
-  const categoryOptions = useMemo(() => [...new Set(allData.map(d => d.category).filter(Boolean))], [allData]);
-  const formatOptions = useMemo(() => [...new Set(allData.map(d => d.format).filter(Boolean))], [allData]);
-  const itOptions = useMemo(() => [...new Set(allData.map(d => d.itCoverage).filter(Boolean))], [allData]);
-  const statusOptions = useMemo(() => [...new Set(allData.map(d => d.status).filter(Boolean))], [allData]);
 
   // Filtered data
   const filteredData = useMemo(() => {
-    let result = allData.filter(d => d.l4Process);
+    let result = allData;
     if (filterL1 !== 'all') result = result.filter(d => d.l1Domain === filterL1);
     if (filterL2 !== 'all') result = result.filter(d => d.l2Group === filterL2);
     if (filterL3 !== 'all') result = result.filter(d => d.l3Segment === filterL3);
     if (filterCategory !== 'all') result = result.filter(d => d.category === filterCategory);
     if (filterFormat !== 'all') result = result.filter(d => d.format === filterFormat);
-    if (filterIT !== 'all') result = result.filter(d => d.itCoverage === filterIT);
-    if (filterStatus !== 'all') result = result.filter(d => d.status === filterStatus);
+    if (filterIt !== 'all') result = result.filter(d => d.itCoverage === filterIt);
     if (searchText) {
       const s = searchText.toLowerCase();
       result = result.filter(d =>
         d.l4Process.toLowerCase().includes(s) ||
         d.processCode.toLowerCase().includes(s) ||
-        d.l4Owner.toLowerCase().includes(s)
+        d.l4Owner.toLowerCase().includes(s) ||
+        d.department.toLowerCase().includes(s)
       );
     }
     return result;
-  }, [allData, filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIT, filterStatus, searchText]);
+  }, [allData, filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIt, searchText]);
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / pageSize);
   const pagedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
 
-  useEffect(() => { setPage(1); }, [filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIT, filterStatus, searchText]);
-  useEffect(() => { setFilterL2('all'); setFilterL3('all'); }, [filterL1]);
-  useEffect(() => { setFilterL3('all'); }, [filterL2]);
+  useEffect(() => { setPage(1); }, [filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIt, searchText, pageSize]);
 
-  // Build tree data
+  // Tree data
   const treeData = useMemo(() => {
-    const l4Data = allData.filter(d => d.l4Process);
-    let filtered = l4Data;
-    if (filterL1 !== 'all') filtered = filtered.filter(d => d.l1Domain === filterL1);
-    if (filterCategory !== 'all') filtered = filtered.filter(d => d.category === filterCategory);
-    if (filterFormat !== 'all') filtered = filtered.filter(d => d.format === filterFormat);
-    if (filterIT !== 'all') filtered = filtered.filter(d => d.itCoverage === filterIT);
-    if (filterStatus !== 'all') filtered = filtered.filter(d => d.status === filterStatus);
-    if (searchText) {
-      const s = searchText.toLowerCase();
-      filtered = filtered.filter(d =>
-        d.l4Process.toLowerCase().includes(s) ||
-        d.processCode.toLowerCase().includes(s)
-      );
-    }
-
-    const tree: TreeNode[] = [];
+    const root: TreeNode[] = [];
     const l1Map = new Map<string, TreeNode>();
     const l2Map = new Map<string, TreeNode>();
     const l3Map = new Map<string, TreeNode>();
 
-    for (const item of filtered) {
-      const l1Key = `L1-${item.l1Domain}`;
-      if (!l1Map.has(l1Key)) {
-        const node: TreeNode = { key: l1Key, label: item.l1Domain, level: 'L1', owner: item.l1Owner, children: [] };
-        l1Map.set(l1Key, node);
-        tree.push(node);
+    for (const item of filteredData) {
+      if (!l1Map.has(item.l1Domain)) {
+        const node: TreeNode = { name: item.l1Domain, level: 1, owner: item.l1Owner, children: [], items: [] };
+        l1Map.set(item.l1Domain, node);
+        root.push(node);
       }
-      const l2Key = `L2-${item.l1Domain}-${item.l2Group}`;
+      const l2Key = `${item.l1Domain}||${item.l2Group}`;
       if (!l2Map.has(l2Key)) {
-        const node: TreeNode = { key: l2Key, label: item.l2Group, level: 'L2', owner: item.l2Owner, children: [] };
+        const node: TreeNode = { name: item.l2Group, level: 2, owner: item.l2Owner, children: [], items: [] };
         l2Map.set(l2Key, node);
-        l1Map.get(l1Key)!.children.push(node);
+        l1Map.get(item.l1Domain)!.children.push(node);
       }
-      const l3Key = `L3-${item.l1Domain}-${item.l2Group}-${item.l3Segment}`;
+      const l3Key = `${l2Key}||${item.l3Segment}`;
       if (!l3Map.has(l3Key)) {
-        const node: TreeNode = { key: l3Key, label: item.l3Segment, level: 'L3', owner: item.l3Owner, children: [] };
+        const node: TreeNode = { name: item.l3Segment, level: 3, owner: item.l3Owner, children: [], items: [] };
         l3Map.set(l3Key, node);
         l2Map.get(l2Key)!.children.push(node);
       }
-      const l4Key = `L4-${item.id}`;
-      const l4Node: TreeNode = {
-        key: l4Key,
-        label: item.l4Process,
-        level: 'L4',
-        owner: item.l4Owner,
-        children: [],
-        items: [item],
-      };
-      l3Map.get(l3Key)!.children.push(l4Node);
+      l3Map.get(l3Key)!.items.push(item);
     }
-    return tree;
-  }, [allData, filterL1, filterCategory, filterFormat, filterIT, filterStatus, searchText]);
+    return root;
+  }, [filteredData]);
 
-  const toggleExpand = (key: string) => {
-    setExpandedKeys(prev => {
+  const toggleNode = (key: string) => {
+    setExpandedNodes(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   };
 
-  // CRUD handlers
+  // Handlers
+  const handleExport = async () => {
+    const res = await fetch('/api/flows/export');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '职能流程清单.xlsx'; a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async () => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.xlsx,.xls';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/flows/import', { method: 'POST', body: formData });
+      if (res.ok) { fetchData(); alert('导入成功'); }
+      else { alert('导入失败'); }
+    };
+    input.click();
+  };
+
   const handleCreate = () => {
     setCurrentItem(null);
-    setEditForm({
-      l1Domain: filterL1 !== 'all' ? filterL1 : '',
-      l2Group: filterL2 !== 'all' ? filterL2 : '',
-      l3Segment: filterL3 !== 'all' ? filterL3 : '',
-      format: '集团模板',
-      category: '流程',
-      status: '试运行',
-    });
+    setEditForm({ l1Domain: '', l1Owner: '', l2Group: '', l2Owner: '', l3Segment: '', l3Owner: '', processCode: '', l4Process: '', version: 'C1.0', department: '', l4Owner: '', format: '集团模板', category: '流程', itCoverage: '否', itSubCategory: '', itScore: 0, status: '试运行' });
     setEditDialog(true);
   };
 
@@ -222,193 +286,158 @@ export default function FunctionalListPage() {
     setEditDialog(true);
   };
 
+  const handleSave = async () => {
+    if (currentItem) {
+      await fetch(`/api/flows/${currentItem.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) });
+    } else {
+      await fetch('/api/flows', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) });
+    }
+    setEditDialog(false);
+    fetchData();
+  };
+
   const handleDelete = (item: FlowItem) => {
     setCurrentItem(item);
     setDeleteDialog(true);
   };
 
-  const handleSave = async () => {
-    try {
-      if (currentItem) {
-        await fetch(`/api/flows/${currentItem.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editForm),
-        });
-      } else {
-        // Create - also creates a revision record
-        await fetch('/api/flows', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editForm),
-        });
-      }
-      setEditDialog(false);
-      fetchData();
-    } catch (err) {
-      console.error('Save failed:', err);
-    }
-  };
-
   const handleConfirmDelete = async () => {
-    if (!currentItem) return;
-    try {
+    if (currentItem) {
       await fetch(`/api/flows/${currentItem.id}`, { method: 'DELETE' });
       setDeleteDialog(false);
       fetchData();
-    } catch (err) {
-      console.error('Delete failed:', err);
     }
   };
 
-  // Revise handler
   const handleRevise = (item: FlowItem) => {
-    setReviseItem(item);
+    setCurrentItem(item);
     setReviseType('upgrade');
     setReviseReason('');
     setReviseContent('');
     setReviseDialog(true);
   };
 
+  const handleRestore = async (item: FlowItem) => {
+    if (!confirm(`确定要恢复运行「${item.l4Process}」吗？此操作将记录到修订记录中。`)) return;
+    await fetch(`/api/flows/${item.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _action: 'restore', reason: '恢复运行，原废止流程恢复为正式运行' }),
+    });
+    fetchData();
+  };
+
   const handleConfirmRevise = async () => {
-    if (!reviseItem) return;
-    try {
-      await fetch(`/api/flows/${reviseItem.id}`, {
+    if (!currentItem) return;
+    if (reviseType === 'abolish') {
+      if (!reviseReason.trim()) return;
+      await fetch(`/api/flows/${currentItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...currentItem, status: '已废止' }),
+      });
+      await fetch('/api/revisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          _action: reviseType,
-          reason: reviseReason,
-          content: reviseContent,
+          processCode: currentItem.processCode,
+          l4Process: currentItem.l4Process,
+          version: currentItem.version,
+          l1Domain: currentItem.l1Domain,
+          l2Group: currentItem.l2Group,
+          l3Segment: currentItem.l3Segment,
+          revisionType: '废止',
+          description: reviseReason,
         }),
       });
-      setReviseDialog(false);
-      fetchData();
-    } catch (err) {
-      console.error('Revise failed:', err);
-    }
-  };
-
-  // Export handler
-  const handleExport = async () => {
-    try {
-      const res = await fetch('/api/flows/export');
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'L1-L4流程文件清单.xlsx';
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-    }
-  };
-
-  // Import handler
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/flows/import', {
-        method: 'POST',
-        body: formData,
+    } else {
+      if (!reviseContent.trim()) return;
+      const match = currentItem.version.match(/C(\d+)\.(\d+)/);
+      let newVersion = currentItem.version;
+      if (match) { newVersion = `C${parseInt(match[1]) + 1}.0`; }
+      await fetch(`/api/flows/${currentItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...currentItem, version: newVersion }),
       });
-      const result = await res.json();
-      if (result.success) {
-        alert(`导入成功！共导入 ${result.imported} 条数据`);
-        fetchData();
-      } else {
-        alert(`导入失败：${result.error}`);
-      }
-    } catch (err) {
-      console.error('Import failed:', err);
-      alert('导入失败，请检查文件格式');
+      await fetch('/api/revisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          processCode: currentItem.processCode,
+          l4Process: currentItem.l4Process,
+          version: newVersion,
+          l1Domain: currentItem.l1Domain,
+          l2Group: currentItem.l2Group,
+          l3Segment: currentItem.l3Segment,
+          revisionType: '修订',
+          description: reviseContent,
+        }),
+      });
     }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  // Render tree node
-  const renderTreeNode = (node: TreeNode, depth: number = 0): React.ReactNode => {
-    const isExpanded = expandedKeys.has(node.key);
-    const hasChildren = node.children.length > 0;
-    const levelColors: Record<string, string> = {
-      L1: 'text-[#1e3a5f] font-semibold',
-      L2: 'text-[#334155] font-medium',
-      L3: 'text-[#475569]',
-      L4: 'text-[#64748b]',
-    };
-    const levelIcons: Record<string, typeof FolderOpen> = {
-      L1: FolderOpen,
-      L2: Folder,
-      L3: Folder,
-      L4: FileText,
-    };
-    const IconComp = levelIcons[node.level];
-
-    return (
-      <div key={node.key}>
-        <div
-          className="flex items-center gap-1.5 py-1.5 px-2 hover:bg-gray-50 cursor-pointer rounded text-sm"
-          style={{ paddingLeft: `${depth * 24 + 8}px` }}
-          onClick={() => hasChildren && toggleExpand(node.key)}
-        >
-          {hasChildren ? (
-            isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" />
-          ) : (
-            <span className="w-4 shrink-0" />
-          )}
-          <IconComp className={`h-4 w-4 shrink-0 ${node.level === 'L4' ? 'text-blue-400' : 'text-amber-500'}`} />
-          <span className={levelColors[node.level]}>{node.label}</span>
-          {node.owner && <span className="text-xs text-gray-400 ml-2">({node.owner})</span>}
-          {node.level === 'L4' && node.items?.[0] && (
-            <span className="ml-auto flex items-center gap-2">
-              {statusBadge(node.items[0].status)}
-              <Badge variant="outline" className="text-xs">{node.items[0].category}</Badge>
-              <Badge variant="secondary" className="text-xs">{node.items[0].version}</Badge>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleEdit(node.items![0]); }}>
-                <Pencil className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleRevise(node.items![0]); }}>
-                <RotateCw className="h-3 w-3 text-amber-600" />
-              </Button>
-            </span>
-          )}
-          {hasChildren && node.level !== 'L4' && (
-            <span className="ml-auto text-xs text-gray-400">{node.children.length}</span>
-          )}
-        </div>
-        {hasChildren && isExpanded && node.children.map(child => renderTreeNode(child, depth + 1))}
-      </div>
-    );
-  };
-
-  const formatBadge = (val: string) => {
-    if (val === '集团模板') return <Badge className="bg-blue-50 text-blue-700 border-blue-200">{val}</Badge>;
-    if (val === '旧格式') return <Badge className="bg-amber-50 text-amber-700 border-amber-200">{val}</Badge>;
-    return <Badge variant="outline">{val || '-'}</Badge>;
-  };
-
-  const categoryBadge = (val: string) => {
-    if (val === '流程') return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">{val}</Badge>;
-    if (val === '办法') return <Badge className="bg-purple-50 text-purple-700 border-purple-200">{val}</Badge>;
-    if (val === '其它') return <Badge className="bg-gray-50 text-gray-700 border-gray-200">{val}</Badge>;
-    return <Badge variant="outline">{val || '-'}</Badge>;
-  };
-
-  const itBadge = (val: string) => {
-    if (val === '是') return <Badge className="bg-green-50 text-green-700 border-green-200">已覆盖</Badge>;
-    if (val === '否') return <Badge className="bg-red-50 text-red-700 border-red-200">未覆盖</Badge>;
-    return <Badge variant="outline">{val || '-'}</Badge>;
+    setReviseDialog(false);
+    fetchData();
   };
 
   const statusBadge = (val: string) => {
-    if (val === '正式运行') return <Badge className="bg-green-50 text-green-700 border-green-200">{val}</Badge>;
-    if (val === '试运行') return <Badge className="bg-blue-50 text-blue-700 border-blue-200">{val}</Badge>;
-    if (val === '已废止') return <Badge className="bg-red-50 text-red-700 border-red-200">{val}</Badge>;
-    return <span className="text-gray-300">-</span>;
+    if (val === '正式运行') return <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px] px-1.5 py-0">{val}</Badge>;
+    if (val === '试运行') return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0">{val}</Badge>;
+    if (val === '已废止') return <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1.5 py-0">{val}</Badge>;
+    return <Badge variant="outline" className="text-[10px] px-1.5 py-0">{val || '-'}</Badge>;
+  };
+
+  const formatBadge = (val: string) => {
+    if (val === '集团模板') return <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] px-1.5 py-0">{val}</Badge>;
+    if (val === '旧格式') return <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">{val}</Badge>;
+    return <span className="text-gray-300 text-xs">-</span>;
+  };
+
+  const categoryBadge = (val: string) => {
+    if (val === '流程') return <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-[10px] px-1.5 py-0">{val}</Badge>;
+    if (val === '办法') return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] px-1.5 py-0">{val}</Badge>;
+    if (val === '其它') return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{val}</Badge>;
+    return <span className="text-gray-300 text-xs">-</span>;
+  };
+
+  const itBadge = (val: string) => {
+    if (val === '是' || val === '已覆盖') return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] px-1.5 py-0">是</Badge>;
+    if (val === '否' || val === '未覆盖') return <Badge className="bg-orange-50 text-orange-600 border-orange-200 text-[10px] px-1.5 py-0">否</Badge>;
+    return <span className="text-gray-300 text-xs">-</span>;
+  };
+
+  const itScoreDisplay = (score: number, itCoverage: string) => {
+    if (itCoverage !== '是' && itCoverage !== '已覆盖') return <span className="text-gray-300 text-xs">-</span>;
+    return <span className="text-xs font-mono">{score}</span>;
+  };
+
+  const renderTreeNode = (node: TreeNode, parentKey: string = '') => {
+    const key = `${parentKey}||${node.name}`;
+    const isExpanded = expandedNodes.has(key);
+    const count = node.level === 3 ? node.items.length : node.children.length;
+
+    return (
+      <div key={key}>
+        <div
+          className="flex items-center gap-2 py-1.5 px-3 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-50"
+          style={{ paddingLeft: `${node.level * 20 + 12}px` }}
+          onClick={() => toggleNode(key)}
+        >
+          {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
+          <span className="font-medium text-[#1e3a5f] truncate">{node.name}</span>
+          {node.owner && <span className="text-gray-400 text-xs ml-1">({node.owner})</span>}
+          <Badge variant="outline" className="text-[10px] px-1 py-0 ml-auto shrink-0">{count}</Badge>
+        </div>
+        {isExpanded && node.children.map(child => renderTreeNode(child, key))}
+        {isExpanded && node.level === 3 && node.items.map(item => (
+          <div key={item.id} className="flex items-center gap-2 py-1 px-3 text-xs text-gray-600 border-b border-gray-50" style={{ paddingLeft: `${4 * 20 + 12}px` }}>
+            <span className="text-gray-400 font-mono">{item.processCode}</span>
+            <span>{item.l4Process}</span>
+            <span className="text-gray-400 ml-1">{item.version}</span>
+            {statusBadge(item.status)}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   if (loading) {
@@ -419,150 +448,161 @@ export default function FunctionalListPage() {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setViewMode('table')} variant={viewMode === 'table' ? 'default' : 'outline'} size="sm">
-            表格视图
-          </Button>
-          <Button onClick={() => setViewMode('tree')} variant={viewMode === 'tree' ? 'default' : 'outline'} size="sm">
-            树形视图
-          </Button>
+        <div className="flex items-center gap-3">
+          <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'table' | 'tree')}>
+            <TabsList className="h-8">
+              <TabsTrigger value="table" className="text-xs px-3 h-6">表格视图</TabsTrigger>
+              <TabsTrigger value="tree" className="text-xs px-3 h-6">树形视图</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleCreate} size="sm" className="bg-[#1e3a5f] hover:bg-[#2d4f7a]">
-            <Plus className="h-4 w-4 mr-1" /> 新增
+          <Button onClick={handleImport} variant="outline" size="sm" className="h-7 text-xs">
+            <Upload className="h-3.5 w-3.5 mr-1" /> 导入
           </Button>
-          <Button onClick={handleExport} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-1" /> 导出
+          <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
+            <Download className="h-3.5 w-3.5 mr-1" /> 导出
           </Button>
-          <input type="file" ref={fileInputRef} accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-          <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="sm">
-            <Upload className="h-4 w-4 mr-1" /> 导入
+          <Button onClick={handleCreate} size="sm" className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
+            <Plus className="h-3.5 w-3.5 mr-1" /> 新增
           </Button>
         </div>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-4 pb-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-            <Select value={filterL1} onValueChange={setFilterL1}>
-              <SelectTrigger><SelectValue placeholder="L1业务域" /></SelectTrigger>
+        <CardContent className="pt-3 pb-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+            <Select value={filterL1} onValueChange={v => { setFilterL1(v); setFilterL2('all'); setFilterL3('all'); }}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="L1业务域" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部业务域</SelectItem>
                 {l1Options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filterL2} onValueChange={setFilterL2}>
-              <SelectTrigger><SelectValue placeholder="L2业务组" /></SelectTrigger>
+            <Select value={filterL2} onValueChange={v => { setFilterL2(v); setFilterL3('all'); }}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="L2业务组" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部业务组</SelectItem>
                 {l2Options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filterL3} onValueChange={setFilterL3}>
-              <SelectTrigger><SelectValue placeholder="L3业务段" /></SelectTrigger>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="L3业务段" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部业务段</SelectItem>
                 {l3Options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger><SelectValue placeholder="分类" /></SelectTrigger>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="分类" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部分类</SelectItem>
-                {categoryOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                <SelectItem value="流程">流程</SelectItem>
+                <SelectItem value="办法">办法</SelectItem>
+                <SelectItem value="其它">其它</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterFormat} onValueChange={setFilterFormat}>
-              <SelectTrigger><SelectValue placeholder="格式" /></SelectTrigger>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="格式" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部格式</SelectItem>
-                {formatOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                <SelectItem value="集团模板">集团模板</SelectItem>
+                <SelectItem value="旧格式">旧格式</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterIT} onValueChange={setFilterIT}>
-              <SelectTrigger><SelectValue placeholder="IT覆盖" /></SelectTrigger>
+            <Select value={filterIt} onValueChange={setFilterIt}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="IT覆盖" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部</SelectItem>
-                {itOptions.map(o => <SelectItem key={o} value={o}>{o === '是' ? '已覆盖' : o === '否' ? '未覆盖' : o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger><SelectValue placeholder="状态" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                {statusOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                <SelectItem value="是">是</SelectItem>
+                <SelectItem value="否">否</SelectItem>
               </SelectContent>
             </Select>
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-              <Input placeholder="搜索流程名/编码/所有者" value={searchText} onChange={e => setSearchText(e.target.value)} className="pl-8" />
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+              <Input placeholder="搜索流程名/编码/所有者" value={searchText} onChange={e => setSearchText(e.target.value)} className="h-7 text-xs pl-7" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Results count */}
-      <div className="text-sm text-gray-500">共 {filteredData.length} 条记录</div>
-
       {/* Table View */}
       {viewMode === 'table' && (
         <Card>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">序号</TableHead>
-                  <TableHead>L1业务域</TableHead>
-                  <TableHead>L2业务组</TableHead>
-                  <TableHead>L3业务段</TableHead>
-                  <TableHead>流程编码</TableHead>
-                  <TableHead>L4职能流程</TableHead>
-                  <TableHead>版本</TableHead>
-                  <TableHead>L4所有者</TableHead>
-                  <TableHead>格式</TableHead>
-                  <TableHead>分类</TableHead>
-                  <TableHead>IT覆盖</TableHead>
-                  <TableHead>IT支撑分</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead className="w-28">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pagedData.map((item, idx) => (
-                  <TableRow key={item.id} className={item.status === '已废止' ? 'opacity-50' : ''}>
-                    <TableCell className="text-gray-400 text-xs">{(page - 1) * pageSize + idx + 1}</TableCell>
-                    <TableCell className="text-xs">{item.l1Domain}</TableCell>
-                    <TableCell className="text-xs">{item.l2Group}</TableCell>
-                    <TableCell className="text-xs">{item.l3Segment}</TableCell>
-                    <TableCell className="text-xs font-mono">{item.processCode}</TableCell>
-                    <TableCell className="text-xs font-medium">{item.l4Process}</TableCell>
-                    <TableCell className="text-xs font-mono">{item.version}</TableCell>
-                    <TableCell className="text-xs">{item.l4Owner}</TableCell>
-                    <TableCell className="text-xs">{formatBadge(item.format)}</TableCell>
-                    <TableCell className="text-xs">{categoryBadge(item.category)}</TableCell>
-                    <TableCell className="text-xs">{itBadge(item.itCoverage)}</TableCell>
-                    <TableCell className="text-xs font-mono">{(item.itCoverage === '是' || item.itCoverage === '已覆盖') ? (item.itScore ?? 0) : '-'}</TableCell>
-                    <TableCell className="text-xs">{statusBadge(item.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-0.5">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" title="编辑" onClick={() => handleEdit(item)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        {item.status !== '已废止' && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" title="修订" onClick={() => handleRevise(item)}>
-                            <RotateCw className="h-3 w-3 text-amber-600" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" title="删除" onClick={() => handleDelete(item)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table className="text-xs">
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80">
+                    <TableHead className="w-9 text-center sticky left-0 bg-gray-50/80 z-10">序号</TableHead>
+                    <TableHead className="min-w-[80px]">L1业务域</TableHead>
+                    <TableHead className="min-w-[80px]">L2业务组</TableHead>
+                    <TableHead className="min-w-[80px]">L3业务段</TableHead>
+                    <TableHead className="min-w-[100px] font-mono">流程编码</TableHead>
+                    <TableHead className="min-w-[120px]">L4职能流程</TableHead>
+                    <TableHead className="w-12 text-center">版本</TableHead>
+                    <TableHead className="min-w-[50px]">L4所有者</TableHead>
+                    <TableHead className="w-14 text-center">格式</TableHead>
+                    <TableHead className="w-10 text-center">分类</TableHead>
+                    <TableHead className="w-10 text-center">IT覆盖</TableHead>
+                    <TableHead className="w-10 text-center">IT支撑分</TableHead>
+                    <TableHead className="w-14 text-center sticky right-[80px] bg-gray-50/80 z-10">状态</TableHead>
+                    <TableHead className="w-[80px] text-center sticky right-0 bg-gray-50/80 z-10">操作</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {pagedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={14} className="text-center py-12 text-gray-400">暂无数据</TableCell>
+                    </TableRow>
+                  ) : (
+                    pagedData.map((item, idx) => (
+                      <TableRow key={item.id} className={item.status === '已废止' ? 'opacity-50' : ''}>
+                        <TableCell className="text-gray-400 text-center sticky left-0 bg-white z-10">{(page - 1) * pageSize + idx + 1}</TableCell>
+                        <TableCell className="truncate max-w-[100px]" title={item.l1Domain}>{item.l1Domain}</TableCell>
+                        <TableCell className="truncate max-w-[100px]" title={item.l2Group}>{item.l2Group}</TableCell>
+                        <TableCell className="truncate max-w-[100px]" title={item.l3Segment}>{item.l3Segment}</TableCell>
+                        <TableCell className="font-mono text-gray-500 truncate max-w-[120px]" title={item.processCode}>{item.processCode}</TableCell>
+                        <TableCell className="font-medium truncate max-w-[150px]" title={item.l4Process}>{item.l4Process}</TableCell>
+                        <TableCell className="text-center font-mono">{item.version}</TableCell>
+                        <TableCell className="truncate max-w-[60px]" title={item.l4Owner}>{item.l4Owner}</TableCell>
+                        <TableCell className="text-center">{formatBadge(item.format)}</TableCell>
+                        <TableCell className="text-center">{categoryBadge(item.category)}</TableCell>
+                        <TableCell className="text-center">{itBadge(item.itCoverage)}</TableCell>
+                        <TableCell className="text-center">{itScoreDisplay(item.itScore, item.itCoverage)}</TableCell>
+                        <TableCell className="text-center sticky right-[80px] bg-white z-10">{statusBadge(item.status)}</TableCell>
+                        <TableCell className="text-center sticky right-0 bg-white z-10">
+                          <div className="flex items-center justify-center gap-0.5">
+                            {item.status === '已废止' ? (
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
+                                <Undo2 className="h-3.5 w-3.5" />
+                              </Button>
+                            ) : (
+                              <>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="修订" onClick={() => handleRevise(item)}>
+                                  <RotateCw className="h-3.5 w-3.5 text-blue-500" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
+                                  <Pencil className="h-3.5 w-3.5 text-gray-500" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="废止" onClick={() => { setCurrentItem(item); setReviseType('abolish'); setReviseReason(''); setReviseDialog(true); }}>
+                                  <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                </Button>
+                              </>
+                            )}
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
+                              <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -582,31 +622,12 @@ export default function FunctionalListPage() {
       )}
 
       {/* Pagination */}
-      {viewMode === 'table' && totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">
-              第 {page} / {totalPages} 页，共 {filteredData.length} 条
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm text-gray-500">每页</span>
-              <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); setPage(1); }}>
-                <SelectTrigger className="h-7 w-[72px] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizeOptions.map(s => (
-                    <SelectItem key={s} value={String(s)}>{s}条</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一页</Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>下一页</Button>
-          </div>
-        </div>
+      {viewMode === 'table' && totalPages > 0 && (
+        <PaginationBar
+          page={page} totalPages={totalPages} total={filteredData.length}
+          pageSize={pageSize} pageSizeOptions={pageSizeOptions}
+          onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+        />
       )}
 
       {/* Edit/Create Dialog */}
@@ -749,8 +770,8 @@ export default function FunctionalListPage() {
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div className="p-3 bg-gray-50 rounded-lg text-sm">
-              <div className="font-medium">{reviseItem?.l4Process}</div>
-              <div className="text-gray-500 mt-1">编码: {reviseItem?.processCode} | 当前版本: {reviseItem?.version}</div>
+              <div className="font-medium">{currentItem?.l4Process}</div>
+              <div className="text-gray-500 mt-1">编码: {currentItem?.processCode} | 当前版本: {currentItem?.version}</div>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">修订类型</label>

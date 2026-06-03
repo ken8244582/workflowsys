@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download } from 'lucide-react';
+import { Search, Download, Trash2 } from 'lucide-react';
 
 interface RevisionRecord {
   id: number;
@@ -23,12 +23,97 @@ interface RevisionRecord {
   operator?: string;
 }
 
+/* ========== Shared Pagination Component ========== */
+function PaginationBar({
+  page, totalPages, total, pageSize, pageSizeOptions,
+  onPageChange, onPageSizeChange
+}: {
+  page: number; totalPages: number; total: number;
+  pageSize: number; pageSizeOptions: number[];
+  onPageChange: (p: number) => void;
+  onPageSizeChange: (s: number) => void;
+}) {
+  const [inputPage, setInputPage] = useState(String(page));
+  useEffect(() => { setInputPage(String(page)); }, [page]);
+
+  const handleJump = () => {
+    const p = parseInt(inputPage);
+    if (!isNaN(p) && p >= 1 && p <= totalPages) {
+      onPageChange(p);
+    } else {
+      setInputPage(String(page));
+    }
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('...');
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (page < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-between py-1">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-500">共 {total} 条</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm text-gray-500">每页</span>
+          <Select value={String(pageSize)} onValueChange={v => onPageSizeChange(Number(v))}>
+            <SelectTrigger className="h-7 w-[72px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map(s => (
+                <SelectItem key={s} value={String(s)}>{s}条</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page <= 1} onClick={() => onPageChange(1)}>«</Button>
+        <Button variant="outline" size="sm" className="h-7 px-2" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>‹</Button>
+        {getPageNumbers().map((p, i) =>
+          typeof p === 'string' ? (
+            <span key={`e${i}`} className="px-1 text-gray-400 text-sm">...</span>
+          ) : (
+            <Button key={p} variant={p === page ? 'default' : 'outline'} size="sm" className="h-7 w-7 p-0 text-xs"
+              onClick={() => onPageChange(p)}
+              style={p === page ? { backgroundColor: '#1e3a5f' } : undefined}>
+              {p}
+            </Button>
+          )
+        )}
+        <Button variant="outline" size="sm" className="h-7 px-2" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>›</Button>
+        <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page >= totalPages} onClick={() => onPageChange(totalPages)}>»</Button>
+        <div className="flex items-center gap-1 ml-2">
+          <span className="text-xs text-gray-500">跳至</span>
+          <Input className="h-7 w-12 text-xs text-center" value={inputPage}
+            onChange={e => setInputPage(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleJump(); }}
+            onBlur={handleJump} />
+          <span className="text-xs text-gray-500">页</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FunctionalRevisionPage() {
   const [allData, setAllData] = useState<RevisionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const pageSizeOptions = [20, 50, 100];
+  const pageSizeOptions = [20, 50, 100, 200];
 
   // Filters
   const [filterType, setFilterType] = useState('all');
@@ -65,16 +150,15 @@ export default function FunctionalRevisionPage() {
         d.description.toLowerCase().includes(s)
       );
     }
-    // Sort by date descending
     result = [...result].sort((a, b) => b.revisionDate.localeCompare(a.revisionDate));
     return result;
   }, [allData, filterType, filterDomain, searchText]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredData.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
   const pagedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
 
-  useEffect(() => { setPage(1); }, [filterType, filterDomain, searchText]);
+  useEffect(() => { setPage(1); }, [filterType, filterDomain, searchText, pageSize]);
 
   // Export handler
   const handleExport = async () => {
@@ -83,12 +167,21 @@ export default function FunctionalRevisionPage() {
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = '职能流程修订记录.xlsx';
-      a.click();
+      a.href = url; a.download = '职能流程修订记录.xlsx'; a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
+    }
+  };
+
+  // Clear all handler
+  const handleClearAll = async () => {
+    if (!confirm('确定要清空所有修订记录吗？此操作不可撤销。')) return;
+    try {
+      await fetch('/api/revisions/clear', { method: 'POST' });
+      fetchData();
+    } catch (err) {
+      console.error('Clear failed:', err);
     }
   };
 
@@ -96,12 +189,14 @@ export default function FunctionalRevisionPage() {
     if (val === '新增') return <Badge className="bg-green-50 text-green-700 border-green-200">{val}</Badge>;
     if (val === '修订') return <Badge className="bg-blue-50 text-blue-700 border-blue-200">{val}</Badge>;
     if (val === '废止') return <Badge className="bg-red-50 text-red-700 border-red-200">{val}</Badge>;
+    if (val === '恢复') return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">{val}</Badge>;
     return <Badge variant="outline">{val || '-'}</Badge>;
   };
 
   const versionChange = (version: string, type: string) => {
     if (type === '新增') return <span className="text-green-600">{version}</span>;
     if (type === '废止') return <span className="text-red-600 line-through">{version}</span>;
+    if (type === '恢复') return <span className="text-emerald-600">{version}</span>;
     return <span className="text-blue-600">{version}</span>;
   };
 
@@ -114,9 +209,14 @@ export default function FunctionalRevisionPage() {
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-500">共 {filteredData.length} 条修订记录</div>
-        <Button onClick={handleExport} variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-1" /> 批量导出
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleClearAll} variant="outline" size="sm" className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> 清空记录
+          </Button>
+          <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
+            <Download className="h-3.5 w-3.5 mr-1" /> 批量导出
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -130,6 +230,7 @@ export default function FunctionalRevisionPage() {
                 <SelectItem value="新增">新增</SelectItem>
                 <SelectItem value="修订">修订</SelectItem>
                 <SelectItem value="废止">废止</SelectItem>
+                <SelectItem value="恢复">恢复</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterDomain} onValueChange={setFilterDomain}>
@@ -150,16 +251,16 @@ export default function FunctionalRevisionPage() {
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="text-xs">
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">序号</TableHead>
+              <TableRow className="bg-gray-50/80">
+                <TableHead className="w-10 text-center">序号</TableHead>
                 <TableHead>修订日期</TableHead>
                 <TableHead>流程编码</TableHead>
                 <TableHead>L4职能流程</TableHead>
-                <TableHead>版本变更</TableHead>
+                <TableHead className="text-center">版本变更</TableHead>
                 <TableHead>所属业务域-业务组-业务段</TableHead>
-                <TableHead>修订类型</TableHead>
+                <TableHead className="text-center">修订类型</TableHead>
                 <TableHead>修订说明</TableHead>
               </TableRow>
             </TableHeader>
@@ -173,22 +274,20 @@ export default function FunctionalRevisionPage() {
               ) : (
                 pagedData.map((item, idx) => (
                   <TableRow key={item.id}>
-                    <TableCell className="text-gray-400 text-xs">{(page - 1) * pageSize + idx + 1}</TableCell>
-                    <TableCell className="text-xs font-mono whitespace-nowrap">{item.revisionDate}</TableCell>
-                    <TableCell className="text-xs font-mono">{item.processCode}</TableCell>
-                    <TableCell className="text-xs font-medium">{item.l4Process}</TableCell>
-                    <TableCell className="text-xs">
-                      {versionChange(item.version, item.revisionType)}
-                    </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-gray-400 text-center">{(page - 1) * pageSize + idx + 1}</TableCell>
+                    <TableCell className="font-mono whitespace-nowrap">{item.revisionDate}</TableCell>
+                    <TableCell className="font-mono">{item.processCode}</TableCell>
+                    <TableCell className="font-medium">{item.l4Process}</TableCell>
+                    <TableCell className="text-center">{versionChange(item.version, item.revisionType)}</TableCell>
+                    <TableCell>
                       <span className="text-[#1e3a5f]">{item.l1Domain}</span>
                       <span className="text-gray-300 mx-1">&gt;</span>
                       <span>{item.l2Group}</span>
                       <span className="text-gray-300 mx-1">&gt;</span>
                       <span className="text-gray-500">{item.l3Segment}</span>
                     </TableCell>
-                    <TableCell className="text-xs">{typeBadge(item.revisionType)}</TableCell>
-                    <TableCell className="text-xs text-gray-500 max-w-[200px] truncate" title={item.description}>
+                    <TableCell className="text-center">{typeBadge(item.revisionType)}</TableCell>
+                    <TableCell className="text-gray-500 max-w-[200px] truncate" title={item.description}>
                       {item.description || '-'}
                     </TableCell>
                   </TableRow>
@@ -200,31 +299,12 @@ export default function FunctionalRevisionPage() {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">
-              第 {page} / {totalPages} 页，共 {filteredData.length} 条
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm text-gray-500">每页</span>
-              <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); setPage(1); }}>
-                <SelectTrigger className="h-7 w-[72px] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizeOptions.map(s => (
-                    <SelectItem key={s} value={String(s)}>{s}条</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一页</Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>下一页</Button>
-          </div>
-        </div>
+      {filteredData.length > 0 && (
+        <PaginationBar
+          page={page} totalPages={totalPages} total={filteredData.length}
+          pageSize={pageSize} pageSizeOptions={pageSizeOptions}
+          onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+        />
       )}
     </div>
   );

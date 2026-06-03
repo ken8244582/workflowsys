@@ -93,6 +93,29 @@ export async function PUT(
     return NextResponse.json(mapFlowRow(updated));
   }
 
+  if (action === 'restore') {
+    // 恢复运行: set status to 试运行, bump version, record revision
+    const oldVersion = existing.version as string;
+    const newVersion = bumpVersion(oldVersion);
+    db.prepare('UPDATE flows SET status = ?, version = ? WHERE id = ?').run('试运行', newVersion, numId);
+
+    insertRevision.run(
+      new Date().toISOString().replace('T', ' ').slice(0, 19),
+      existing.process_code as string,
+      existing.l4_process as string,
+      newVersion,
+      existing.l1_domain as string,
+      existing.l2_group as string,
+      existing.l3_segment as string,
+      '恢复',
+      body.reason || `流程恢复运行，版本从 ${oldVersion} 升级到 ${newVersion}`,
+      ''
+    );
+
+    const updated = db.prepare('SELECT * FROM flows WHERE id = ?').get(numId) as Record<string, unknown>;
+    return NextResponse.json(mapFlowRow(updated));
+  }
+
   // Normal update
   const { _action: _, ...updateData } = body;
   const setClauses: string[] = [];
