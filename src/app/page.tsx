@@ -371,35 +371,35 @@ function RevisionStatsCards({ data }: { data: RevisionItem[] }) {
 }
 
 function RevisionDeptChart({ data }: { data: RevisionItem[] }) {
-  const deptMap = new Map<string, { 修订: number; 新增: number; 已完成: number; 未完成: number }>();
+  const deptMap = new Map<string, { 修订: number; 新增: number }>();
   data.forEach((d) => {
     if (!d.所属部门) return;
-    const entry = deptMap.get(d.所属部门) || { 修订: 0, 新增: 0, 已完成: 0, 未完成: 0 };
+    const entry = deptMap.get(d.所属部门) || { 修订: 0, 新增: 0 };
     if (d.修订类型 === '修订') entry.修订++;
     else if (d.修订类型 === '新增') entry.新增++;
-    if (d.完成情况 === '已完成') entry.已完成++;
-    else entry.未完成++;
     deptMap.set(d.所属部门, entry);
   });
 
-  const chartData = Array.from(deptMap.entries()).map(([name, counts]) => ({ name, ...counts }));
+  const chartData = Array.from(deptMap.entries())
+    .map(([name, counts]) => ({ name, ...counts }))
+    .sort((a, b) => (b.修订 + b.新增) - (a.修订 + a.新增));
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">各部门修订进度</CardTitle>
-        <CardDescription>修订/新增计划数量及完成情况</CardDescription>
+        <CardTitle className="text-sm">各业务域修订进度</CardTitle>
+        <CardDescription>修订/新增计划数量</CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+            <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={75} />
             <Tooltip />
             <Legend />
-            <Bar dataKey="修订" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="新增" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="修订" fill="#1e3a5f" radius={[0, 4, 4, 0]} stackId="a" />
+            <Bar dataKey="新增" fill="#f59e0b" radius={[0, 4, 4, 0]} stackId="a" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

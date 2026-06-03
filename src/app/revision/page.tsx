@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,12 +27,6 @@ interface RevisionItem {
   完成时间: string;
   完成情况: string;
 }
-
-const STATUS_STYLES: Record<string, string> = {
-  '已完成': 'bg-[#10b981] text-white',
-  '进行中': 'bg-[#3b82f6] text-white',
-  '未开始': 'bg-[#94a3b8] text-white',
-};
 
 const TYPE_STYLES: Record<string, string> = {
   '修订': 'bg-[#1e3a5f] text-white',
@@ -62,24 +56,10 @@ export default function RevisionPage() {
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
 
   useEffect(() => {
-    // Nav highlight
-    const updateNav = () => {
-      const path = window.location.pathname;
-      document.querySelectorAll('.nav-link').forEach((link) => {
-        const href = link.getAttribute('href');
-        if (href === path) {
-          link.classList.add('bg-accent', 'text-foreground');
-          link.classList.remove('text-muted-foreground');
-        } else {
-          link.classList.remove('bg-accent', 'text-foreground');
-          link.classList.add('text-muted-foreground');
-        }
-      });
-    };
-    updateNav();
-
     fetch('/revision-plan.json')
       .then((res) => res.json())
       .then((raw: RevisionItem[]) => {
@@ -98,9 +78,21 @@ export default function RevisionPage() {
     let result = data;
     if (deptFilter !== 'all') result = result.filter((d) => d.所属部门 === deptFilter);
     if (typeFilter !== 'all') result = result.filter((d) => d.修订类型 === typeFilter);
-    if (statusFilter !== 'all') result = result.filter((d) => d.完成情况 === statusFilter);
+    if (statusFilter !== 'all') {
+      if (statusFilter === '未完成') {
+        result = result.filter((d) => !d.完成情况);
+      } else {
+        result = result.filter((d) => d.完成情况 === statusFilter);
+      }
+    }
     return result;
   }, [data, deptFilter, typeFilter, statusFilter]);
+
+  // Reset page on filter change
+  useEffect(() => { setPage(1); }, [deptFilter, typeFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = useMemo(() => {
     const total = data.length;
@@ -111,7 +103,7 @@ export default function RevisionPage() {
     return { total, completed, revision, newAdd, completionRate };
   }, [data]);
 
-  // Chart data
+  // Chart data: type distribution
   const typeDistribution = useMemo(() => {
     const map = new Map<string, number>();
     data.forEach((d) => {
@@ -120,25 +112,30 @@ export default function RevisionPage() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [data]);
 
+  // Chart data: completion status
   const statusDistribution = useMemo(() => {
-    const map = new Map<string, number>();
-    data.forEach((d) => {
-      const key = d.完成情况 || '未完成';
-      map.set(key, (map.get(key) || 0) + 1);
-    });
-    return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
+    const completed = data.filter((d) => d.完成情况 === '已完成').length;
+    const incomplete = data.filter((d) => !d.完成情况).length;
+    return [
+      { name: '已完成', value: completed },
+      { name: '未完成', value: incomplete },
+    ];
   }, [data]);
 
+  // Chart data: department distribution (horizontal bar)
   const deptDistribution = useMemo(() => {
-    const map = new Map<string, { 修订: number; 新增: number }>();
+    const map = new Map<string, { 修订: number; 新增: number; total: number }>();
     data.forEach((d) => {
       if (!d.所属部门) return;
-      const entry = map.get(d.所属部门) || { 修订: 0, 新增: 0 };
+      const entry = map.get(d.所属部门) || { 修订: 0, 新增: 0, total: 0 };
       if (d.修订类型 === '修订') entry.修订++;
       else if (d.修订类型 === '新增') entry.新增++;
+      entry.total++;
       map.set(d.所属部门, entry);
     });
-    return Array.from(map.entries()).map(([name, counts]) => ({ name, ...counts }));
+    return Array.from(map.entries())
+      .map(([name, counts]) => ({ name, ...counts }))
+      .sort((a, b) => b.total - a.total);
   }, [data]);
 
   if (loading) {
@@ -163,7 +160,7 @@ export default function RevisionPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard title="修订计划总数" value={stats.total} accent />
-        <StatCard title="已完成" value={stats.completed} subtitle={`完成率 ${stats.completionRate}%`} accent />
+        <StatCard title="已完成" value={stats.completed} subtitle={`完成率 ${stats.completionRate}%`} />
         <StatCard title="修订类" value={stats.revision} />
         <StatCard title="新增类" value={stats.newAdd} />
       </div>
@@ -175,11 +172,11 @@ export default function RevisionPage() {
             <CardTitle className="text-sm">修订类型分布</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={typeDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                <Pie data={typeDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                   {typeDistribution.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={['#1e3a5f', '#f59e0b'][index] || CHART_COLORS[index]} />
+                    <Cell key={`type-${index}`} fill={['#1e3a5f', '#f59e0b'][index] || CHART_COLORS[index]} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -193,11 +190,11 @@ export default function RevisionPage() {
             <CardTitle className="text-sm">完成情况</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={statusDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                <Pie data={statusDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                   {statusDistribution.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={['#10b981', '#94a3b8'][index] || CHART_COLORS[index]} />
+                    <Cell key={`status-${index}`} fill={['#10b981', '#94a3b8'][index] || CHART_COLORS[index]} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -208,18 +205,18 @@ export default function RevisionPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">各部门修订计划</CardTitle>
+            <CardTitle className="text-sm">各业务域修订计划</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={deptDistribution} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={deptDistribution} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={75} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="修订" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="新增" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="修订" fill="#1e3a5f" radius={[0, 4, 4, 0]} stackId="a" />
+                <Bar dataKey="新增" fill="#f59e0b" radius={[0, 4, 4, 0]} stackId="a" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -239,11 +236,11 @@ export default function RevisionPage() {
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <Select value={deptFilter} onValueChange={setDeptFilter}>
-              <SelectTrigger className="w-[160px] text-sm">
-                <SelectValue placeholder="所属部门" />
+              <SelectTrigger className="w-[180px] text-sm">
+                <SelectValue placeholder="所属业务域" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部部门</SelectItem>
+                <SelectItem value="all">全部业务域</SelectItem>
                 {deptOptions.map((opt) => (
                   <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                 ))}
@@ -266,7 +263,7 @@ export default function RevisionPage() {
               <SelectContent>
                 <SelectItem value="all">全部状态</SelectItem>
                 <SelectItem value="已完成">已完成</SelectItem>
-                <SelectItem value="">未完成</SelectItem>
+                <SelectItem value="未完成">未完成</SelectItem>
               </SelectContent>
             </Select>
             {(deptFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all') && (
@@ -283,23 +280,20 @@ export default function RevisionPage() {
                   <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">L4流程名称</th>
                   <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">修订前版本</th>
                   <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">修订后版本</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">修订内容</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">所属部门</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">所属业务域</th>
                   <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">修订类型</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">完成时间</th>
                   <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">完成情况</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item, idx) => (
+                {paged.map((item, idx) => (
                   <tr key={idx} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">{item.计划修订时间}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">{item.计划修订时间 || '-'}</td>
                     <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-muted-foreground">{item.流程编码 || '-'}</td>
-                    <td className="max-w-[200px] truncate px-3 py-2 text-xs font-medium">{item.L4流程名称 || '-'}</td>
+                    <td className="max-w-[240px] truncate px-3 py-2 text-xs font-medium" title={item.L4流程名称}>{item.L4流程名称 || '-'}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">{item.修订前版本 || '-'}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">{item.修订后版本 || '-'}</td>
-                    <td className="max-w-[200px] truncate px-3 py-2 text-xs text-muted-foreground">{item.修订内容 || '-'}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs">{item.所属部门}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-xs">{item.所属部门 || '-'}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-xs">
                       {item.修订类型 && (
                         <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${TYPE_STYLES[item.修订类型] || 'bg-gray-200 text-gray-700'}`}>
@@ -307,9 +301,8 @@ export default function RevisionPage() {
                         </span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">{item.完成时间 || '-'}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-xs">
-                      <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${item.完成情况 ? (STATUS_STYLES[item.完成情况] || 'bg-gray-200 text-gray-700') : 'bg-[#94a3b8] text-white'}`}>
+                      <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${item.完成情况 === '已完成' ? 'bg-[#10b981] text-white' : 'bg-[#94a3b8] text-white'}`}>
                         {item.完成情况 || '未完成'}
                       </span>
                     </td>
@@ -317,7 +310,7 @@ export default function RevisionPage() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-3 py-12 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-3 py-12 text-center text-muted-foreground">
                       无匹配结果
                     </td>
                   </tr>
@@ -325,6 +318,27 @@ export default function RevisionPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-muted-foreground">
+                第 {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filtered.length)} 条，共 {filtered.length} 条
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>上一页</Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .map((p, i, arr) => (
+                    <span key={p}>
+                      {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                      <Button variant={p === page ? 'default' : 'outline'} size="sm" className="min-w-[32px]" onClick={() => setPage(p)}>{p}</Button>
+                    </span>
+                  ))}
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>下一页</Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
