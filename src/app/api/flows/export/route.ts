@@ -20,6 +20,7 @@ interface FlowItem {
   category: string;
   itCoverage: string;
   itSubCategory: string;
+  itScore: number;
 }
 
 const DATA_PATH = path.join(process.cwd(), 'public', 'flow-data.json');
@@ -38,7 +39,7 @@ export async function GET() {
     const rows = data.map(item => [
       item.id, item.l1Domain, item.l1Owner, item.l2Group, item.l2Owner,
       item.l3Segment, item.l3Owner, item.processCode, item.l4Process, item.version,
-      item.department, item.l4Owner, item.format, item.category, item.itCoverage, item.itSubCategory
+      item.department, item.l4Owner, item.format, item.category, item.itCoverage, item.itScore ?? 0
     ]);
 
     const wsData = [header, ...rows];

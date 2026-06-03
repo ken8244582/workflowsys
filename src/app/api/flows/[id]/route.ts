@@ -19,6 +19,7 @@ interface FlowItem {
   category: string;
   itCoverage: string;
   itSubCategory: string;
+  itScore: number;
 }
 
 const DATA_PATH = path.join(process.cwd(), 'public', 'flow-data.json');

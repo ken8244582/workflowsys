@@ -68,7 +68,8 @@ export default function FunctionalListPage() {
 
   // Pagination
   const [page, setPage] = useState(1);
-  const pageSize = 50;
+  const [pageSize, setPageSize] = useState(50);
+  const pageSizeOptions = [50, 100, 200, 500];
 
   // Dialog state
   const [editDialog, setEditDialog] = useState(false);
@@ -496,6 +497,7 @@ export default function FunctionalListPage() {
                   <TableHead>格式</TableHead>
                   <TableHead>分类</TableHead>
                   <TableHead>IT覆盖</TableHead>
+                  <TableHead>IT支撑分</TableHead>
                   <TableHead className="w-20">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -513,6 +515,7 @@ export default function FunctionalListPage() {
                     <TableCell className="text-xs">{formatBadge(item.format)}</TableCell>
                     <TableCell className="text-xs">{categoryBadge(item.category)}</TableCell>
                     <TableCell className="text-xs">{itBadge(item.itCoverage)}</TableCell>
+                    <TableCell className="text-xs font-mono">{item.itScore ?? 0}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(item)}>
@@ -548,8 +551,23 @@ export default function FunctionalListPage() {
       {/* Pagination */}
       {viewMode === 'table' && totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            第 {page} / {totalPages} 页
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">
+              第 {page} / {totalPages} 页，共 {filteredData.length} 条
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-gray-500">每页</span>
+              <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); setPage(1); }}>
+                <SelectTrigger className="h-7 w-[72px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {pageSizeOptions.map(s => (
+                    <SelectItem key={s} value={String(s)}>{s}条</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一页</Button>
@@ -637,6 +655,17 @@ export default function FunctionalListPage() {
                 <SelectContent>
                   <SelectItem value="是">是</SelectItem>
                   <SelectItem value="否">否</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">IT支撑分(0-5)</label>
+              <Select value={String(editForm.itScore ?? 0)} onValueChange={v => setEditForm(f => ({ ...f, itScore: Number(v) }))}>
+                <SelectTrigger><SelectValue placeholder="选择分数" /></SelectTrigger>
+                <SelectContent>
+                  {[0,1,2,3,4,5].map(s => (
+                    <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

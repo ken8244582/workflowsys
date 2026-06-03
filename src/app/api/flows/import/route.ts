@@ -20,6 +20,7 @@ interface FlowItem {
   category: string;
   itCoverage: string;
   itSubCategory: string;
+  itScore: number;
 }
 
 const DATA_PATH = path.join(process.cwd(), 'public', 'flow-data.json');
@@ -79,7 +80,8 @@ export async function POST(request: NextRequest) {
         format: String(row[12] || ''),
         category: String(row[13] || ''),
         itCoverage: String(row[14] || ''),
-        itSubCategory: String(row[15] || ''),
+        itSubCategory: String(row[16] || ''),
+        itScore: Number(row[15]) || 0,
       };
       importedItems.push(item);
     }

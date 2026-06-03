@@ -15,6 +15,7 @@ export interface FlowItem {
   category: string;
   itCoverage: string;
   itSubCategory: string;
+  itScore: number;
 }
 
 export interface L1Stat {
