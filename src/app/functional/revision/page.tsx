@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Trash2 } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
+import { MultiSelectFilter } from '@/components/multi-select-filter';
 
 interface RevisionRecord {
   id: number;
@@ -116,8 +117,8 @@ export default function FunctionalRevisionPage() {
   const pageSizeOptions = [20, 50, 100, 200];
 
   // Filters
-  const [filterType, setFilterType] = useState('all');
-  const [filterDomain, setFilterDomain] = useState('all');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
 
   const fetchData = async () => {
@@ -140,8 +141,8 @@ export default function FunctionalRevisionPage() {
   // Filtered data
   const filteredData = useMemo(() => {
     let result = allData;
-    if (filterType !== 'all') result = result.filter(d => d.revisionType === filterType);
-    if (filterDomain !== 'all') result = result.filter(d => d.l1Domain === filterDomain);
+    if (selectedTypes.length > 0) result = result.filter(d => selectedTypes.includes(d.revisionType));
+    if (selectedDomains.length > 0) result = result.filter(d => selectedDomains.includes(d.l1Domain));
     if (searchText) {
       const s = searchText.toLowerCase();
       result = result.filter(d =>
@@ -152,13 +153,13 @@ export default function FunctionalRevisionPage() {
     }
     result = [...result].sort((a, b) => b.revisionDate.localeCompare(a.revisionDate));
     return result;
-  }, [allData, filterType, filterDomain, searchText]);
+  }, [allData, selectedTypes, selectedDomains, searchText]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
   const pagedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
 
-  useEffect(() => { setPage(1); }, [filterType, filterDomain, searchText, pageSize]);
+  useEffect(() => { setPage(1); }, [selectedTypes, selectedDomains, searchText, pageSize]);
 
   // Export handler
   const handleExport = async () => {
@@ -171,17 +172,6 @@ export default function FunctionalRevisionPage() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
-    }
-  };
-
-  // Clear all handler
-  const handleClearAll = async () => {
-    if (!confirm('确定要清空所有修订记录吗？此操作不可撤销。')) return;
-    try {
-      await fetch('/api/revisions/clear', { method: 'POST' });
-      fetchData();
-    } catch (err) {
-      console.error('Clear failed:', err);
     }
   };
 
@@ -210,9 +200,6 @@ export default function FunctionalRevisionPage() {
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-500">共 {filteredData.length} 条修订记录</div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleClearAll} variant="outline" size="sm" className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
-            <Trash2 className="h-3.5 w-3.5 mr-1" /> 清空记录
-          </Button>
           <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
             <Download className="h-3.5 w-3.5 mr-1" /> 批量导出
           </Button>
@@ -223,23 +210,18 @@ export default function FunctionalRevisionPage() {
       <Card>
         <CardContent className="pt-4 pb-4">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger><SelectValue placeholder="修订类型" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部类型</SelectItem>
-                <SelectItem value="新增">新增</SelectItem>
-                <SelectItem value="修订">修订</SelectItem>
-                <SelectItem value="废止">废止</SelectItem>
-                <SelectItem value="恢复">恢复</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterDomain} onValueChange={setFilterDomain}>
-              <SelectTrigger><SelectValue placeholder="所属业务域" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部业务域</SelectItem>
-                {domainOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelectFilter
+              label="修订类型"
+              options={['新增', '修订', '废止', '恢复']}
+              selected={selectedTypes}
+              onChange={setSelectedTypes}
+            />
+            <MultiSelectFilter
+              label="所属业务域"
+              options={domainOptions}
+              selected={selectedDomains}
+              onChange={setSelectedDomains}
+            />
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
               <Input placeholder="搜索流程名/编码/修订内容" value={searchText} onChange={e => setSearchText(e.target.value)} className="pl-8" />

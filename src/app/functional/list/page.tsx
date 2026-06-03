@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Download, Upload, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2 } from 'lucide-react';
+import { Search, Download, Upload, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, ChevronUp } from 'lucide-react';
+import { MultiSelectFilter } from '@/components/multi-select-filter';
 
 interface FlowItem {
   id: number;
@@ -135,13 +136,13 @@ export default function FunctionalListPage() {
   const [pageSize, setPageSize] = useState(50);
   const pageSizeOptions = [50, 100, 200, 500];
 
-  // Filters
-  const [filterL1, setFilterL1] = useState('all');
-  const [filterL2, setFilterL2] = useState('all');
-  const [filterL3, setFilterL3] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterFormat, setFilterFormat] = useState('all');
-  const [filterIt, setFilterIt] = useState('all');
+  // Filters (multi-select)
+  const [selectedL1, setSelectedL1] = useState<string[]>([]);
+  const [selectedL2, setSelectedL2] = useState<string[]>([]);
+  const [selectedL3, setSelectedL3] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
+  const [selectedFormat, setSelectedFormat] = useState<string[]>([]);
+  const [selectedIt, setSelectedIt] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
 
   // Dialogs
@@ -174,25 +175,26 @@ export default function FunctionalListPage() {
   // Filter options
   const l1Options = useMemo(() => [...new Set(allData.map(d => d.l1Domain).filter(Boolean))].sort(), [allData]);
   const l2Options = useMemo(() => {
-    if (filterL1 === 'all') return [...new Set(allData.map(d => d.l2Group).filter(Boolean))].sort();
-    return [...new Set(allData.filter(d => d.l1Domain === filterL1).map(d => d.l2Group).filter(Boolean))].sort();
-  }, [allData, filterL1]);
+    let base = allData;
+    if (selectedL1.length > 0) base = base.filter(d => selectedL1.includes(d.l1Domain));
+    return [...new Set(base.map(d => d.l2Group).filter(Boolean))].sort();
+  }, [allData, selectedL1]);
   const l3Options = useMemo(() => {
     let base = allData;
-    if (filterL1 !== 'all') base = base.filter(d => d.l1Domain === filterL1);
-    if (filterL2 !== 'all') base = base.filter(d => d.l2Group === filterL2);
+    if (selectedL1.length > 0) base = base.filter(d => selectedL1.includes(d.l1Domain));
+    if (selectedL2.length > 0) base = base.filter(d => selectedL2.includes(d.l2Group));
     return [...new Set(base.map(d => d.l3Segment).filter(Boolean))].sort();
-  }, [allData, filterL1, filterL2]);
+  }, [allData, selectedL1, selectedL2]);
 
   // Filtered data
   const filteredData = useMemo(() => {
     let result = allData;
-    if (filterL1 !== 'all') result = result.filter(d => d.l1Domain === filterL1);
-    if (filterL2 !== 'all') result = result.filter(d => d.l2Group === filterL2);
-    if (filterL3 !== 'all') result = result.filter(d => d.l3Segment === filterL3);
-    if (filterCategory !== 'all') result = result.filter(d => d.category === filterCategory);
-    if (filterFormat !== 'all') result = result.filter(d => d.format === filterFormat);
-    if (filterIt !== 'all') result = result.filter(d => d.itCoverage === filterIt);
+    if (selectedL1.length > 0) result = result.filter(d => selectedL1.includes(d.l1Domain));
+    if (selectedL2.length > 0) result = result.filter(d => selectedL2.includes(d.l2Group));
+    if (selectedL3.length > 0) result = result.filter(d => selectedL3.includes(d.l3Segment));
+    if (selectedCategory.length > 0) result = result.filter(d => selectedCategory.includes(d.category));
+    if (selectedFormat.length > 0) result = result.filter(d => selectedFormat.includes(d.format));
+    if (selectedIt.length > 0) result = result.filter(d => selectedIt.includes(d.itCoverage));
     if (searchText) {
       const s = searchText.toLowerCase();
       result = result.filter(d =>
@@ -203,13 +205,13 @@ export default function FunctionalListPage() {
       );
     }
     return result;
-  }, [allData, filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIt, searchText]);
+  }, [allData, selectedL1, selectedL2, selectedL3, selectedCategory, selectedFormat, selectedIt, searchText]);
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / pageSize);
   const pagedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
 
-  useEffect(() => { setPage(1); }, [filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIt, searchText, pageSize]);
+  useEffect(() => { setPage(1); }, [selectedL1, selectedL2, selectedL3, selectedCategory, selectedFormat, selectedIt, searchText, pageSize]);
 
   // Tree data
   const treeData = useMemo(() => {
@@ -334,45 +336,14 @@ export default function FunctionalListPage() {
       await fetch(`/api/flows/${currentItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...currentItem, status: '已废止' }),
-      });
-      await fetch('/api/revisions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          processCode: currentItem.processCode,
-          l4Process: currentItem.l4Process,
-          version: currentItem.version,
-          l1Domain: currentItem.l1Domain,
-          l2Group: currentItem.l2Group,
-          l3Segment: currentItem.l3Segment,
-          revisionType: '废止',
-          description: reviseReason,
-        }),
+        body: JSON.stringify({ _action: 'abolish', reason: reviseReason }),
       });
     } else {
       if (!reviseContent.trim()) return;
-      const match = currentItem.version.match(/C(\d+)\.(\d+)/);
-      let newVersion = currentItem.version;
-      if (match) { newVersion = `C${parseInt(match[1]) + 1}.0`; }
       await fetch(`/api/flows/${currentItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...currentItem, version: newVersion }),
-      });
-      await fetch('/api/revisions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          processCode: currentItem.processCode,
-          l4Process: currentItem.l4Process,
-          version: newVersion,
-          l1Domain: currentItem.l1Domain,
-          l2Group: currentItem.l2Group,
-          l3Segment: currentItem.l3Segment,
-          revisionType: '修订',
-          description: reviseContent,
-        }),
+        body: JSON.stringify({ _action: 'upgrade', description: reviseContent }),
       });
     }
     setReviseDialog(false);
@@ -474,52 +445,12 @@ export default function FunctionalListPage() {
       <Card>
         <CardContent className="pt-3 pb-3">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-            <Select value={filterL1} onValueChange={v => { setFilterL1(v); setFilterL2('all'); setFilterL3('all'); }}>
-              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="L1业务域" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部业务域</SelectItem>
-                {l1Options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterL2} onValueChange={v => { setFilterL2(v); setFilterL3('all'); }}>
-              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="L2业务组" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部业务组</SelectItem>
-                {l2Options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterL3} onValueChange={setFilterL3}>
-              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="L3业务段" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部业务段</SelectItem>
-                {l3Options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="分类" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部分类</SelectItem>
-                <SelectItem value="流程">流程</SelectItem>
-                <SelectItem value="办法">办法</SelectItem>
-                <SelectItem value="其它">其它</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterFormat} onValueChange={setFilterFormat}>
-              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="格式" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部格式</SelectItem>
-                <SelectItem value="集团模板">集团模板</SelectItem>
-                <SelectItem value="旧格式">旧格式</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterIt} onValueChange={setFilterIt}>
-              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="IT覆盖" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="是">是</SelectItem>
-                <SelectItem value="否">否</SelectItem>
-              </SelectContent>
-            </Select>
+            <MultiSelectFilter label="L1业务域" options={l1Options} selected={selectedL1} onChange={v => { setSelectedL1(v); setSelectedL2([]); setSelectedL3([]); }} />
+            <MultiSelectFilter label="L2业务组" options={l2Options} selected={selectedL2} onChange={v => { setSelectedL2(v); setSelectedL3([]); }} />
+            <MultiSelectFilter label="L3业务段" options={l3Options} selected={selectedL3} onChange={setSelectedL3} />
+            <MultiSelectFilter label="分类" options={['流程','办法','其它']} selected={selectedCategory} onChange={setSelectedCategory} />
+            <MultiSelectFilter label="格式" options={['集团模板','旧格式']} selected={selectedFormat} onChange={setSelectedFormat} />
+            <MultiSelectFilter label="IT覆盖" options={['是','否']} selected={selectedIt} onChange={setSelectedIt} />
             <div className="relative">
               <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
               <Input placeholder="搜索流程名/编码/所有者" value={searchText} onChange={e => setSearchText(e.target.value)} className="h-7 text-xs pl-7" />
