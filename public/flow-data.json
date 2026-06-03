@@ -37,7 +37,10 @@
     "itCoverage": "",
     "itSubCategory": "1",
     "itScore": 0,
-    "status": "试运行"
+    "status": "试运行",
+    "action": "abolish",
+    "reason": "不需要了",
+    "content": ""
   },
   {
     "id": 3,

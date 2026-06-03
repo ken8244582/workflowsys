@@ -1,86 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-interface FlowItem {
-  id: number;
-  l1Domain: string;
-  l1Owner: string;
-  l2Group: string;
-  l2Owner: string;
-  l3Segment: string;
-  l3Owner: string;
-  processCode: string;
-  l4Process: string;
-  version: string;
-  department: string;
-  l4Owner: string;
-  format: string;
-  category: string;
-  itCoverage: string;
-  itSubCategory: string;
-  itScore: number;
-  status: string;
-}
-
-const DATA_PATH = path.join(process.cwd(), 'public', 'flow-data.json');
-const REVISION_PATH = path.join(process.cwd(), 'public', 'revision-records.json');
-
-interface RevisionRecord {
-  id: number;
-  revisionDate: string;
-  processCode: string;
-  l4Process: string;
-  version: string;
-  l1Domain: string;
-  l2Group: string;
-  l3Segment: string;
-  revisionType: string;
-  description: string;
-  operator: string;
-}
-
-function readData(): FlowItem[] {
-  const raw = fs.readFileSync(DATA_PATH, 'utf-8');
-  return JSON.parse(raw);
-}
-
-function writeData(data: FlowItem[]): void {
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-function readRevisions(): RevisionRecord[] {
-  try {
-    const raw = fs.readFileSync(REVISION_PATH, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function writeRevisions(data: RevisionRecord[]): void {
-  fs.writeFileSync(REVISION_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-function recordRevision(params: Omit<RevisionRecord, 'id' | 'revisionDate'>): RevisionRecord {
-  const revisions = readRevisions();
-  const maxId = revisions.reduce((max, r) => Math.max(max, r.id || 0), 0);
-  const record: RevisionRecord = {
-    id: maxId + 1,
-    revisionDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    ...params,
-  };
-  revisions.push(record);
-  writeRevisions(revisions);
-  return record;
-}
+import { getDb, mapFlowRow, mapRevisionRow } from '@/lib/db';
 
 // GET /api/flows - List with optional filtering
 export async function GET(request: NextRequest) {
-  const data = readData();
+  const db = getDb();
   const { searchParams } = new URL(request.url);
 
-  let filtered = data;
+  const conditions: string[] = [];
+  const params: unknown[] = [];
 
   const l1Domain = searchParams.get('l1Domain');
   const l2Group = searchParams.get('l2Group');
@@ -91,35 +18,36 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search');
   const hasL4 = searchParams.get('hasL4');
 
-  if (l1Domain) filtered = filtered.filter(item => item.l1Domain === l1Domain);
-  if (l2Group) filtered = filtered.filter(item => item.l2Group === l2Group);
-  if (l3Segment) filtered = filtered.filter(item => item.l3Segment === l3Segment);
-  if (category) filtered = filtered.filter(item => item.category === category);
-  if (format) filtered = filtered.filter(item => item.format === format);
-  if (itCoverage) filtered = filtered.filter(item => item.itCoverage === itCoverage);
-  if (hasL4 === 'true') filtered = filtered.filter(item => item.l4Process !== '');
-  if (hasL4 === 'false') filtered = filtered.filter(item => item.l4Process === '');
+  if (l1Domain) { conditions.push('l1_domain = ?'); params.push(l1Domain); }
+  if (l2Group) { conditions.push('l2_group = ?'); params.push(l2Group); }
+  if (l3Segment) { conditions.push('l3_segment = ?'); params.push(l3Segment); }
+  if (category) { conditions.push('category = ?'); params.push(category); }
+  if (format) { conditions.push('format = ?'); params.push(format); }
+  if (itCoverage) { conditions.push('it_coverage = ?'); params.push(itCoverage); }
+  if (hasL4 === 'true') { conditions.push('l4_process != ?'); params.push(''); }
+  if (hasL4 === 'false') { conditions.push('l4_process = ?'); params.push(''); }
   if (search) {
-    const s = search.toLowerCase();
-    filtered = filtered.filter(item =>
-      item.l4Process.toLowerCase().includes(s) ||
-      item.processCode.toLowerCase().includes(s) ||
-      item.l4Owner.toLowerCase().includes(s) ||
-      item.l3Segment.toLowerCase().includes(s) ||
-      item.l2Group.toLowerCase().includes(s)
-    );
+    conditions.push('(l4_process LIKE ? OR process_code LIKE ? OR l4_owner LIKE ? OR l3_segment LIKE ? OR l2_group LIKE ?)');
+    const s = `%${search}%`;
+    params.push(s, s, s, s, s);
   }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  // Count
+  const countRow = db.prepare(`SELECT COUNT(*) as cnt FROM flows ${whereClause}`).get(...params) as { cnt: number };
+  const total = countRow.cnt;
 
   // Pagination
   const page = parseInt(searchParams.get('page') || '1');
   const pageSize = parseInt(searchParams.get('pageSize') || '50');
-  const total = filtered.length;
   const totalPages = Math.ceil(total / pageSize);
-  const start = (page - 1) * pageSize;
-  const items = filtered.slice(start, start + pageSize);
+  const offset = (page - 1) * pageSize;
+
+  const rows = db.prepare(`SELECT * FROM flows ${whereClause} ORDER BY id ASC LIMIT ? OFFSET ?`).all(...params, pageSize, offset) as Record<string, unknown>[];
 
   return NextResponse.json({
-    items,
+    items: rows.map(mapFlowRow),
     total,
     page,
     pageSize,
@@ -129,48 +57,58 @@ export async function GET(request: NextRequest) {
 
 // POST /api/flows - Create new flow item
 export async function POST(request: NextRequest) {
-  const data = readData();
-  const body: FlowItem = await request.json();
+  const db = getDb();
+  const body = await request.json();
 
-  const maxId = data.reduce((max, item) => Math.max(max, item.id || 0), 0);
-  const newItem: FlowItem = {
-    id: maxId + 1,
-    l1Domain: body.l1Domain || '',
-    l1Owner: body.l1Owner || '',
-    l2Group: body.l2Group || '',
-    l2Owner: body.l2Owner || '',
-    l3Segment: body.l3Segment || '',
-    l3Owner: body.l3Owner || '',
-    processCode: body.processCode || '',
-    l4Process: body.l4Process || '',
-    version: body.version || '',
-    department: body.department || '',
-    l4Owner: body.l4Owner || '',
-    format: body.format || '',
-    category: body.category || '',
-    itCoverage: body.itCoverage || '',
-    itSubCategory: body.itSubCategory || '',
-    itScore: body.itScore ?? 0,
-    status: body.status || '试运行',
-  };
+  const stmt = db.prepare(`
+    INSERT INTO flows (l1_domain, l1_owner, l2_group, l2_owner, l3_segment, l3_owner,
+      process_code, l4_process, version, department, l4_owner, format, category,
+      it_coverage, it_sub_category, it_score, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
 
-  data.push(newItem);
-  writeData(data);
+  const result = stmt.run(
+    body.l1Domain || '',
+    body.l1Owner || '',
+    body.l2Group || '',
+    body.l2Owner || '',
+    body.l3Segment || '',
+    body.l3Owner || '',
+    body.processCode || '',
+    body.l4Process || '',
+    body.version || '',
+    body.department || '',
+    body.l4Owner || '',
+    body.format || '',
+    body.category || '',
+    body.itCoverage || '',
+    body.itSubCategory || '',
+    body.itScore ?? 0,
+    body.status || '试运行'
+  );
+
+  const newId = result.lastInsertRowid;
 
   // Record to revision records if this is a new L4 process
-  if (newItem.l4Process) {
-    recordRevision({
-      processCode: newItem.processCode,
-      l4Process: newItem.l4Process,
-      version: newItem.version,
-      l1Domain: newItem.l1Domain,
-      l2Group: newItem.l2Group,
-      l3Segment: newItem.l3Segment,
-      revisionType: '新增',
-      description: '新增流程',
-      operator: '',
-    });
+  if (body.l4Process) {
+    db.prepare(`
+      INSERT INTO revision_records (revision_date, process_code, l4_process, version,
+        l1_domain, l2_group, l3_segment, revision_type, description, operator)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      new Date().toISOString().replace('T', ' ').slice(0, 19),
+      body.processCode || '',
+      body.l4Process || '',
+      body.version || '',
+      body.l1Domain || '',
+      body.l2Group || '',
+      body.l3Segment || '',
+      '新增',
+      '新增流程',
+      ''
+    );
   }
 
-  return NextResponse.json(newItem, { status: 201 });
+  const newRow = db.prepare('SELECT * FROM flows WHERE id = ?').get(newId) as Record<string, unknown>;
+  return NextResponse.json(mapFlowRow(newRow), { status: 201 });
 }

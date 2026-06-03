@@ -1,69 +1,46 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { getDb } from '@/lib/db';
 
-interface RevisionRecord {
-  id: number;
-  revisionDate: string;
-  processCode: string;
-  l4Process: string;
-  version: string;
-  l1Domain: string;
-  l2Group: string;
-  l3Segment: string;
-  revisionType: string;
-  description: string;
-  operator: string;
-}
-
-const REVISION_PATH = path.join(process.cwd(), 'public', 'revision-records.json');
-
-function readData(): RevisionRecord[] {
-  try {
-    const raw = fs.readFileSync(REVISION_PATH, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-// GET /api/revisions/export - Export all revision records as Excel
+// GET /api/revisions/export - Export revision records as Excel
 export async function GET() {
   try {
-    const data = readData();
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM revision_records ORDER BY id DESC').all() as Record<string, unknown>[];
 
-    // Use xlsx library
+    // Use xlsx to generate Excel
     const XLSX = await import('xlsx');
-    const exportData = data.map(item => ({
-      '修订日期': item.revisionDate,
-      '流程编码': item.processCode,
-      'L4职能流程': item.l4Process,
-      '修订后版本': item.version,
-      '所属业务域': item.l1Domain,
-      '业务组': item.l2Group,
-      '业务段': item.l3Segment,
-      '修订类型': item.revisionType,
-      '修订描述': item.description,
-      '操作人': item.operator,
+    const data = rows.map((row) => ({
+      '修订日期时间': row.revision_date as string,
+      '流程编码': row.process_code as string,
+      'L4职能流程': row.l4_process as string,
+      '修订后版本号': row.version as string,
+      '所属业务域': row.l1_domain as string,
+      '所属业务组': row.l2_group as string,
+      '所属业务段': row.l3_segment as string,
+      '修订类型': row.revision_type as string,
+      '修订描述': row.description as string,
+      '操作人': row.operator as string,
     }));
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
     ws['!cols'] = [
-      { wch: 20 }, { wch: 25 }, { wch: 35 }, { wch: 10 },
-      { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 },
+      { wch: 20 }, { wch: 25 }, { wch: 30 }, { wch: 10 },
+      { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 10 },
       { wch: 40 }, { wch: 10 },
     ];
-    const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '修订记录');
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-    return new NextResponse(buffer, {
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    return new NextResponse(buf, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename=revision-records-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        'Content-Disposition': 'attachment; filename=revision-records.xlsx',
       },
     });
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    console.error('Export error:', error);
+    return NextResponse.json({ error: '导出失败' }, { status: 500 });
   }
 }

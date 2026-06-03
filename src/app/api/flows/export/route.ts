@@ -1,70 +1,52 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import * as XLSX from 'xlsx';
+import { getDb } from '@/lib/db';
 
-interface FlowItem {
-  id: number;
-  l1Domain: string;
-  l1Owner: string;
-  l2Group: string;
-  l2Owner: string;
-  l3Segment: string;
-  l3Owner: string;
-  processCode: string;
-  l4Process: string;
-  version: string;
-  department: string;
-  l4Owner: string;
-  format: string;
-  category: string;
-  itCoverage: string;
-  itSubCategory: string;
-  itScore: number;
-}
-
-const DATA_PATH = path.join(process.cwd(), 'public', 'flow-data.json');
-
-// GET /api/flows/export - Export to Excel file
+// GET /api/flows/export - Export flows as Excel
 export async function GET() {
   try {
-    const data: FlowItem[] = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM flows ORDER BY id ASC').all() as Record<string, unknown>[];
 
-    const header = [
-      '序号', 'L1-业务域', 'L1流程所有者', 'L2-业务组', 'L2流程所有者',
-      'L3-业务段', 'L3流程所有者', '流程编码', 'L4职能流程', '最新版本号',
-      '流程所属部门', 'L4流程所有者', '格式', '分类', '是否IT覆盖', 'IT支撑分'
-    ];
-
-    const rows = data.map(item => [
-      item.id, item.l1Domain, item.l1Owner, item.l2Group, item.l2Owner,
-      item.l3Segment, item.l3Owner, item.processCode, item.l4Process, item.version,
-      item.department, item.l4Owner, item.format, item.category, item.itCoverage, item.itScore ?? 0
-    ]);
-
-    const wsData = [header, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 6 }, { wch: 20 }, { wch: 10 }, { wch: 16 }, { wch: 10 },
-      { wch: 18 }, { wch: 10 }, { wch: 22 }, { wch: 28 }, { wch: 10 },
-      { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 10 }
-    ];
+    const XLSX = await import('xlsx');
+    const data = rows.map((row) => ({
+      'L1业务域': row.l1_domain as string,
+      'L1所有者': row.l1_owner as string,
+      'L2业务组': row.l2_group as string,
+      'L2所有者': row.l2_owner as string,
+      'L3业务段': row.l3_segment as string,
+      'L3所有者': row.l3_owner as string,
+      '流程编码': row.process_code as string,
+      'L4职能流程': row.l4_process as string,
+      '版本': row.version as string,
+      '部门': row.department as string,
+      'L4所有者': row.l4_owner as string,
+      '格式': row.format as string,
+      '分类': row.category as string,
+      'IT覆盖': row.it_coverage as string,
+      'IT支撑分': row.it_score as number,
+      '状态': row.status as string,
+    }));
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'L1-L4流程文件清单');
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [
+      { wch: 18 }, { wch: 10 }, { wch: 15 }, { wch: 10 },
+      { wch: 15 }, { wch: 10 }, { wch: 22 }, { wch: 25 },
+      { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 10 },
+      { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, '流程清单');
 
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-    return new NextResponse(buffer, {
+    return new NextResponse(buf, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': "attachment; filename*=UTF-8''L1-L4%E6%B5%81%E7%A8%8B%E6%96%87%E4%BB%B6%E6%B8%85%E5%8D%95.xlsx",
+        'Content-Disposition': 'attachment; filename=flow-list.xlsx',
       },
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Export failed';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error) {
+    console.error('Export error:', error);
+    return NextResponse.json({ error: '导出失败' }, { status: 500 });
   }
 }

@@ -1,105 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import * as XLSX from 'xlsx';
+import { getDb, mapFlowRow } from '@/lib/db';
 
-interface FlowItem {
-  id: number;
-  l1Domain: string;
-  l1Owner: string;
-  l2Group: string;
-  l2Owner: string;
-  l3Segment: string;
-  l3Owner: string;
-  processCode: string;
-  l4Process: string;
-  version: string;
-  department: string;
-  l4Owner: string;
-  format: string;
-  category: string;
-  itCoverage: string;
-  itSubCategory: string;
-  itScore: number;
-}
-
-const DATA_PATH = path.join(process.cwd(), 'public', 'flow-data.json');
-
-// POST /api/flows/import - Import from Excel file
+// POST /api/flows/import - Import flows from Excel file
 export async function POST(request: NextRequest) {
   try {
+    const db = getDb();
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+
     if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+      return NextResponse.json({ error: '请选择文件' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const XLSX = await import('xlsx');
+    const wb = XLSX.read(buffer, { type: 'buffer' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
 
-    // Try to find the right sheet
-    const sheetName = workbook.SheetNames.find(n =>
-      n.includes('流程文件清单') || n.includes('流程清单')
-    ) || workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const jsonData: (string | number | null)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    // Clear existing data and re-import
+    db.prepare('DELETE FROM flows').run();
 
-    // Find header row
-    let headerRowIndex = 0;
-    for (let i = 0; i < Math.min(5, jsonData.length); i++) {
-      const row = jsonData[i];
-      if (row && row.some(cell => String(cell || '').includes('业务域') || String(cell || '').includes('L1'))) {
-        headerRowIndex = i;
-        break;
+    const insertStmt = db.prepare(`
+      INSERT INTO flows (l1_domain, l1_owner, l2_group, l2_owner, l3_segment, l3_owner,
+        process_code, l4_process, version, department, l4_owner, format, category,
+        it_coverage, it_sub_category, it_score, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let count = 0;
+    for (const row of data) {
+      const l4Process = String(row['L4职能流程'] || row['l4Process'] || '');
+      const itCoverage = String(row['IT覆盖'] || row['itCoverage'] || '');
+      const version = String(row['版本'] || row['version'] || '');
+
+      // Determine status
+      let status = '';
+      if (!l4Process) {
+        status = '';
+      } else if (itCoverage === '是' || itCoverage === '已覆盖') {
+        status = '正式运行';
+      } else {
+        status = '试运行';
       }
+
+      insertStmt.run(
+        String(row['L1业务域'] || row['l1Domain'] || ''),
+        String(row['L1所有者'] || row['l1Owner'] || ''),
+        String(row['L2业务组'] || row['l2Group'] || ''),
+        String(row['L2所有者'] || row['l2Owner'] || ''),
+        String(row['L3业务段'] || row['l3Segment'] || ''),
+        String(row['L3所有者'] || row['l3Owner'] || ''),
+        String(row['流程编码'] || row['processCode'] || ''),
+        l4Process,
+        version,
+        String(row['部门'] || row['department'] || ''),
+        String(row['L4所有者'] || row['l4Owner'] || ''),
+        String(row['格式'] || row['format'] || ''),
+        String(row['分类'] || row['category'] || ''),
+        itCoverage,
+        String(row['IT支撑分'] || row['itSubCategory'] || ''),
+        Number(row['IT支撑分'] || row['itScore'] || 0),
+        status
+      );
+      count++;
     }
 
-    const existingData: FlowItem[] = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
-    const maxId = existingData.reduce((max, item) => Math.max(max, item.id || 0), 0);
-
-    const importedItems: FlowItem[] = [];
-    let newId = maxId + 1;
-
-    for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
-      const row = jsonData[i];
-      if (!row || !row[0]) continue;
-
-      const item: FlowItem = {
-        id: newId++,
-        l1Domain: String(row[1] || ''),
-        l1Owner: String(row[2] || ''),
-        l2Group: String(row[3] || ''),
-        l2Owner: String(row[4] || ''),
-        l3Segment: String(row[5] || ''),
-        l3Owner: String(row[6] || ''),
-        processCode: String(row[7] || ''),
-        l4Process: String(row[8] || ''),
-        version: String(row[9] || ''),
-        department: String(row[10] || ''),
-        l4Owner: String(row[11] || ''),
-        format: String(row[12] || ''),
-        category: String(row[13] || ''),
-        itCoverage: String(row[14] || ''),
-        itSubCategory: String(row[16] || ''),
-        itScore: Number(row[15]) || 0,
-      };
-      importedItems.push(item);
-    }
-
-    // Replace all data with imported data
-    writeData(importedItems);
-
-    return NextResponse.json({
-      success: true,
-      imported: importedItems.length,
-      total: importedItems.length,
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Import failed';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ success: true, count });
+  } catch (error) {
+    console.error('Import error:', error);
+    return NextResponse.json({ error: '导入失败' }, { status: 500 });
   }
-}
-
-function writeData(data: FlowItem[]): void {
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
 }

@@ -1,79 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-interface FlowItem {
-  id: number;
-  l1Domain: string;
-  l1Owner: string;
-  l2Group: string;
-  l2Owner: string;
-  l3Segment: string;
-  l3Owner: string;
-  processCode: string;
-  l4Process: string;
-  version: string;
-  department: string;
-  l4Owner: string;
-  format: string;
-  category: string;
-  itCoverage: string;
-  itSubCategory: string;
-  itScore: number;
-  status: string;
-}
-
-interface RevisionRecord {
-  id: number;
-  revisionDate: string;
-  processCode: string;
-  l4Process: string;
-  version: string;
-  l1Domain: string;
-  l2Group: string;
-  l3Segment: string;
-  revisionType: string;
-  description: string;
-  operator: string;
-}
-
-const DATA_PATH = path.join(process.cwd(), 'public', 'flow-data.json');
-const REVISION_PATH = path.join(process.cwd(), 'public', 'revision-records.json');
-
-function readData(): FlowItem[] {
-  const raw = fs.readFileSync(DATA_PATH, 'utf-8');
-  return JSON.parse(raw);
-}
-
-function writeData(data: FlowItem[]): void {
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-function readRevisions(): RevisionRecord[] {
-  try {
-    const raw = fs.readFileSync(REVISION_PATH, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function writeRevisions(data: RevisionRecord[]): void {
-  fs.writeFileSync(REVISION_PATH, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-function recordRevision(params: Omit<RevisionRecord, 'id' | 'revisionDate'>): RevisionRecord {
-  const revisions = readRevisions();
-  const maxId = revisions.reduce((max, r) => Math.max(max, r.id || 0), 0);
-  const record: RevisionRecord = {
-    id: maxId + 1,
-    revisionDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    ...params,
-  };
-  revisions.push(record);
-  writeRevisions(revisions);
-  return record;
-}
+import { getDb, mapFlowRow } from '@/lib/db';
 
 // Bump version: C1.0 -> C2.0, C2.0 -> C3.0, etc.
 function bumpVersion(version: string): string {
@@ -91,12 +17,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const data = readData();
-  const item = data.find(d => d.id === parseInt(id));
-  if (!item) {
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM flows WHERE id = ?').get(parseInt(id)) as Record<string, unknown> | undefined;
+  if (!row) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
-  return NextResponse.json(item);
+  return NextResponse.json(mapFlowRow(row));
 }
 
 // PUT /api/flows/[id] - Update flow item or perform revision action
@@ -105,61 +31,98 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const data = readData();
-  const index = data.findIndex(d => d.id === parseInt(id));
-  if (index === -1) {
+  const db = getDb();
+  const numId = parseInt(id);
+
+  const existing = db.prepare('SELECT * FROM flows WHERE id = ?').get(numId) as Record<string, unknown> | undefined;
+  if (!existing) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   const body = await request.json();
   const action = body._action;
 
+  const insertRevision = db.prepare(`
+    INSERT INTO revision_records (revision_date, process_code, l4_process, version,
+      l1_domain, l2_group, l3_segment, revision_type, description, operator)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
   // Revision actions
   if (action === 'abolish') {
     // 废止: set status to 已废止, record revision
-    data[index].status = '已废止';
-    writeData(data);
-    recordRevision({
-      processCode: data[index].processCode,
-      l4Process: data[index].l4Process,
-      version: data[index].version,
-      l1Domain: data[index].l1Domain,
-      l2Group: data[index].l2Group,
-      l3Segment: data[index].l3Segment,
-      revisionType: '废止',
-      description: body.reason || '流程废止',
-      operator: '',
-    });
-    return NextResponse.json(data[index]);
+    db.prepare('UPDATE flows SET status = ? WHERE id = ?').run('已废止', numId);
+
+    insertRevision.run(
+      new Date().toISOString().replace('T', ' ').slice(0, 19),
+      existing.process_code as string,
+      existing.l4_process as string,
+      existing.version as string,
+      existing.l1_domain as string,
+      existing.l2_group as string,
+      existing.l3_segment as string,
+      '废止',
+      body.reason || '流程废止',
+      ''
+    );
+
+    const updated = db.prepare('SELECT * FROM flows WHERE id = ?').get(numId) as Record<string, unknown>;
+    return NextResponse.json(mapFlowRow(updated));
   }
 
   if (action === 'upgrade') {
-    // 版本升级: bump version, record revision
-    const oldVersion = data[index].version;
+    // 版本升级: bump version, set status to 试运行, record revision
+    const oldVersion = existing.version as string;
     const newVersion = bumpVersion(oldVersion);
-    data[index].version = newVersion;
-    data[index].status = '试运行';
-    writeData(data);
-    recordRevision({
-      processCode: data[index].processCode,
-      l4Process: data[index].l4Process,
-      version: newVersion,
-      l1Domain: data[index].l1Domain,
-      l2Group: data[index].l2Group,
-      l3Segment: data[index].l3Segment,
-      revisionType: '修订',
-      description: body.description || `版本从 ${oldVersion} 升级到 ${newVersion}`,
-      operator: '',
-    });
-    return NextResponse.json(data[index]);
+    db.prepare('UPDATE flows SET version = ?, status = ? WHERE id = ?').run(newVersion, '试运行', numId);
+
+    insertRevision.run(
+      new Date().toISOString().replace('T', ' ').slice(0, 19),
+      existing.process_code as string,
+      existing.l4_process as string,
+      newVersion,
+      existing.l1_domain as string,
+      existing.l2_group as string,
+      existing.l3_segment as string,
+      '修订',
+      body.description || `版本从 ${oldVersion} 升级到 ${newVersion}`,
+      ''
+    );
+
+    const updated = db.prepare('SELECT * FROM flows WHERE id = ?').get(numId) as Record<string, unknown>;
+    return NextResponse.json(mapFlowRow(updated));
   }
 
   // Normal update
   const { _action: _, ...updateData } = body;
-  data[index] = { ...data[index], ...updateData, id: data[index].id };
-  writeData(data);
+  const setClauses: string[] = [];
+  const values: unknown[] = [];
 
-  return NextResponse.json(data[index]);
+  const fieldMap: Record<string, string> = {
+    l1Domain: 'l1_domain', l1Owner: 'l1_owner',
+    l2Group: 'l2_group', l2Owner: 'l2_owner',
+    l3Segment: 'l3_segment', l3Owner: 'l3_owner',
+    processCode: 'process_code', l4Process: 'l4_process',
+    version: 'version', department: 'department',
+    l4Owner: 'l4_owner', format: 'format', category: 'category',
+    itCoverage: 'it_coverage', itSubCategory: 'it_sub_category',
+    itScore: 'it_score', status: 'status',
+  };
+
+  for (const [key, dbCol] of Object.entries(fieldMap)) {
+    if (key in updateData) {
+      setClauses.push(`${dbCol} = ?`);
+      values.push(updateData[key]);
+    }
+  }
+
+  if (setClauses.length > 0) {
+    values.push(numId);
+    db.prepare(`UPDATE flows SET ${setClauses.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  const updated = db.prepare('SELECT * FROM flows WHERE id = ?').get(numId) as Record<string, unknown>;
+  return NextResponse.json(mapFlowRow(updated));
 }
 
 // DELETE /api/flows/[id] - Delete flow item
@@ -168,14 +131,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const data = readData();
-  const index = data.findIndex(d => d.id === parseInt(id));
-  if (index === -1) {
+  const db = getDb();
+  const numId = parseInt(id);
+
+  const existing = db.prepare('SELECT * FROM flows WHERE id = ?').get(numId) as Record<string, unknown> | undefined;
+  if (!existing) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const deleted = data.splice(index, 1)[0];
-  writeData(data);
-
-  return NextResponse.json(deleted);
+  db.prepare('DELETE FROM flows WHERE id = ?').run(numId);
+  return NextResponse.json(mapFlowRow(existing));
 }
