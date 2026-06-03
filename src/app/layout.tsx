@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import './globals.css';
+import { NavMenu } from '@/components/nav-menu';
 
 export const metadata: Metadata = {
-  title: '职能流程管理统计',
+  title: '流程管理平台',
   description: 'L1-L4职能流程文件清单统计分析平台',
 };
 
@@ -23,13 +23,9 @@ export default function RootLayout({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
                 </svg>
               </div>
-              <span className="text-base font-semibold text-[#1e3a5f]">职能流程管理统计</span>
+              <span className="text-base font-semibold text-[#1e3a5f]">流程管理平台</span>
             </div>
-            <nav className="ml-8 flex items-center gap-1">
-              <Link href="/" className="nav-link rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">统计概览</Link>
-              <Link href="/flows" className="nav-link rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">流程清单</Link>
-              <Link href="/revision" className="nav-link rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">流程修订计划</Link>
-            </nav>
+            <NavMenu />
           </div>
         </header>
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
