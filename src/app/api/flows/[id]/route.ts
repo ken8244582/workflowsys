@@ -62,7 +62,7 @@ export async function PUT(
       existing.l2_group as string,
       existing.l3_segment as string,
       '废止',
-      body.reason || '流程废止',
+      body._description || '流程废止',
       ''
     );
 
@@ -85,7 +85,7 @@ export async function PUT(
       existing.l2_group as string,
       existing.l3_segment as string,
       '修订',
-      body.description || `版本从 ${oldVersion} 升级到 ${newVersion}`,
+      body._description || `版本从 ${oldVersion} 升级到 ${newVersion}`,
       ''
     );
 
@@ -108,7 +108,7 @@ export async function PUT(
       existing.l2_group as string,
       existing.l3_segment as string,
       '恢复',
-      body.reason || `流程恢复运行，版本从 ${oldVersion} 升级到 ${newVersion}`,
+      body._description || `流程恢复运行，版本从 ${oldVersion} 升级到 ${newVersion}`,
       ''
     );
 
