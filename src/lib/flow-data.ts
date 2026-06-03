@@ -16,6 +16,21 @@ export interface FlowItem {
   itCoverage: string;
   itSubCategory: string;
   itScore: number;
+  status: '正式运行' | '试运行' | '已废止' | '';
+}
+
+export interface RevisionRecord {
+  id: number;
+  revisionDate: string;
+  processCode: string;
+  l4Process: string;
+  version: string;
+  l1Domain: string;
+  l2Group: string;
+  l3Segment: string;
+  revisionType: '废止' | '修订' | '新增';
+  description: string;
+  operator: string;
 }
 
 export interface L1Stat {

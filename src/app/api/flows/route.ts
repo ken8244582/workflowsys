@@ -20,9 +20,25 @@ interface FlowItem {
   itCoverage: string;
   itSubCategory: string;
   itScore: number;
+  status: string;
 }
 
 const DATA_PATH = path.join(process.cwd(), 'public', 'flow-data.json');
+const REVISION_PATH = path.join(process.cwd(), 'public', 'revision-records.json');
+
+interface RevisionRecord {
+  id: number;
+  revisionDate: string;
+  processCode: string;
+  l4Process: string;
+  version: string;
+  l1Domain: string;
+  l2Group: string;
+  l3Segment: string;
+  revisionType: string;
+  description: string;
+  operator: string;
+}
 
 function readData(): FlowItem[] {
   const raw = fs.readFileSync(DATA_PATH, 'utf-8');
@@ -31,6 +47,32 @@ function readData(): FlowItem[] {
 
 function writeData(data: FlowItem[]): void {
   fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function readRevisions(): RevisionRecord[] {
+  try {
+    const raw = fs.readFileSync(REVISION_PATH, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function writeRevisions(data: RevisionRecord[]): void {
+  fs.writeFileSync(REVISION_PATH, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function recordRevision(params: Omit<RevisionRecord, 'id' | 'revisionDate'>): RevisionRecord {
+  const revisions = readRevisions();
+  const maxId = revisions.reduce((max, r) => Math.max(max, r.id || 0), 0);
+  const record: RevisionRecord = {
+    id: maxId + 1,
+    revisionDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    ...params,
+  };
+  revisions.push(record);
+  writeRevisions(revisions);
+  return record;
 }
 
 // GET /api/flows - List with optional filtering
@@ -109,10 +151,26 @@ export async function POST(request: NextRequest) {
     itCoverage: body.itCoverage || '',
     itSubCategory: body.itSubCategory || '',
     itScore: body.itScore ?? 0,
+    status: body.status || '试运行',
   };
 
   data.push(newItem);
   writeData(data);
+
+  // Record to revision records if this is a new L4 process
+  if (newItem.l4Process) {
+    recordRevision({
+      processCode: newItem.processCode,
+      l4Process: newItem.l4Process,
+      version: newItem.version,
+      l1Domain: newItem.l1Domain,
+      l2Group: newItem.l2Group,
+      l3Segment: newItem.l3Segment,
+      revisionType: '新增',
+      description: '新增流程',
+      operator: '',
+    });
+  }
 
   return NextResponse.json(newItem, { status: 201 });
 }

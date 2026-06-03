@@ -1,111 +1,102 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { FlowItem } from '@/lib/flow-data';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Download,
-  Upload,
-  Plus,
-  Pencil,
-  Trash2,
-  Search,
-  ChevronRight,
-  ChevronDown,
-  FolderOpen,
-  Folder,
-  FileText,
-} from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Search, Download, Upload, Plus, Pencil, Trash2, ChevronDown, ChevronRight, FolderOpen, Folder, FileText, RotateCw, XCircle } from 'lucide-react';
+
+interface FlowItem {
+  id: number;
+  l1Domain: string;
+  l1Owner: string;
+  l2Group: string;
+  l2Owner: string;
+  l3Segment: string;
+  l3Owner: string;
+  processCode: string;
+  l4Process: string;
+  version: string;
+  department: string;
+  l4Owner: string;
+  format: string;
+  category: string;
+  itCoverage: string;
+  itSubCategory: string;
+  itScore: number;
+  status: string;
+}
 
 interface TreeNode {
   key: string;
   label: string;
-  level: 'L1' | 'L2' | 'L3' | 'L4';
+  level: string;
   owner?: string;
   children: TreeNode[];
   items?: FlowItem[];
-  expanded?: boolean;
 }
 
 export default function FunctionalListPage() {
   const [allData, setAllData] = useState<FlowItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'tree'>('table');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const pageSizeOptions = [20, 50, 100];
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter state
+  // Filters
   const [filterL1, setFilterL1] = useState('all');
   const [filterL2, setFilterL2] = useState('all');
   const [filterL3, setFilterL3] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterFormat, setFilterFormat] = useState('all');
   const [filterIT, setFilterIT] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [searchText, setSearchText] = useState('');
 
-  // Pagination
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  const pageSizeOptions = [50, 100, 200, 500];
-
-  // Dialog state
+  // Edit dialog
   const [editDialog, setEditDialog] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState(false);
   const [currentItem, setCurrentItem] = useState<FlowItem | null>(null);
   const [editForm, setEditForm] = useState<Partial<FlowItem>>({});
 
-  // Tree expanded state
+  // Delete dialog
+  const [deleteDialog, setDeleteDialog] = useState(false);
+
+  // Revise dialog
+  const [reviseDialog, setReviseDialog] = useState(false);
+  const [reviseItem, setReviseItem] = useState<FlowItem | null>(null);
+  const [reviseType, setReviseType] = useState<'abolish' | 'upgrade'>('upgrade');
+  const [reviseReason, setReviseReason] = useState('');
+  const [reviseContent, setReviseContent] = useState('');
+
+  // Tree
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
 
-  // Import ref
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Fetch data
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch('/api/flows?pageSize=9999');
+      const res = await fetch('/api/flows?page=1&pageSize=10000');
       const data = await res.json();
       setAllData(data.items || []);
-    } catch {
-      // fallback to static json
-      const res = await fetch('/flow-data.json');
-      const data = await res.json();
-      setAllData(data);
+    } catch (err) {
+      console.error('Fetch failed:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, []);
+  };
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, []);
 
-  // Filter options
+  // Options
   const l1Options = useMemo(() => [...new Set(allData.map(d => d.l1Domain).filter(Boolean))], [allData]);
   const l2Options = useMemo(() => {
-    const filtered = filterL1 === 'all' ? allData : allData.filter(d => d.l1Domain === filterL1);
+    let filtered = allData;
+    if (filterL1 !== 'all') filtered = filtered.filter(d => d.l1Domain === filterL1);
     return [...new Set(filtered.map(d => d.l2Group).filter(Boolean))];
   }, [allData, filterL1]);
   const l3Options = useMemo(() => {
@@ -117,16 +108,18 @@ export default function FunctionalListPage() {
   const categoryOptions = useMemo(() => [...new Set(allData.map(d => d.category).filter(Boolean))], [allData]);
   const formatOptions = useMemo(() => [...new Set(allData.map(d => d.format).filter(Boolean))], [allData]);
   const itOptions = useMemo(() => [...new Set(allData.map(d => d.itCoverage).filter(Boolean))], [allData]);
+  const statusOptions = useMemo(() => [...new Set(allData.map(d => d.status).filter(Boolean))], [allData]);
 
   // Filtered data
   const filteredData = useMemo(() => {
-    let result = allData.filter(d => d.l4Process); // Only show rows with L4 process
+    let result = allData.filter(d => d.l4Process);
     if (filterL1 !== 'all') result = result.filter(d => d.l1Domain === filterL1);
     if (filterL2 !== 'all') result = result.filter(d => d.l2Group === filterL2);
     if (filterL3 !== 'all') result = result.filter(d => d.l3Segment === filterL3);
     if (filterCategory !== 'all') result = result.filter(d => d.category === filterCategory);
     if (filterFormat !== 'all') result = result.filter(d => d.format === filterFormat);
     if (filterIT !== 'all') result = result.filter(d => d.itCoverage === filterIT);
+    if (filterStatus !== 'all') result = result.filter(d => d.status === filterStatus);
     if (searchText) {
       const s = searchText.toLowerCase();
       result = result.filter(d =>
@@ -136,16 +129,13 @@ export default function FunctionalListPage() {
       );
     }
     return result;
-  }, [allData, filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIT, searchText]);
+  }, [allData, filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIT, filterStatus, searchText]);
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / pageSize);
   const pagedData = filteredData.slice((page - 1) * pageSize, page * pageSize);
 
-  // Reset page when filters change
-  useEffect(() => { setPage(1); }, [filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIT, searchText]);
-
-  // Reset L2/L3 when L1 changes
+  useEffect(() => { setPage(1); }, [filterL1, filterL2, filterL3, filterCategory, filterFormat, filterIT, filterStatus, searchText]);
   useEffect(() => { setFilterL2('all'); setFilterL3('all'); }, [filterL1]);
   useEffect(() => { setFilterL3('all'); }, [filterL2]);
 
@@ -157,6 +147,7 @@ export default function FunctionalListPage() {
     if (filterCategory !== 'all') filtered = filtered.filter(d => d.category === filterCategory);
     if (filterFormat !== 'all') filtered = filtered.filter(d => d.format === filterFormat);
     if (filterIT !== 'all') filtered = filtered.filter(d => d.itCoverage === filterIT);
+    if (filterStatus !== 'all') filtered = filtered.filter(d => d.status === filterStatus);
     if (searchText) {
       const s = searchText.toLowerCase();
       filtered = filtered.filter(d =>
@@ -171,28 +162,24 @@ export default function FunctionalListPage() {
     const l3Map = new Map<string, TreeNode>();
 
     for (const item of filtered) {
-      // L1
       const l1Key = `L1-${item.l1Domain}`;
       if (!l1Map.has(l1Key)) {
         const node: TreeNode = { key: l1Key, label: item.l1Domain, level: 'L1', owner: item.l1Owner, children: [] };
         l1Map.set(l1Key, node);
         tree.push(node);
       }
-      // L2
       const l2Key = `L2-${item.l1Domain}-${item.l2Group}`;
       if (!l2Map.has(l2Key)) {
         const node: TreeNode = { key: l2Key, label: item.l2Group, level: 'L2', owner: item.l2Owner, children: [] };
         l2Map.set(l2Key, node);
         l1Map.get(l1Key)!.children.push(node);
       }
-      // L3
       const l3Key = `L3-${item.l1Domain}-${item.l2Group}-${item.l3Segment}`;
       if (!l3Map.has(l3Key)) {
         const node: TreeNode = { key: l3Key, label: item.l3Segment, level: 'L3', owner: item.l3Owner, children: [] };
         l3Map.set(l3Key, node);
         l2Map.get(l2Key)!.children.push(node);
       }
-      // L4
       const l4Key = `L4-${item.id}`;
       const l4Node: TreeNode = {
         key: l4Key,
@@ -205,14 +192,12 @@ export default function FunctionalListPage() {
       l3Map.get(l3Key)!.children.push(l4Node);
     }
     return tree;
-  }, [allData, filterL1, filterCategory, filterFormat, filterIT, searchText]);
+  }, [allData, filterL1, filterCategory, filterFormat, filterIT, filterStatus, searchText]);
 
-  // Tree toggle
   const toggleExpand = (key: string) => {
     setExpandedKeys(prev => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   };
@@ -226,6 +211,7 @@ export default function FunctionalListPage() {
       l3Segment: filterL3 !== 'all' ? filterL3 : '',
       format: '集团模板',
       category: '流程',
+      status: '试运行',
     });
     setEditDialog(true);
   };
@@ -244,14 +230,13 @@ export default function FunctionalListPage() {
   const handleSave = async () => {
     try {
       if (currentItem) {
-        // Update
         await fetch(`/api/flows/${currentItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(editForm),
         });
       } else {
-        // Create
+        // Create - also creates a revision record
         await fetch('/api/flows', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -273,6 +258,34 @@ export default function FunctionalListPage() {
       fetchData();
     } catch (err) {
       console.error('Delete failed:', err);
+    }
+  };
+
+  // Revise handler
+  const handleRevise = (item: FlowItem) => {
+    setReviseItem(item);
+    setReviseType('upgrade');
+    setReviseReason('');
+    setReviseContent('');
+    setReviseDialog(true);
+  };
+
+  const handleConfirmRevise = async () => {
+    if (!reviseItem) return;
+    try {
+      await fetch(`/api/flows/${reviseItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: reviseType,
+          reason: reviseReason,
+          content: reviseContent,
+        }),
+      });
+      setReviseDialog(false);
+      fetchData();
+    } catch (err) {
+      console.error('Revise failed:', err);
     }
   };
 
@@ -314,7 +327,6 @@ export default function FunctionalListPage() {
       console.error('Import failed:', err);
       alert('导入失败，请检查文件格式');
     }
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -334,7 +346,6 @@ export default function FunctionalListPage() {
       L3: Folder,
       L4: FileText,
     };
-
     const IconComp = levelIcons[node.level];
 
     return (
@@ -354,13 +365,14 @@ export default function FunctionalListPage() {
           {node.owner && <span className="text-xs text-gray-400 ml-2">({node.owner})</span>}
           {node.level === 'L4' && node.items?.[0] && (
             <span className="ml-auto flex items-center gap-2">
+              {statusBadge(node.items[0].status)}
               <Badge variant="outline" className="text-xs">{node.items[0].category}</Badge>
               <Badge variant="secondary" className="text-xs">{node.items[0].version}</Badge>
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleEdit(node.items![0]); }}>
                 <Pencil className="h-3 w-3" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={(e) => { e.stopPropagation(); handleDelete(node.items![0]); }}>
-                <Trash2 className="h-3 w-3" />
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleRevise(node.items![0]); }}>
+                <RotateCw className="h-3 w-3 text-amber-600" />
               </Button>
             </span>
           )}
@@ -390,6 +402,13 @@ export default function FunctionalListPage() {
     if (val === '是') return <Badge className="bg-green-50 text-green-700 border-green-200">已覆盖</Badge>;
     if (val === '否') return <Badge className="bg-red-50 text-red-700 border-red-200">未覆盖</Badge>;
     return <Badge variant="outline">{val || '-'}</Badge>;
+  };
+
+  const statusBadge = (val: string) => {
+    if (val === '正式运行') return <Badge className="bg-green-50 text-green-700 border-green-200">{val}</Badge>;
+    if (val === '试运行') return <Badge className="bg-blue-50 text-blue-700 border-blue-200">{val}</Badge>;
+    if (val === '已废止') return <Badge className="bg-red-50 text-red-700 border-red-200">{val}</Badge>;
+    return <span className="text-gray-300">-</span>;
   };
 
   if (loading) {
@@ -425,7 +444,7 @@ export default function FunctionalListPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-4 pb-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
             <Select value={filterL1} onValueChange={setFilterL1}>
               <SelectTrigger><SelectValue placeholder="L1业务域" /></SelectTrigger>
               <SelectContent>
@@ -468,6 +487,13 @@ export default function FunctionalListPage() {
                 {itOptions.map(o => <SelectItem key={o} value={o}>{o === '是' ? '已覆盖' : o === '否' ? '未覆盖' : o}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger><SelectValue placeholder="状态" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                {statusOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
               <Input placeholder="搜索流程名/编码/所有者" value={searchText} onChange={e => setSearchText(e.target.value)} className="pl-8" />
@@ -498,12 +524,13 @@ export default function FunctionalListPage() {
                   <TableHead>分类</TableHead>
                   <TableHead>IT覆盖</TableHead>
                   <TableHead>IT支撑分</TableHead>
-                  <TableHead className="w-20">操作</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead className="w-28">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pagedData.map((item, idx) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className={item.status === '已废止' ? 'opacity-50' : ''}>
                     <TableCell className="text-gray-400 text-xs">{(page - 1) * pageSize + idx + 1}</TableCell>
                     <TableCell className="text-xs">{item.l1Domain}</TableCell>
                     <TableCell className="text-xs">{item.l2Group}</TableCell>
@@ -516,12 +543,18 @@ export default function FunctionalListPage() {
                     <TableCell className="text-xs">{categoryBadge(item.category)}</TableCell>
                     <TableCell className="text-xs">{itBadge(item.itCoverage)}</TableCell>
                     <TableCell className="text-xs font-mono">{(item.itCoverage === '是' || item.itCoverage === '已覆盖') ? (item.itScore ?? 0) : '-'}</TableCell>
+                    <TableCell className="text-xs">{statusBadge(item.status)}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(item)}>
+                      <div className="flex items-center gap-0.5">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" title="编辑" onClick={() => handleEdit(item)}>
                           <Pencil className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => handleDelete(item)}>
+                        {item.status !== '已废止' && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6" title="修订" onClick={() => handleRevise(item)}>
+                            <RotateCw className="h-3 w-3 text-amber-600" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" title="删除" onClick={() => handleDelete(item)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -673,6 +706,17 @@ export default function FunctionalListPage() {
                 <div className="h-9 flex items-center px-3 rounded-md border bg-muted text-muted-foreground">-</div>
               )}
             </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">状态</label>
+              <Select value={editForm.status || ''} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
+                <SelectTrigger><SelectValue placeholder="选择状态" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="正式运行">正式运行</SelectItem>
+                  <SelectItem value="试运行">试运行</SelectItem>
+                  <SelectItem value="已废止">已废止</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>取消</Button>
@@ -693,6 +737,75 @@ export default function FunctionalListPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialog(false)}>取消</Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>删除</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revise Dialog */}
+      <Dialog open={reviseDialog} onOpenChange={setReviseDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>流程修订操作</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="p-3 bg-gray-50 rounded-lg text-sm">
+              <div className="font-medium">{reviseItem?.l4Process}</div>
+              <div className="text-gray-500 mt-1">编码: {reviseItem?.processCode} | 当前版本: {reviseItem?.version}</div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">修订类型</label>
+              <div className="flex gap-2">
+                <Button
+                  variant={reviseType === 'upgrade' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setReviseType('upgrade')}
+                  className={reviseType === 'upgrade' ? 'bg-[#1e3a5f] hover:bg-[#2d4f7a]' : ''}
+                >
+                  <RotateCw className="h-4 w-4 mr-1" /> 版本升级
+                </Button>
+                <Button
+                  variant={reviseType === 'abolish' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setReviseType('abolish')}
+                  className={reviseType === 'abolish' ? 'bg-red-600 hover:bg-red-700' : ''}
+                >
+                  <XCircle className="h-4 w-4 mr-1" /> 废止流程
+                </Button>
+              </div>
+            </div>
+            {reviseType === 'abolish' ? (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">废止原因 <span className="text-red-500">*</span></label>
+                <Textarea
+                  placeholder="请输入废止原因..."
+                  value={reviseReason}
+                  onChange={e => setReviseReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">修订内容描述 <span className="text-red-500">*</span></label>
+                  <Textarea
+                    placeholder="请描述本次修订的内容..."
+                    value={reviseContent}
+                    onChange={e => setReviseContent(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReviseDialog(false)}>取消</Button>
+            <Button
+              onClick={handleConfirmRevise}
+              className={reviseType === 'abolish' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1e3a5f] hover:bg-[#2d4f7a]'}
+              disabled={reviseType === 'abolish' ? !reviseReason.trim() : !reviseContent.trim()}
+            >
+              确认{reviseType === 'abolish' ? '废止' : '升级'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
