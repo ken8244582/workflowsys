@@ -515,7 +515,7 @@ export default function FunctionalListPage() {
                     <TableCell className="text-xs">{formatBadge(item.format)}</TableCell>
                     <TableCell className="text-xs">{categoryBadge(item.category)}</TableCell>
                     <TableCell className="text-xs">{itBadge(item.itCoverage)}</TableCell>
-                    <TableCell className="text-xs font-mono">{item.itScore ?? 0}</TableCell>
+                    <TableCell className="text-xs font-mono">{(item.itCoverage === '是' || item.itCoverage === '已覆盖') ? (item.itScore ?? 0) : '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(item)}>
@@ -650,7 +650,7 @@ export default function FunctionalListPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">是否IT覆盖</label>
-              <Select value={editForm.itCoverage || ''} onValueChange={v => setEditForm(f => ({ ...f, itCoverage: v }))}>
+              <Select value={editForm.itCoverage || ''} onValueChange={v => setEditForm(f => ({ ...f, itCoverage: v, itScore: (v === '是' || v === '已覆盖') ? f.itScore : 0 }))}>
                 <SelectTrigger><SelectValue placeholder="选择" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="是">是</SelectItem>
@@ -660,14 +660,18 @@ export default function FunctionalListPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">IT支撑分(0-5)</label>
-              <Select value={String(editForm.itScore ?? 0)} onValueChange={v => setEditForm(f => ({ ...f, itScore: Number(v) }))}>
-                <SelectTrigger><SelectValue placeholder="选择分数" /></SelectTrigger>
-                <SelectContent>
-                  {[0,1,2,3,4,5].map(s => (
-                    <SelectItem key={s} value={String(s)}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(editForm.itCoverage === '是' || editForm.itCoverage === '已覆盖') ? (
+                <Select value={String(editForm.itScore ?? 0)} onValueChange={v => setEditForm(f => ({ ...f, itScore: Number(v) }))}>
+                  <SelectTrigger><SelectValue placeholder="选择分数" /></SelectTrigger>
+                  <SelectContent>
+                    {[0,1,2,3,4,5].map(s => (
+                      <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="h-9 flex items-center px-3 rounded-md border bg-muted text-muted-foreground">-</div>
+              )}
             </div>
           </div>
           <DialogFooter>
