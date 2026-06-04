@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download } from 'lucide-react';
+import { Search, Download, Trash2, AlertTriangle } from 'lucide-react';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 
 interface RevisionRecord {
@@ -105,6 +105,7 @@ function PaginationBar({
           <span className="text-xs text-gray-500">页</span>
         </div>
       </div>
+
     </div>
   );
 }
@@ -120,6 +121,8 @@ export default function FunctionalRevisionPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -134,6 +137,18 @@ export default function FunctionalRevisionPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await fetch(`/api/revisions/${deleteId}`, { method: 'DELETE' });
+      setDeleteConfirmOpen(false);
+      setDeleteId(null);
+      fetchData();
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
+  };
 
   // Options
   const domainOptions = useMemo(() => [...new Set(allData.map(d => d.l1Domain).filter(Boolean))], [allData]);
@@ -244,12 +259,13 @@ export default function FunctionalRevisionPage() {
                 <TableHead>所属业务域-业务组-业务段</TableHead>
                 <TableHead className="text-center">修订类型</TableHead>
                 <TableHead>修订说明</TableHead>
+                <TableHead className="text-center w-16">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pagedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-gray-400">
+                  <TableCell colSpan={9} className="text-center py-12 text-gray-400">
                     暂无修订记录
                   </TableCell>
                 </TableRow>
@@ -272,6 +288,15 @@ export default function FunctionalRevisionPage() {
                     <TableCell className="text-gray-500 max-w-[200px] truncate" title={item.description}>
                       {item.description || '-'}
                     </TableCell>
+                    <TableCell className="text-center">
+                      <button
+                        onClick={() => { setDeleteId(item.id); setDeleteConfirmOpen(true); }}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                        title="删除此记录"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -287,6 +312,37 @@ export default function FunctionalRevisionPage() {
           pageSize={pageSize} pageSizeOptions={pageSizeOptions}
           onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
         />
+      )}
+
+      {/* 删除确认对话框 */}
+      {deleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">确认删除</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              确定要删除这条修订记录吗？此操作不可撤销。
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setDeleteConfirmOpen(false); setDeleteId(null); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

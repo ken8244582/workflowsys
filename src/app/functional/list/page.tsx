@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Download, Upload, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, ChevronUp } from 'lucide-react';
+import { Search, Download, Upload, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, ChevronUp, RotateCcw, Building2, Layers, GitBranch, FileText, AlertTriangle } from 'lucide-react';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 
 interface FlowItem {
@@ -143,6 +143,11 @@ export default function FunctionalListPage() {
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
   const [selectedFormat, setSelectedFormat] = useState<string[]>([]);
   const [selectedIt, setSelectedIt] = useState<string[]>([]);
+
+  // Data reinitialize state
+  const [showReinitDialog, setShowReinitDialog] = useState(false);
+  const [reinitConfirmText, setReinitConfirmText] = useState('');
+  const [reinitLoading, setReinitLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
 
   // Dialogs
@@ -350,6 +355,31 @@ export default function FunctionalListPage() {
     fetchData();
   };
 
+  const [initDialog, setInitDialog] = useState(false);
+  const [initConfirmText, setInitConfirmText] = useState('');
+  const [initLoading, setInitLoading] = useState(false);
+
+  const handleReinitialize = async () => {
+    if (initConfirmText !== '数据初始化') return;
+    setInitLoading(true);
+    try {
+      const formData = new FormData();
+      const fileInput = document.getElementById('init-file-input') as HTMLInputElement;
+      if (fileInput?.files?.[0]) {
+        formData.append('file', fileInput.files[0]);
+      }
+      const res = await fetch('/api/flows/reinitialize', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('初始化失败');
+      setInitDialog(false);
+      setInitConfirmText('');
+      fetchData();
+    } catch {
+      alert('数据初始化失败，请检查文件格式');
+    } finally {
+      setInitLoading(false);
+    }
+  };
+
   const statusBadge = (val: string) => {
     if (val === '正式运行') return <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px] px-1.5 py-0">{val}</Badge>;
     if (val === '试运行') return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0">{val}</Badge>;
@@ -381,30 +411,43 @@ export default function FunctionalListPage() {
     return <span className="text-xs font-mono">{score}</span>;
   };
 
+  const levelConfig: Record<number, { icon: React.ReactNode; color: string; bgColor: string; borderColor: string }> = {
+    1: { icon: <Building2 className="h-4 w-4" />, color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-l-blue-400' },
+    2: { icon: <Layers className="h-3.5 w-3.5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-50', borderColor: 'border-l-indigo-300' },
+    3: { icon: <GitBranch className="h-3.5 w-3.5" />, color: 'text-violet-600', bgColor: 'bg-violet-50', borderColor: 'border-l-violet-300' },
+  };
+
   const renderTreeNode = (node: TreeNode, parentKey: string = '') => {
     const key = `${parentKey}||${node.name}`;
     const isExpanded = expandedNodes.has(key);
     const count = node.level === 3 ? node.items.length : node.children.length;
+    const cfg = levelConfig[node.level] || levelConfig[3];
 
     return (
       <div key={key}>
         <div
-          className="flex items-center gap-2 py-1.5 px-3 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-50"
+          className={`flex items-center gap-2 py-2 px-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 border-l-3 ${cfg.borderColor} ${isExpanded ? cfg.bgColor : ''}`}
           style={{ paddingLeft: `${node.level * 20 + 12}px` }}
           onClick={() => toggleNode(key)}
         >
           {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-400 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
-          <span className="font-medium text-[#1e3a5f] truncate">{node.name}</span>
-          {node.owner && <span className="text-gray-400 text-xs ml-1">({node.owner})</span>}
-          <Badge variant="outline" className="text-[10px] px-1 py-0 ml-auto shrink-0">{count}</Badge>
+          <span className={`${cfg.color} shrink-0`}>{cfg.icon}</span>
+          <span className={`font-medium ${cfg.color} truncate`}>{node.name}</span>
+          {node.owner && <span className="text-gray-400 text-xs ml-1 shrink-0">({node.owner})</span>}
+          <span className={`ml-auto shrink-0 text-xs px-2 py-0.5 rounded-full ${cfg.bgColor} ${cfg.color} font-medium`}>{count}</span>
         </div>
         {isExpanded && node.children.map(child => renderTreeNode(child, key))}
         {isExpanded && node.level === 3 && node.items.map(item => (
-          <div key={item.id} className="flex items-center gap-2 py-1 px-3 text-xs text-gray-600 border-b border-gray-50" style={{ paddingLeft: `${4 * 20 + 12}px` }}>
-            <span className="text-gray-400 font-mono">{item.processCode}</span>
-            <span>{item.l4Process}</span>
-            <span className="text-gray-400 ml-1">{item.version}</span>
-            {statusBadge(item.status)}
+          <div key={item.id} className="flex items-center gap-2 py-1.5 px-3 text-xs border-b border-gray-50 border-l-3 border-l-gray-200 bg-white/50" style={{ paddingLeft: `${4 * 20 + 12}px` }}>
+            <FileText className="h-3 w-3 text-gray-400 shrink-0" />
+            <span className="font-mono text-gray-400 shrink-0">{item.processCode}</span>
+            <span className="text-gray-700 truncate">{item.l4Process}</span>
+            <span className="text-gray-400 ml-1 shrink-0">{item.version}</span>
+            <span className="ml-auto flex items-center gap-1.5 shrink-0">
+              {formatBadge(item.format)}
+              {categoryBadge(item.category)}
+              {statusBadge(item.status)}
+            </span>
           </div>
         ))}
       </div>
@@ -434,6 +477,9 @@ export default function FunctionalListPage() {
           </Button>
           <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
             <Download className="h-3.5 w-3.5 mr-1" /> 导出
+          </Button>
+          <Button onClick={() => setInitDialog(true)} variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
+            <RotateCcw className="h-3.5 w-3.5 mr-1" /> 数据初始化
           </Button>
           <Button onClick={handleCreate} size="sm" className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
             <Plus className="h-3.5 w-3.5 mr-1" /> 新增
@@ -467,20 +513,20 @@ export default function FunctionalListPage() {
               <Table className="text-xs">
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
-                    <TableHead className="w-9 text-center sticky left-0 bg-gray-50/80 z-10">序号</TableHead>
-                    <TableHead className="min-w-[80px]">L1业务域</TableHead>
-                    <TableHead className="min-w-[80px]">L2业务组</TableHead>
-                    <TableHead className="min-w-[80px]">L3业务段</TableHead>
-                    <TableHead className="min-w-[100px] font-mono">流程编码</TableHead>
-                    <TableHead className="min-w-[120px]">L4职能流程</TableHead>
-                    <TableHead className="w-12 text-center">版本</TableHead>
-                    <TableHead className="min-w-[50px]">L4所有者</TableHead>
-                    <TableHead className="w-14 text-center">格式</TableHead>
-                    <TableHead className="w-10 text-center">分类</TableHead>
-                    <TableHead className="w-10 text-center">IT覆盖</TableHead>
-                    <TableHead className="w-10 text-center">IT支撑分</TableHead>
-                    <TableHead className="w-14 text-center sticky right-[80px] bg-gray-50/80 z-10">状态</TableHead>
-                    <TableHead className="w-[80px] text-center sticky right-0 bg-gray-50/80 z-10">操作</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky left-0 bg-gray-50/80 z-10">序号</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">L1业务域</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">L2业务组</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">L3业务段</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">流程编码</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">L4职能流程</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">版本</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">L4所有者</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">格式</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">分类</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">IT覆盖</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">IT支撑分</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-[80px] bg-gray-50/80 z-10">状态</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 bg-gray-50/80 z-10">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
