@@ -103,20 +103,22 @@ export function NavMenu() {
               </svg>
             </button>
             {openMenu === item.label && (
-              <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-white py-1 shadow-lg">
-                {item.children!.map((child) => (
-                  <Link
-                    key={child.href}
-                    href={child.href}
-                    className={`block px-4 py-2 text-sm transition-colors ${
-                      isActive(child.href)
-                        ? 'bg-[#1e3a5f]/10 font-medium text-[#1e3a5f]'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                    }`}
-                  >
-                    {child.label}
-                  </Link>
-                ))}
+              <div className="absolute left-0 top-full z-50 pt-2">
+                <div className="w-48 rounded-lg border border-border bg-white py-1 shadow-lg">
+                  {item.children!.map((child) => (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      className={`block px-4 py-2 text-sm transition-colors ${
+                        isActive(child.href)
+                          ? 'bg-[#1e3a5f]/10 font-medium text-[#1e3a5f]'
+                          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                      }`}
+                    >
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
           </div>
