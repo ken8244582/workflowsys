@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -148,6 +148,7 @@ export default function FunctionalListPage() {
   const [showReinitDialog, setShowReinitDialog] = useState(false);
   const [reinitConfirmText, setReinitConfirmText] = useState('');
   const [reinitLoading, setReinitLoading] = useState(false);
+  const [reinitFile, setReinitFile] = useState<File | null>(null);
   const [searchText, setSearchText] = useState('');
 
   // Dialogs
@@ -355,28 +356,23 @@ export default function FunctionalListPage() {
     fetchData();
   };
 
-  const [initDialog, setInitDialog] = useState(false);
-  const [initConfirmText, setInitConfirmText] = useState('');
-  const [initLoading, setInitLoading] = useState(false);
-
   const handleReinitialize = async () => {
-    if (initConfirmText !== '数据初始化') return;
-    setInitLoading(true);
+    if (reinitConfirmText !== '数据初始化') return;
+    if (!reinitFile) { alert('请选择要导入的Excel文件'); return; }
+    setReinitLoading(true);
     try {
       const formData = new FormData();
-      const fileInput = document.getElementById('init-file-input') as HTMLInputElement;
-      if (fileInput?.files?.[0]) {
-        formData.append('file', fileInput.files[0]);
-      }
+      formData.append('file', reinitFile);
       const res = await fetch('/api/flows/reinitialize', { method: 'POST', body: formData });
       if (!res.ok) throw new Error('初始化失败');
-      setInitDialog(false);
-      setInitConfirmText('');
+      setShowReinitDialog(false);
+      setReinitConfirmText('');
+      setReinitFile(null);
       fetchData();
     } catch {
       alert('数据初始化失败，请检查文件格式');
     } finally {
-      setInitLoading(false);
+      setReinitLoading(false);
     }
   };
 
@@ -478,7 +474,7 @@ export default function FunctionalListPage() {
           <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
             <Download className="h-3.5 w-3.5 mr-1" /> 导出
           </Button>
-          <Button onClick={() => setInitDialog(true)} variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
+          <Button onClick={() => setShowReinitDialog(true)} variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
             <RotateCcw className="h-3.5 w-3.5 mr-1" /> 数据初始化
           </Button>
           <Button onClick={handleCreate} size="sm" className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
@@ -803,6 +799,53 @@ export default function FunctionalListPage() {
               disabled={reviseType === 'abolish' ? !reviseReason.trim() : !reviseContent.trim()}
             >
               确认{reviseType === 'abolish' ? '废止' : '升级'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 数据初始化确认对话框 */}
+      <Dialog open={showReinitDialog} onOpenChange={setShowReinitDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              数据初始化
+            </DialogTitle>
+            <DialogDescription className="text-left pt-2">
+              此操作将<strong className="text-red-600">清空所有现有流程清单数据</strong>并重新导入，此操作不可撤销！
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-slate-600 mb-3">请输入 <strong className="text-red-600">数据初始化</strong> 以确认操作：</p>
+            <input
+              type="text"
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+              placeholder="请输入：数据初始化"
+              value={reinitConfirmText}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReinitConfirmText(e.target.value)}
+            />
+          </div>
+          <div className="mb-4">
+            <label className="text-sm text-slate-600 mb-2 block">选择要导入的 Excel 文件：</label>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const file = e.target.files?.[0];
+                if (file) setReinitFile(file);
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowReinitDialog(false); setReinitConfirmText(''); setReinitFile(null); }}>取消</Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              disabled={reinitConfirmText !== '数据初始化' || !reinitFile || reinitLoading}
+              onClick={handleReinitialize}
+            >
+              {reinitLoading ? '初始化中...' : '确认初始化'}
             </Button>
           </DialogFooter>
         </DialogContent>
