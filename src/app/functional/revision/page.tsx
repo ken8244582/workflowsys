@@ -150,8 +150,9 @@ export default function FunctionalRevisionPage() {
     }
   };
 
-  // Options
+  // Options - derived from actual data
   const domainOptions = useMemo(() => [...new Set(allData.map(d => d.l1Domain).filter(Boolean))], [allData]);
+  const typeOptions = useMemo(() => [...new Set(allData.map(d => d.revisionType).filter(Boolean))], [allData]);
 
   // Filtered data
   const filteredData = useMemo(() => {
@@ -227,7 +228,7 @@ export default function FunctionalRevisionPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
             <MultiSelectFilter
               label="修订类型"
-              options={['新增', '修订', '废止', '恢复']}
+              options={typeOptions}
               selected={selectedTypes}
               onChange={setSelectedTypes}
             />

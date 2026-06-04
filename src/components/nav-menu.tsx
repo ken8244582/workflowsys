@@ -17,14 +17,19 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { label: '统计概览', href: '/' },
-  { label: '指标监控', href: '/monitoring' },
+  {
+    label: '指标管理',
+    children: [
+      { label: '职能流程指标清单', href: '/functional/indicators' },
+      { label: '端到端流程指标清单', href: '/e2e/indicators' },
+    ],
+  },
   {
     label: '职能流程',
     children: [
       { label: '职能流程架构', href: '/functional/architecture' },
       { label: '职能流程清单', href: '/functional/list' },
       { label: '职能流程修订记录', href: '/functional/revision' },
-      { label: '职能流程指标清单', href: '/functional/indicators' },
     ],
   },
   {
@@ -32,7 +37,6 @@ const menuItems: MenuItem[] = [
     children: [
       { label: '端到端流程清单', href: '/e2e/list' },
       { label: '端到端流程修订记录', href: '/e2e/revision' },
-      { label: '端到端流程指标清单', href: '/e2e/indicators' },
     ],
   },
 ];

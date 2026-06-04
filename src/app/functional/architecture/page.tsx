@@ -3,7 +3,79 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronRight, ChevronDown, Building2, Layers, GitBranch, FileText, Users } from 'lucide-react';
+import { ChevronRight, ChevronDown, Users } from 'lucide-react';
+
+/* ========== Unified L1-L4 Hierarchy Icons ========== */
+/* Nested rectangle icons showing containment: L1 (outermost) → L4 (innermost) */
+
+function LevelIcon({ level, className }: { level: number; className?: string }) {
+  const colors: Record<number, { stroke: string; fill: string }> = {
+    1: { stroke: '#1e3a5f', fill: '#1e3a5f' },
+    2: { stroke: '#2563eb', fill: '#2563eb' },
+    3: { stroke: '#059669', fill: '#059669' },
+    4: { stroke: '#d97706', fill: '#d97706' },
+  };
+  const c = colors[level] || colors[4];
+
+  if (level === 1) {
+    return (
+      <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="14" height="14" rx="2.5" stroke={c.stroke} strokeWidth="1.5" fill={c.fill + '10'} />
+        <rect x="4" y="4" width="8" height="8" rx="1.5" stroke={c.stroke} strokeWidth="1" strokeDasharray="2 1" fill="none" />
+      </svg>
+    );
+  }
+  if (level === 2) {
+    return (
+      <svg className={className} width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <rect x="0.5" y="0.5" width="14" height="14" rx="2" stroke={c.stroke} strokeWidth="1.2" strokeDasharray="3 1.5" fill="none" />
+        <rect x="3.5" y="3.5" width="8" height="8" rx="1.5" stroke={c.stroke} strokeWidth="1.2" fill={c.fill + '12'} />
+        <rect x="5.5" y="5.5" width="4" height="4" rx="1" stroke={c.stroke} strokeWidth="0.8" strokeDasharray="1.5 1" fill="none" />
+      </svg>
+    );
+  }
+  if (level === 3) {
+    return (
+      <svg className={className} width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="0.5" y="0.5" width="13" height="13" rx="2" stroke={c.stroke} strokeWidth="1" strokeDasharray="2.5 1.5" fill="none" />
+        <rect x="3" y="3" width="8" height="8" rx="1.5" stroke={c.stroke} strokeWidth="1" strokeDasharray="1.5 1" fill="none" />
+        <rect x="5" y="5" width="4" height="4" rx="1" stroke={c.stroke} strokeWidth="1" fill={c.fill + '15'} />
+      </svg>
+    );
+  }
+  // L4 - innermost solid filled dot/document
+  return (
+    <svg className={className} width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <rect x="0.5" y="0.5" width="12" height="12" rx="2" stroke={c.stroke} strokeWidth="0.8" strokeDasharray="2 1" fill="none" />
+      <rect x="2.5" y="2.5" width="8" height="8" rx="1.5" stroke={c.stroke} strokeWidth="0.8" strokeDasharray="1.5 1" fill="none" />
+      <rect x="4.5" y="4.5" width="4" height="4" rx="1" stroke={c.stroke} strokeWidth="0.8" strokeDasharray="1 0.5" fill="none" />
+      <circle cx="6.5" cy="6.5" r="1.2" fill={c.fill} />
+    </svg>
+  );
+}
+
+/* Large level icon for stat cards */
+function LevelIconLarge({ level }: { level: number }) {
+  const colors: Record<number, { stroke: string; fill: string; label: string }> = {
+    1: { stroke: '#1e3a5f', fill: '#1e3a5f', label: 'L1' },
+    2: { stroke: '#2563eb', fill: '#2563eb', label: 'L2' },
+    3: { stroke: '#059669', fill: '#059669', label: 'L3' },
+    4: { stroke: '#d97706', fill: '#d97706', label: 'L4' },
+  };
+  const c = colors[level];
+
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      {level >= 1 && <rect x="1" y="1" width="18" height="18" rx="3" stroke={c.stroke} strokeWidth="1.5" fill={c.fill + '08'} />}
+      {level >= 2 && <rect x="4" y="4" width="12" height="12" rx="2" stroke={c.stroke} strokeWidth="1.2" strokeDasharray="3 1.5" fill={c.fill + '0a'} />}
+      {level >= 3 && <rect x="7" y="7" width="6" height="6" rx="1.5" stroke={c.stroke} strokeWidth="1" strokeDasharray="2 1" fill={c.fill + '0d'} />}
+      {level >= 4 && <circle cx="10" cy="10" r="1.8" fill={c.fill} />}
+      <text x="10" y="10" textAnchor="middle" dominantBaseline="central" fontSize="6" fontWeight="bold" fill={c.fill} opacity="0">
+        {c.label}
+      </text>
+    </svg>
+  );
+}
 
 interface FlowItem {
   id: number;
@@ -120,15 +192,15 @@ export default function ArchitecturePage() {
       {/* Overview Cards */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'L1 业务域', value: hierarchy.length, icon: Building2, color: '#1e3a5f' },
-          { label: 'L2 业务组', value: totalL2, icon: Layers, color: '#2563eb' },
-          { label: 'L3 业务段', value: totalL3, icon: GitBranch, color: '#059669' },
-          { label: 'L4 职能流程', value: totalL4, icon: FileText, color: '#d97706' },
+          { label: 'L1 业务域', value: hierarchy.length, level: 1, color: '#1e3a5f' },
+          { label: 'L2 业务组', value: totalL2, level: 2, color: '#2563eb' },
+          { label: 'L3 业务段', value: totalL3, level: 3, color: '#059669' },
+          { label: 'L4 职能流程', value: totalL4, level: 4, color: '#d97706' },
         ].map(card => (
           <Card key={card.label} className="border-l-4" style={{ borderLeftColor: card.color }}>
             <CardContent className="pt-4 pb-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: card.color + '15' }}>
-                <card.icon className="h-5 w-5" style={{ color: card.color }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: card.color + '12' }}>
+                <LevelIconLarge level={card.level} />
               </div>
               <div>
                 <div className="text-2xl font-bold tabular-nums" style={{ color: card.color }}>{card.value}</div>
@@ -143,7 +215,7 @@ export default function ArchitecturePage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <GitBranch className="h-4 w-4 text-[#1e3a5f]" /> 流程架构层级
+            <LevelIcon level={1} className="shrink-0" /> 流程架构层级
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -159,7 +231,7 @@ export default function ArchitecturePage() {
                     onClick={() => toggleL1(l1.name)}
                   >
                     {l1Open ? <ChevronDown className="h-4 w-4 text-[#1e3a5f]" /> : <ChevronRight className="h-4 w-4 text-[#1e3a5f]" />}
-                    <Building2 className="h-4 w-4 text-[#1e3a5f]" />
+                    <LevelIcon level={1} className="shrink-0" />
                     <span className="font-semibold text-sm text-[#1e3a5f]">{l1.name}</span>
                     <span className="text-xs text-gray-400 ml-1">{l1.l2Groups.length}个业务组 · {l1L4Count}个流程</span>
                     {l1.owner && <span className="ml-auto text-xs text-gray-500 flex items-center gap-1"><Users className="h-3 w-3" />{l1.owner}</span>}
@@ -177,7 +249,7 @@ export default function ArchitecturePage() {
                           onClick={() => toggleL2(l2Key)}
                         >
                           {l2Open ? <ChevronDown className="h-3.5 w-3.5 text-blue-600" /> : <ChevronRight className="h-3.5 w-3.5 text-blue-600" />}
-                          <Layers className="h-3.5 w-3.5 text-blue-600" />
+                          <LevelIcon level={2} className="shrink-0" />
                           <span className="font-medium text-sm text-blue-800">{l2.name}</span>
                           <span className="text-xs text-gray-400">{l2.l3Segments.length}个业务段 · {l2L4Count}个流程</span>
                           {l2.owner && <span className="ml-auto text-xs text-gray-500">{l2.owner}</span>}
@@ -194,7 +266,7 @@ export default function ArchitecturePage() {
                                 onClick={() => toggleL3(l3Key)}
                               >
                                 {l3Open ? <ChevronDown className="h-3 w-3 text-green-600" /> : <ChevronRight className="h-3 w-3 text-green-600" />}
-                                <GitBranch className="h-3 w-3 text-green-600" />
+                                <LevelIcon level={3} className="shrink-0" />
                                 <span className="text-sm text-green-800">{l3.name}</span>
                                 <span className="text-xs text-gray-400">{l3.l4Processes.length}个流程</span>
                                 {l3.owner && <span className="ml-auto text-xs text-gray-500">{l3.owner}</span>}
@@ -205,7 +277,7 @@ export default function ArchitecturePage() {
                                 <div className="ml-4 py-1">
                                   {l3.l4Processes.map((p, pi) => (
                                     <div key={pi} className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-md hover:bg-gray-50 ${statusColor(p.status)}`}>
-                                      <FileText className="h-3 w-3 text-gray-400 shrink-0" />
+                                      <LevelIcon level={4} className="shrink-0" />
                                       <span className="font-mono text-gray-400 shrink-0">{p.code}</span>
                                       <span className={`${p.status === '已废止' ? 'line-through' : 'font-medium'} truncate`}>{p.name}</span>
                                       <span className="text-gray-400 shrink-0">v{p.version}</span>
@@ -235,7 +307,7 @@ export default function ArchitecturePage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-[#1e3a5f]" /> 业务域详细统计
+            <LevelIconLarge level={1} /> 业务域详细统计
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">

@@ -10,8 +10,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Download, Upload, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, ChevronUp, RotateCcw, Building2, Layers, GitBranch, FileText, AlertTriangle } from 'lucide-react';
+import { Search, Download, Upload, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, ChevronUp, RotateCcw, AlertTriangle } from 'lucide-react';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
+
+/* ========== Unified L1-L4 Hierarchy Icons ========== */
+function LevelIcon({ level, className }: { level: number; className?: string }) {
+  const colors: Record<number, { stroke: string; fill: string }> = {
+    1: { stroke: '#1e3a5f', fill: '#1e3a5f' },
+    2: { stroke: '#2563eb', fill: '#2563eb' },
+    3: { stroke: '#059669', fill: '#059669' },
+    4: { stroke: '#d97706', fill: '#d97706' },
+  };
+  const c = colors[level] || colors[4];
+  if (level === 1) {
+    return (<svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2.5" stroke={c.stroke} strokeWidth="1.5" fill={c.fill + '10'} /><rect x="4" y="4" width="8" height="8" rx="1.5" stroke={c.stroke} strokeWidth="1" strokeDasharray="2 1" fill="none" /></svg>);
+  }
+  if (level === 2) {
+    return (<svg className={className} width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="0.5" y="0.5" width="14" height="14" rx="2" stroke={c.stroke} strokeWidth="1.2" strokeDasharray="3 1.5" fill="none" /><rect x="3.5" y="3.5" width="8" height="8" rx="1.5" stroke={c.stroke} strokeWidth="1.2" fill={c.fill + '12'} /><rect x="5.5" y="5.5" width="4" height="4" rx="1" stroke={c.stroke} strokeWidth="0.8" strokeDasharray="1.5 1" fill="none" /></svg>);
+  }
+  if (level === 3) {
+    return (<svg className={className} width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="0.5" y="0.5" width="13" height="13" rx="2" stroke={c.stroke} strokeWidth="1" strokeDasharray="2.5 1.5" fill="none" /><rect x="3" y="3" width="8" height="8" rx="1.5" stroke={c.stroke} strokeWidth="1" strokeDasharray="1.5 1" fill="none" /><rect x="5" y="5" width="4" height="4" rx="1" stroke={c.stroke} strokeWidth="1" fill={c.fill + '15'} /></svg>);
+  }
+  return (<svg className={className} width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="12" rx="2" stroke={c.stroke} strokeWidth="0.8" strokeDasharray="2 1" fill="none" /><rect x="2.5" y="2.5" width="8" height="8" rx="1.5" stroke={c.stroke} strokeWidth="0.8" strokeDasharray="1.5 1" fill="none" /><rect x="4.5" y="4.5" width="4" height="4" rx="1" stroke={c.stroke} strokeWidth="0.8" strokeDasharray="1 0.5" fill="none" /><circle cx="6.5" cy="6.5" r="1.2" fill={c.fill} /></svg>);
+}
 
 interface FlowItem {
   id: number;
@@ -178,7 +199,7 @@ export default function FunctionalListPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Filter options
+  // Filter options - all derived from actual data
   const l1Options = useMemo(() => [...new Set(allData.map(d => d.l1Domain).filter(Boolean))].sort(), [allData]);
   const l2Options = useMemo(() => {
     let base = allData;
@@ -191,6 +212,9 @@ export default function FunctionalListPage() {
     if (selectedL2.length > 0) base = base.filter(d => selectedL2.includes(d.l2Group));
     return [...new Set(base.map(d => d.l3Segment).filter(Boolean))].sort();
   }, [allData, selectedL1, selectedL2]);
+  const categoryOptions = useMemo(() => [...new Set(allData.map(d => d.category).filter(Boolean))].sort(), [allData]);
+  const formatOptions = useMemo(() => [...new Set(allData.map(d => d.format).filter(Boolean))].sort(), [allData]);
+  const itOptions = useMemo(() => [...new Set(allData.map(d => d.itCoverage).filter(Boolean))].sort(), [allData]);
 
   // Filtered data
   const filteredData = useMemo(() => {
@@ -408,9 +432,9 @@ export default function FunctionalListPage() {
   };
 
   const levelConfig: Record<number, { icon: React.ReactNode; color: string; bgColor: string; borderColor: string }> = {
-    1: { icon: <Building2 className="h-4 w-4" />, color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-l-blue-400' },
-    2: { icon: <Layers className="h-3.5 w-3.5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-50', borderColor: 'border-l-indigo-300' },
-    3: { icon: <GitBranch className="h-3.5 w-3.5" />, color: 'text-violet-600', bgColor: 'bg-violet-50', borderColor: 'border-l-violet-300' },
+    1: { icon: <LevelIcon level={1} className="shrink-0" />, color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-l-blue-400' },
+    2: { icon: <LevelIcon level={2} className="shrink-0" />, color: 'text-indigo-600', bgColor: 'bg-indigo-50', borderColor: 'border-l-indigo-300' },
+    3: { icon: <LevelIcon level={3} className="shrink-0" />, color: 'text-violet-600', bgColor: 'bg-violet-50', borderColor: 'border-l-violet-300' },
   };
 
   const renderTreeNode = (node: TreeNode, parentKey: string = '') => {
@@ -435,7 +459,7 @@ export default function FunctionalListPage() {
         {isExpanded && node.children.map(child => renderTreeNode(child, key))}
         {isExpanded && node.level === 3 && node.items.map(item => (
           <div key={item.id} className="flex items-center gap-2 py-1.5 px-3 text-xs border-b border-gray-50 border-l-3 border-l-gray-200 bg-white/50" style={{ paddingLeft: `${4 * 20 + 12}px` }}>
-            <FileText className="h-3 w-3 text-gray-400 shrink-0" />
+            <LevelIcon level={4} className="shrink-0" />
             <span className="font-mono text-gray-400 shrink-0">{item.processCode}</span>
             <span className="text-gray-700 truncate">{item.l4Process}</span>
             <span className="text-gray-400 ml-1 shrink-0">{item.version}</span>
@@ -490,9 +514,9 @@ export default function FunctionalListPage() {
             <MultiSelectFilter label="L1业务域" options={l1Options} selected={selectedL1} onChange={v => { setSelectedL1(v); setSelectedL2([]); setSelectedL3([]); }} />
             <MultiSelectFilter label="L2业务组" options={l2Options} selected={selectedL2} onChange={v => { setSelectedL2(v); setSelectedL3([]); }} />
             <MultiSelectFilter label="L3业务段" options={l3Options} selected={selectedL3} onChange={setSelectedL3} />
-            <MultiSelectFilter label="分类" options={['流程','办法','其它']} selected={selectedCategory} onChange={setSelectedCategory} />
-            <MultiSelectFilter label="格式" options={['集团模板','旧格式']} selected={selectedFormat} onChange={setSelectedFormat} />
-            <MultiSelectFilter label="IT覆盖" options={['是','否']} selected={selectedIt} onChange={setSelectedIt} />
+            <MultiSelectFilter label="分类" options={categoryOptions} selected={selectedCategory} onChange={setSelectedCategory} />
+            <MultiSelectFilter label="格式" options={formatOptions} selected={selectedFormat} onChange={setSelectedFormat} />
+            <MultiSelectFilter label="IT覆盖" options={itOptions} selected={selectedIt} onChange={setSelectedIt} />
             <div className="relative">
               <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
               <Input placeholder="搜索流程名/编码/所有者" value={searchText} onChange={e => setSearchText(e.target.value)} className="h-7 text-xs pl-7" />
