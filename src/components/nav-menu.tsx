@@ -35,8 +35,9 @@ const menuItems: MenuItem[] = [
   {
     label: '端到端流程',
     children: [
-      { label: '端到端流程清单', href: '/e2e/list' },
-      { label: '端到端流程修订记录', href: '/e2e/revision' },
+      { label: '流程概览', href: '/e2e/overview' },
+      { label: '流程管理', href: '/e2e/list' },
+      { label: '梳理计划', href: '/e2e/plan' },
     ],
   },
 ];

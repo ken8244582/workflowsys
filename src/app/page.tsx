@@ -11,26 +11,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 const CHART_COLORS = ['#1e3a5f', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b', '#06b6d4', '#84cc16', '#f43f5e', '#a855f7', '#14b8a6', '#e11d48', '#7c3aed', '#0ea5e9', '#d946ef'];
 
-// --- 端到端流程模拟数据 ---
-interface E2EProcess {
+// --- 端到端流程数据（从API加载） ---
+interface E2EProcessData {
+  id: string;
   name: string;
+  owner: string;
   department: string;
-  current: number;
-  plan?: number;
-  target: number;
-  change: number;
+  responsiblePerson: string;
+  currentProgress: number;
+  targetProgress: number;
+  status: string;
 }
-
-const E2E_DATA: E2EProcess[] = [
-  { name: '投资需求到资产处置', department: '工艺部', current: 80, target: 75, change: 10 },
-  { name: '线索到回款', department: '品牌与发展部', current: 80, target: 75, change: 10 },
-  { name: '问题到解决', department: '质量部', current: 70, plan: 5, target: 75, change: 5 },
-  { name: '计划到交付', department: '制造部', current: 70, plan: 5, target: 75, change: 10 },
-  { name: '采购到付款', department: '采购管理部', current: 70, plan: 5, target: 70, change: 20 },
-  { name: '产品需求到发布', department: '产品规划部', current: 70, target: 70, change: 45 },
-  { name: '市场到线索', department: '品牌与发展部', current: 70, target: 50, change: 60 },
-  { name: '战略到落地', department: '产品规划部', current: 70, target: 50, change: 60 },
-];
 
 // --- Section 标题组件 ---
 function SectionTitle({ number, title }: { number: string; title: string }) {
@@ -228,19 +219,20 @@ function L1Table({ data }: { data: L1Stat[] }) {
 // Section 2: 端到端流程工作
 // =============================================
 
-function E2EProgressChart() {
-  const chartData = E2E_DATA.map((d) => ({
-    name: d.name,
-    current: d.current,
-    target: d.target,
-    plan: d.plan || 0,
-  }));
+function E2EProgressChart({ data }: { data: E2EProcessData[] }) {
+  const chartData = data
+    .sort((a, b) => b.currentProgress - a.currentProgress)
+    .map((d) => ({
+      name: d.name,
+      current: d.currentProgress,
+      target: d.targetProgress,
+    }));
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">端到端流程贯通进度</CardTitle>
-        <CardDescription>当前完成值（蓝色条）vs 目标值（虚线），黄色标记为计划值</CardDescription>
+        <CardDescription>当前完成值（蓝色条）vs 目标值（虚线）</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={380}>
@@ -262,7 +254,8 @@ function E2EProgressChart() {
   );
 }
 
-function E2EDetailTable() {
+function E2EDetailTable({ data }: { data: E2EProcessData[] }) {
+  const sortedData = [...data].sort((a, b) => b.currentProgress - a.currentProgress);
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -276,61 +269,34 @@ function E2EDetailTable() {
               <th className="whitespace-nowrap px-2 py-1.5 font-medium text-muted-foreground">负责部门</th>
               <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium text-muted-foreground">当前完成</th>
               <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium text-muted-foreground">目标值</th>
-              <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium text-muted-foreground">计划值</th>
-              <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium text-muted-foreground">同比上月</th>
+              <th className="whitespace-nowrap px-2 py-1.5 font-medium text-muted-foreground">状态</th>
               <th className="whitespace-nowrap px-2 py-1.5 font-medium text-muted-foreground">进度条</th>
             </tr>
           </thead>
           <tbody>
-            {E2E_DATA.map((row) => (
-              <tr key={row.name} className="border-b last:border-0 hover:bg-muted/50">
-                <td className="whitespace-nowrap px-2 py-1.5 font-medium">{row.name}</td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-muted-foreground">{row.department}</td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums font-semibold">{row.current}%</td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">{row.target}%</td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">{row.plan ? `${row.plan}%` : '-'}</td>
-                <td className="whitespace-nowrap px-2 py-1.5 text-right">
-                  <span className="font-medium text-[#dc2626]">↑ {row.change}%</span>
-                </td>
-                <td className="whitespace-nowrap px-2 py-1.5" style={{ minWidth: 160 }}>
-                  <div className="relative h-4 w-full rounded-full bg-muted">
-                    <div className="absolute inset-y-0 left-0 rounded-full bg-[#1e3a5f]" style={{ width: `${row.current}%` }} />
-                    <div className="absolute inset-y-0 border-l-2 border-dashed border-[#1e3a5f]/50" style={{ left: `${row.target}%` }} />
-                    {row.plan && (
-                      <div className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-[#f59e0b]" style={{ left: `${row.current + row.plan}%` }} />
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {sortedData.map((row) => {
+              const statusLabel = row.status === 'completed' ? '已完成' : row.status === 'in_progress' ? '进行中' : '未开始';
+              const statusColor = row.status === 'completed' ? 'text-[#10b981]' : row.status === 'in_progress' ? 'text-[#3b82f6]' : 'text-[#94a3b8]';
+              return (
+                <tr key={row.id} className="border-b last:border-0 hover:bg-muted/50">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-medium">{row.name}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-muted-foreground">{row.department}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums font-semibold">{row.currentProgress}%</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">{row.targetProgress}%</td>
+                  <td className="whitespace-nowrap px-2 py-1.5">
+                    <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-1.5" style={{ minWidth: 160 }}>
+                    <div className="relative h-4 w-full rounded-full bg-muted">
+                      <div className="absolute inset-y-0 left-0 rounded-full bg-[#1e3a5f]" style={{ width: `${row.currentProgress}%` }} />
+                      <div className="absolute inset-y-0 border-l-2 border-dashed border-[#f59e0b]" style={{ left: `${row.targetProgress}%` }} />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function E2EWorkNotes() {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="rounded-md bg-muted/40 p-3 text-xs leading-relaxed">
-          <p className="font-medium text-foreground">5月份端到端流程梳理工作情况及目标：</p>
-          <ul className="mt-1.5 space-y-1 text-muted-foreground">
-            <li className="flex items-start gap-1.5">
-              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#10b981]" />
-              <span><span className="text-foreground">已完成：</span>投资需求到资产处置、线索到回款已走流程制度会发布流程。</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#dc2626]" />
-              <span><span className="text-foreground">待完成：</span>问题到解决、计划到交付、采购到付款、产品需求到发布、战略到落地 <span className="font-medium text-[#dc2626]">5月31号前</span> 需完成评审发布。</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f59e0b]" />
-              <span><span className="text-foreground">考核要求：</span>以上工作未按时完成将进行考核。</span>
-            </li>
-          </ul>
-        </div>
       </CardContent>
     </Card>
   );
@@ -464,16 +430,19 @@ function PlaceholderChart({ title, description }: { title: string; description: 
 export default function DashboardPage() {
   const [stats, setStats] = useState<OverviewStats | null>(null);
   const [revisionData, setRevisionData] = useState<RevisionItem[]>([]);
+  const [e2eData, setE2eData] = useState<E2EProcessData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch('/flow-data.json').then((res) => res.json()),
       fetch('/revision-plan.json').then((res) => res.json()),
+      fetch('/api/e2e/processes').then((res) => res.json()).catch(() => []),
     ])
-      .then(([flowData, revData]) => {
+      .then(([flowData, revData, e2eProcData]) => {
         setStats(computeStats(flowData as FlowItem[]));
         setRevisionData(revData as RevisionItem[]);
+        setE2eData(Array.isArray(e2eProcData) ? e2eProcData : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -501,9 +470,9 @@ export default function DashboardPage() {
     ? ((stats.itYesCount / stats.l4ProcessCount) * 100).toFixed(1)
     : '0';
 
-  const avgE2ERate = Math.round(E2E_DATA.reduce((s, d) => s + d.current, 0) / E2E_DATA.length);
-  const completedE2E = E2E_DATA.filter(d => d.current >= d.target).length;
-  const maxChangeE2E = E2E_DATA.reduce((max, d) => d.change > max.change ? d : max, E2E_DATA[0]);
+  const avgE2ERate = e2eData.length > 0 ? Math.round(e2eData.reduce((s, d) => s + d.currentProgress, 0) / e2eData.length) : 0;
+  const completedE2E = e2eData.filter(d => d.currentProgress >= d.targetProgress).length;
+  const maxProgressE2E = e2eData.length > 0 ? e2eData.reduce((max, d) => d.currentProgress > max.currentProgress ? d : max, e2eData[0]) : null;
 
   return (
     <div className="space-y-2">
@@ -541,15 +510,24 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard title="端到端流程总数" value={E2E_DATA.length} accent />
+        <StatCard title="端到端流程总数" value={e2eData.length} accent />
         <StatCard title="平均贯通率" value={`${avgE2ERate}%`} accent />
-        <StatCard title="已达目标数" value={completedE2E} subtitle={`共 ${E2E_DATA.length} 条`} />
-        <StatCard title="同比提升最大" value={`${maxChangeE2E.change}%`} subtitle={maxChangeE2E.name} />
+        <StatCard title="已达目标数" value={completedE2E} subtitle={`共 ${e2eData.length} 条`} />
+        <StatCard title="进度最高" value={maxProgressE2E ? `${maxProgressE2E.currentProgress}%` : '--'} subtitle={maxProgressE2E?.name} />
       </div>
 
-      <E2EProgressChart />
-      <E2EDetailTable />
-      <E2EWorkNotes />
+      {e2eData.length > 0 ? (
+        <>
+          <E2EProgressChart data={e2eData} />
+          <E2EDetailTable data={e2eData} />
+        </>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="flex h-48 items-center justify-center">
+            <p className="text-sm text-muted-foreground">暂无端到端流程数据</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ============================================ */}
       {/* Section 3: 流程治理运营工作 */}
@@ -583,10 +561,10 @@ export default function DashboardPage() {
 
       {/* Footer */}
       <div className="flex items-center justify-between border-t pt-4 text-xs text-muted-foreground">
-        <span>数据来源：L1-L4流程文件清单20260515 / 流程修订计划表</span>
+        <span>数据来源：L1-L4流程文件清单20260515 / 流程修订计划表 / 端到端流程管理</span>
         <div className="flex items-center gap-4">
           <Link href="/flows" className="text-[#1e3a5f] hover:underline">查看完整流程清单 →</Link>
-          <Link href="/revision" className="text-[#1e3a5f] hover:underline">查看修订计划 →</Link>
+          <Link href="/e2e/overview" className="text-[#1e3a5f] hover:underline">端到端流程概览 →</Link>
         </div>
       </div>
     </div>
