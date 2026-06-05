@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, ClipboardList, CheckCircle2, Clock, Plus, ArrowRight, ChevronRight, BarChart3, Target, TrendingUp, Trash2, Undo2 } from 'lucide-react';
+import { Calendar, ClipboardList, CheckCircle2, Clock, Plus, ArrowRight, ChevronRight, BarChart3, Target, TrendingUp } from 'lucide-react';
 import type { RevisionPlan, DepartmentProgress } from '@/lib/flow-data';
 
 interface PlanWithProgress extends RevisionPlan {
@@ -23,15 +23,6 @@ export default function RevisionPlanPage() {
   const [newPlanMonth, setNewPlanMonth] = useState('');
   const [newPlanName, setNewPlanName] = useState('');
   const [creating, setCreating] = useState(false);
-
-  // Delete/Withdraw dialog state
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    type: 'delete' | 'withdraw';
-    plan: PlanWithProgress | null;
-    confirmText: string;
-    inputText: string;
-  }>({ open: false, type: 'delete', plan: null, confirmText: '', inputText: '' });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -88,44 +79,6 @@ export default function RevisionPlanPage() {
     } finally {
       setCreating(false);
     }
-  };
-
-  const handleDeletePlan = async () => {
-    if (!confirmDialog.plan || confirmDialog.inputText !== confirmDialog.confirmText) return;
-    try {
-      await fetch(`/api/revision-plans/${confirmDialog.plan.id}`, { method: 'DELETE' });
-      setConfirmDialog({ open: false, type: 'delete', plan: null, confirmText: '', inputText: '' });
-      fetchData();
-    } catch (err) {
-      console.error('Failed to delete plan:', err);
-    }
-  };
-
-  const handleWithdrawPlan = async () => {
-    if (!confirmDialog.plan || confirmDialog.inputText !== confirmDialog.confirmText) return;
-    try {
-      await fetch(`/api/revision-plans/${confirmDialog.plan.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _action: 'revoke' }),
-      });
-      setConfirmDialog({ open: false, type: 'withdraw', plan: null, confirmText: '', inputText: '' });
-      fetchData();
-    } catch (err) {
-      console.error('Failed to withdraw plan:', err);
-    }
-  };
-
-  const openDeleteDialog = (plan: PlanWithProgress, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setConfirmDialog({ open: true, type: 'delete', plan, confirmText: '删除', inputText: '' });
-  };
-
-  const openWithdrawDialog = (plan: PlanWithProgress, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setConfirmDialog({ open: true, type: 'withdraw', plan, confirmText: '撤回', inputText: '' });
   };
 
   const statusColor = (status: string) => {
@@ -263,15 +216,16 @@ export default function RevisionPlanPage() {
           ) : (
             <div className="space-y-2">
               {plans.map((plan) => (
-                <div
+                <Link
                   key={plan.id}
+                  href={`/functional/plan/${plan.id}`}
                   className="block border rounded-lg p-4 hover:shadow-md hover:border-[#1e3a5f]/30 transition-all group"
                 >
                   <div className="flex items-center justify-between">
-                    <Link href={`/functional/plan/${plan.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-[#1e3a5f] truncate">{plan.planName}</div>
-                      <Badge className={`text-[10px] px-1.5 py-0 shrink-0 ${statusColor(plan.status)}`}>{plan.status}</Badge>
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <div className="text-sm font-semibold text-[#1e3a5f]">{plan.planName}</div>
+                      <Badge className={`text-[10px] px-1.5 py-0 ${statusColor(plan.status)}`}>{plan.status}</Badge>
+                    </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>任务 <strong className="text-foreground">{plan.taskCount}</strong></span>
                       <span>已完成 <strong className="text-emerald-600">{plan.completedCount}</strong></span>
@@ -280,35 +234,10 @@ export default function RevisionPlanPage() {
                           {Math.round(plan.completedCount / plan.taskCount * 100)}%
                         </strong></span>
                       )}
-                      {/* Action buttons based on status */}
-                      {plan.status === '草稿' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={(e) => openDeleteDialog(plan, e)}
-                          title="删除计划"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      {plan.status === '已下发' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                          onClick={(e) => openWithdrawDialog(plan, e)}
-                          title="撤回计划"
-                        >
-                          <Undo2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      <Link href={`/functional/plan/${plan.id}`}>
-                        <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-[#1e3a5f]" />
-                      </Link>
+                      <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-[#1e3a5f]" />
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -349,45 +278,6 @@ export default function RevisionPlanPage() {
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>取消</Button>
             <Button onClick={handleCreatePlan} disabled={!newPlanMonth || creating} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
               {creating ? '创建中...' : '创建'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirm Delete/Withdraw Dialog */}
-      <Dialog open={confirmDialog.open} onOpenChange={(open) => {
-        if (!open) setConfirmDialog({ ...confirmDialog, open: false, inputText: '' });
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{confirmDialog.type === 'delete' ? '删除计划' : '撤回计划'}</DialogTitle>
-            <DialogDescription>
-              {confirmDialog.type === 'delete'
-                ? `确定要删除「${confirmDialog.plan?.planName}」吗？删除后该计划及其所有任务将被永久删除，无法恢复。`
-                : `确定要撤回「${confirmDialog.plan?.planName}」吗？撤回后计划将变回草稿状态，可重新编辑。`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-2">
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700 mb-3">
-              {confirmDialog.type === 'delete'
-                ? '此操作不可恢复，请输入"删除"确认操作'
-                : '撤回后计划中的已完成任务状态将保留，请输入"撤回"确认操作'}
-            </div>
-            <Input
-              value={confirmDialog.inputText}
-              onChange={(e) => setConfirmDialog({ ...confirmDialog, inputText: e.target.value })}
-              placeholder={`请输入"${confirmDialog.confirmText}"确认`}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialog({ ...confirmDialog, open: false, inputText: '' })}>取消</Button>
-            <Button
-              variant={confirmDialog.type === 'delete' ? 'destructive' : 'default'}
-              className={confirmDialog.type === 'withdraw' ? 'bg-amber-600 hover:bg-amber-700' : ''}
-              disabled={confirmDialog.inputText !== confirmDialog.confirmText}
-              onClick={confirmDialog.type === 'delete' ? handleDeletePlan : handleWithdrawPlan}
-            >
-              {confirmDialog.type === 'delete' ? '确认删除' : '确认撤回'}
             </Button>
           </DialogFooter>
         </DialogContent>

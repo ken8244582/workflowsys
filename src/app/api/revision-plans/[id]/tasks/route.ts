@@ -1,46 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
-
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
+import { getDb, mapPlanTaskRow } from '@/lib/db';
 
 // GET /api/revision-plans/[id]/tasks - List tasks for a plan
-export async function GET(request: NextRequest, context: RouteContext) {
-  const { id } = await context.params;
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
   const db = getDb();
-  const numId = parseInt(id);
-  const { searchParams } = new URL(request.url);
+  const planId = parseInt(id);
 
-  const department = searchParams.get('department');
-  const taskType = searchParams.get('taskType');
-  const status = searchParams.get('status');
-  const search = searchParams.get('search');
-  const page = parseInt(searchParams.get('page') || '1');
-  const pageSize = parseInt(searchParams.get('pageSize') || '50');
-
-  let where = 'WHERE plan_id = ?';
-  const params: (string | number)[] = [numId];
-
-  if (department) { where += ' AND department = ?'; params.push(department); }
-  if (taskType) { where += ' AND task_type = ?'; params.push(taskType); }
-  if (status) { where += ' AND status = ?'; params.push(status); }
-  if (search) {
-    where += ' AND (process_name LIKE ? OR process_code LIKE ? OR description LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  const plan = db.prepare('SELECT id FROM revision_plans WHERE id = ?').get(planId);
+  if (!plan) {
+    return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
   }
 
-  const total = db.prepare(`SELECT COUNT(*) as cnt FROM plan_tasks ${where}`).get(...params) as Record<string, unknown>;
-  const totalPages = Math.ceil((total.cnt as number) / pageSize);
+  const { searchParams } = new URL(request.url);
+  const conditions: string[] = ['plan_id = ?'];
+  const paramsList: unknown[] = [planId];
+
+  const department = searchParams.get('department');
+  if (department) { conditions.push('department = ?'); paramsList.push(department); }
+
+  const taskType = searchParams.get('taskType');
+  if (taskType) { conditions.push('task_type = ?'); paramsList.push(taskType); }
+
+  const status = searchParams.get('status');
+  if (status) { conditions.push('status = ?'); paramsList.push(status); }
+
+  const search = searchParams.get('search');
+  if (search) {
+    conditions.push('(process_name LIKE ? OR process_code LIKE ? OR description LIKE ?)');
+    const s = `%${search}%`;
+    paramsList.push(s, s, s);
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+  // Count
+  const countRow = db.prepare(`SELECT COUNT(*) as cnt FROM plan_tasks ${whereClause}`).get(...paramsList) as { cnt: number };
+  const total = countRow.cnt;
+
+  // Pagination
+  const page = parseInt(searchParams.get('page') || '1');
+  const pageSize = parseInt(searchParams.get('pageSize') || '50');
+  const totalPages = Math.ceil(total / pageSize);
   const offset = (page - 1) * pageSize;
 
-  const items = db.prepare(
-    `SELECT * FROM plan_tasks ${where} ORDER BY sort_order ASC, id ASC LIMIT ? OFFSET ?`
-  ).all(...params, pageSize, offset);
+  const rows = db.prepare(
+    `SELECT * FROM plan_tasks ${whereClause} ORDER BY sort_order ASC, id ASC LIMIT ? OFFSET ?`
+  ).all(...paramsList, pageSize, offset) as Record<string, unknown>[];
 
   return NextResponse.json({
-    items,
-    total: total.cnt,
+    items: rows.map(mapPlanTaskRow),
+    total,
     page,
     pageSize,
     totalPages,
@@ -48,74 +61,62 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 // POST /api/revision-plans/[id]/tasks - Add tasks to a plan
-export async function POST(request: NextRequest, context: RouteContext) {
-  const { id } = await context.params;
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
   const db = getDb();
-  const numId = parseInt(id);
-  const body = await request.json();
+  const planId = parseInt(id);
 
-  const plan = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown> | undefined;
+  const plan = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(planId) as Record<string, unknown> | undefined;
   if (!plan) {
-    return NextResponse.json({ error: '计划不存在' }, { status: 404 });
+    return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
   }
 
-  const tasks = body.tasks as Array<{
-    flowItemId: number | null;
-    processCode: string;
-    processName: string;
-    department: string;
-    l2Group: string;
-    l3Segment: string;
-    version: string;
-    format: string;
-    category: string;
-    itCoverage: string;
-    itScore: number;
-    flowStatus: string;
-    taskType: string;
-    description: string;
-  }>;
-
-  if (!tasks || !tasks.length) {
-    return NextResponse.json({ error: 'tasks is required' }, { status: 400 });
+  if (plan.status === '已归档') {
+    return NextResponse.json({ error: '已归档的计划不能添加任务' }, { status: 400 });
   }
 
-  const maxSort = db.prepare('SELECT MAX(sort_order) as maxSort FROM plan_tasks WHERE plan_id = ?').get(numId) as Record<string, unknown>;
-  let sortOrder = (maxSort.maxSort as number | null) || 0;
+  const body = await request.json();
+  const tasks = Array.isArray(body.tasks) ? body.tasks : [body];
 
   const insertStmt = db.prepare(`
-    INSERT INTO plan_tasks (plan_id, flow_item_id, process_code, process_name, department, l2_group, l3_segment, version, format, category, it_coverage, it_score, flow_status, task_type, description, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO plan_tasks (plan_id, flow_item_id, process_code, process_name, department,
+      task_type, description, status, sort_order, remarks, carried_from_plan_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const inserted: Record<string, unknown>[] = [];
-  for (const task of tasks) {
-    sortOrder++;
-    const result = insertStmt.run(
-      numId,
-      task.flowItemId || null,
-      task.processCode || '',
-      task.processName || '',
-      task.department || '',
-      task.l2Group || '',
-      task.l3Segment || '',
-      task.version || '',
-      task.format || '',
-      task.category || '',
-      task.itCoverage || '',
-      task.itScore || 0,
-      task.flowStatus || '',
-      task.taskType || '内容修订',
-      task.description || '',
-      sortOrder
-    );
-    const row = db.prepare('SELECT * FROM plan_tasks WHERE id = ?').get(result.lastInsertRowid);
-    inserted.push(row as Record<string, unknown>);
-  }
+  // Get max sort_order
+  const maxSort = (db.prepare('SELECT MAX(sort_order) as max_sort FROM plan_tasks WHERE plan_id = ?').get(planId) as { max_sort: number | null }).max_sort || 0;
 
-  // Update plan counts
-  const taskCount = db.prepare('SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ?').get(numId) as Record<string, unknown>;
-  db.prepare('UPDATE revision_plans SET task_count = ? WHERE id = ?').run(taskCount.cnt, numId);
+  const results: unknown[] = [];
+  const transaction = db.transaction(() => {
+    let sortOrder = maxSort + 1;
+    for (const task of tasks) {
+      const result = insertStmt.run(
+        planId,
+        task.flowItemId || null,
+        task.processCode || '',
+        task.processName || '',
+        task.department || '',
+        task.taskType || '内容修订',
+        task.description || '',
+        task.status || '待执行',
+        sortOrder++,
+        task.remarks || '',
+        task.carriedFromPlanId || null
+      );
+      const row = db.prepare('SELECT * FROM plan_tasks WHERE id = ?').get(result.lastInsertRowid) as Record<string, unknown>;
+      results.push(mapPlanTaskRow(row));
+    }
+    // Update plan task count
+    const taskCount = (db.prepare('SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ?').get(planId) as { cnt: number }).cnt;
+    const completedCount = (db.prepare("SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ? AND status = '已完成'").get(planId) as { cnt: number }).cnt;
+    db.prepare('UPDATE revision_plans SET task_count = ?, completed_count = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?').run(taskCount, completedCount, planId);
+  });
 
-  return NextResponse.json({ items: inserted }, { status: 201 });
+  transaction();
+
+  return NextResponse.json({ items: results }, { status: 201 });
 }
