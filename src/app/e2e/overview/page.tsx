@@ -315,10 +315,13 @@ export default function E2EOverviewPage() {
     if (!procForm.name.trim()) return;
     setSavingProc(true);
     try {
+      // 根据 currentProgress 自动计算 status，防止进度与状态不一致
+      const autoStatus = procForm.currentProgress >= 100 ? 'completed' as const : procForm.currentProgress > 0 ? 'in_progress' as const : 'not_started' as const;
+      const payload = { ...procForm, status: autoStatus };
       if (editingProcId) {
         await fetch(`/api/e2e/processes/${editingProcId}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(procForm),
+          body: JSON.stringify(payload),
         });
       }
       setShowProcDialog(false);

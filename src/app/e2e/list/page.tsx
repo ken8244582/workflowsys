@@ -157,11 +157,14 @@ export default function E2EListPage() {
     if (!form.name.trim() || !form.owner.trim() || !form.department.trim() || !form.responsiblePerson.trim()) return;
     setSaving(true);
     try {
+      // 根据 currentProgress 自动计算 status，防止进度与状态不一致
+      const autoStatus = form.currentProgress >= 100 ? 'completed' as const : form.currentProgress > 0 ? 'in_progress' as const : 'not_started' as const;
+      const payload = { ...form, status: autoStatus };
       if (editingId) {
         await fetch(`/api/e2e/processes/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
       } else {
         await fetch('/api/e2e/processes', {
