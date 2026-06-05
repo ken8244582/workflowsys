@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import type { E2EProcess, E2EPlan } from '@/lib/e2e-store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +50,9 @@ const STATUS_DOT: Record<string, { symbol: string; color: string }> = {
   delayed: { symbol: '✕', color: 'text-red-500' },
 };
 
+const STORAGE_KEY_COMPARE_MONTH = 'e2e-plan-compare-month';
+const STORAGE_KEY_COMPARE_QUARTER = 'e2e-plan-compare-quarter';
+
 interface PlanFormData {
   processId: string;
   planType: 'monthly' | 'quarterly';
@@ -64,6 +70,18 @@ export default function E2EPlanPage() {
   const [loading, setLoading] = useState(true);
   const [viewType, setViewType] = useState<'monthly' | 'quarterly'>('monthly');
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  // 对比月份选择（localStorage 持久化）
+  const [compareMonth, setCompareMonth] = useState<number>(() => {
+    if (typeof window === 'undefined') return new Date().getMonth() + 1;
+    const saved = localStorage.getItem(STORAGE_KEY_COMPARE_MONTH);
+    return saved ? parseInt(saved) : new Date().getMonth() + 1;
+  });
+  const [compareQuarter, setCompareQuarter] = useState<number>(() => {
+    if (typeof window === 'undefined') return Math.ceil((new Date().getMonth() + 1) / 3);
+    const saved = localStorage.getItem(STORAGE_KEY_COMPARE_QUARTER);
+    return saved ? parseInt(saved) : Math.ceil((new Date().getMonth() + 1) / 3);
+  });
 
   // 弹窗
   const [showDialog, setShowDialog] = useState(false);
@@ -105,12 +123,37 @@ export default function E2EPlanPage() {
     return proc?.currentProgress ?? 0;
   };
 
+  // 保存对比月份到 localStorage
+  const handleCompareMonthChange = (month: number) => {
+    setCompareMonth(month);
+    localStorage.setItem(STORAGE_KEY_COMPARE_MONTH, String(month));
+  };
+
+  const handleCompareQuarterChange = (quarter: number) => {
+    setCompareQuarter(quarter);
+    localStorage.setItem(STORAGE_KEY_COMPARE_QUARTER, String(quarter));
+  };
+
   // 统计卡片
   const yearPlans = plans.filter((p) => p.year === currentYear);
   const totalPlans = yearPlans.length;
   const completedPlans = yearPlans.filter((p) => p.status === 'completed').length;
   const inProgressPlans = yearPlans.filter((p) => p.status === 'in_progress').length;
   const delayedPlans = yearPlans.filter((p) => p.status === 'delayed').length;
+
+  // 对比数据：选中月份/季度的计划与实际对比
+  const comparePeriod = viewType === 'monthly' ? compareMonth : compareQuarter;
+  const comparePlans = yearPlans.filter(
+    (p) => p.planType === viewType && p.period === comparePeriod
+  );
+  const compareChartData = comparePlans.map((plan) => {
+    const proc = processMap.get(plan.processId);
+    return {
+      name: proc?.name || '未知',
+      '计划进度': plan.planProgress,
+      '实际进度': getActualProgress(plan.processId),
+    };
+  });
 
   // 添加计划（点击月份/季度卡片）
   const handleAddPlan = (period: number) => {
@@ -253,6 +296,63 @@ export default function E2EPlanPage() {
         </Card>
       </div>
 
+      {/* 对比计划进度图表 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm">计划进度对比</CardTitle>
+              <CardDescription>对比选中时段的计划进度与实际完成进度</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">对比时段：</span>
+              {viewType === 'monthly' ? (
+                <Select value={String(compareMonth)} onValueChange={(v) => handleCompareMonthChange(parseInt(v))}>
+                  <SelectTrigger className="h-7 w-[80px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <SelectItem key={m} value={String(m)}>{m}月</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={String(compareQuarter)} onValueChange={(v) => handleCompareQuarterChange(parseInt(v))}>
+                  <SelectTrigger className="h-7 w-[80px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 4 }, (_, i) => i + 1).map((q) => (
+                      <SelectItem key={q} value={String(q)}>Q{q}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {compareChartData.length === 0 ? (
+            <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+              {periodLabel(comparePeriod)}暂无梳理计划，请在下方时间轴中添加
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(200, compareChartData.length * 45 + 40)}>
+              <BarChart data={compareChartData} layout="vertical" margin={{ top: 5, right: 20, left: 120, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v}%`} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={115} />
+                <Tooltip formatter={(value: number) => `${value}%`} />
+                <Legend />
+                <Bar dataKey="计划进度" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={14} />
+                <Bar dataKey="实际进度" fill="#1e3a5f" radius={[0, 4, 4, 0]} barSize={14} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
       {/* 月度/季度 Tab 切换 */}
       <Tabs value={viewType} onValueChange={(v) => setViewType(v as 'monthly' | 'quarterly')}>
         <TabsList>
@@ -265,10 +365,16 @@ export default function E2EPlanPage() {
               const periodPlans = yearPlans.filter(
                 (p) => p.planType === viewType && p.period === period
               );
+              const isSelectedForCompare = period === comparePeriod;
               return (
-                <Card key={period} className="flex flex-col">
+                <Card key={period} className={`flex flex-col ${isSelectedForCompare ? 'border-[#1e3a5f]/40 bg-[#1e3a5f]/5' : ''}`}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm">{periodLabel(period)}</CardTitle>
+                    <div className="flex items-center gap-1.5">
+                      <CardTitle className="text-sm">{periodLabel(period)}</CardTitle>
+                      {isSelectedForCompare && (
+                        <span className="rounded bg-[#1e3a5f] px-1 py-0.5 text-[9px] font-medium text-white">对比中</span>
+                      )}
+                    </div>
                     <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleAddPlan(period)}>
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -292,11 +398,20 @@ export default function E2EPlanPage() {
                           >
                             <div className="flex items-start justify-between">
                               <p className="truncate text-xs font-medium">{proc?.name || '未知流程'}</p>
-                              <span className={`ml-1 shrink-0 text-[10px] ${dot.color}`}>{dot.symbol}</span>
+                              <div className="flex items-center gap-1">
+                                <span className={`shrink-0 text-[10px] ${dot.color}`}>{dot.symbol}</span>
+                                <button
+                                  className="shrink-0 rounded p-0.5 text-[#dc2626] opacity-0 transition-opacity hover:bg-red-50 group-hover:opacity-100"
+                                  onClick={(e) => { e.stopPropagation(); setDeleteId(plan.id); }}
+                                  title="删除"
+                                >
+                                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                              </div>
                             </div>
                             <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{plan.planContent}</p>
                             <div className="mt-1.5 space-y-1">
-                              {/* 计划进度条（橙色底 + 目标线） */}
+                              {/* 计划进度条（橙色） */}
                               <div className="flex items-center gap-1.5">
                                 <span className="w-8 shrink-0 text-[9px] text-muted-foreground">计划</span>
                                 <div className="relative h-2 flex-1 rounded-full bg-[#f59e0b]/20">
@@ -307,7 +422,7 @@ export default function E2EPlanPage() {
                                 </div>
                                 <span className="w-7 shrink-0 text-right text-[10px] tabular-nums text-[#f59e0b]">{plan.planProgress}%</span>
                               </div>
-                              {/* 实际进度条（靛蓝） */}
+                              {/* 实际进度条（靛蓝/绿色） */}
                               <div className="flex items-center gap-1.5">
                                 <span className="w-8 shrink-0 text-[9px] text-muted-foreground">实际</span>
                                 <div className="relative h-2 flex-1 rounded-full bg-muted">
@@ -428,7 +543,7 @@ export default function E2EPlanPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>端到端流程 *</Label>
-                <Select value={form.processId} onValueChange={(v) => setForm({ ...form, processId: v })}>
+                <Select value={form.processId} onValueChange={(v) => setForm({ ...form, processId: v })} disabled={!!editingPlanId}>
                   <SelectTrigger><SelectValue placeholder="选择流程" /></SelectTrigger>
                   <SelectContent>
                     {processes.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
