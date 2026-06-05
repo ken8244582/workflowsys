@@ -1,66 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, mapPlanRow } from '@/lib/db';
+import { getDb } from '@/lib/db';
 
-// GET /api/revision-plans - List revision plans
+// GET /api/revision-plans - List all plans
 export async function GET(request: NextRequest) {
   const db = getDb();
   const { searchParams } = new URL(request.url);
-
-  const conditions: string[] = [];
-  const params: unknown[] = [];
-
-  const status = searchParams.get('status');
-  if (status) { conditions.push('status = ?'); params.push(status); }
-
   const planMonth = searchParams.get('planMonth');
-  if (planMonth) { conditions.push('plan_month = ?'); params.push(planMonth); }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  let query = 'SELECT * FROM revision_plans';
+  const params: string[] = [];
 
-  const rows = db.prepare(
-    `SELECT * FROM revision_plans ${whereClause} ORDER BY plan_month DESC`
-  ).all(...params) as Record<string, unknown>[];
+  if (planMonth) {
+    query += ' WHERE plan_month = ?';
+    params.push(planMonth);
+  }
 
-  // Recalculate counts for each plan
-  const plans = rows.map(row => {
-    const planId = row.id as number;
-    const taskCount = (db.prepare('SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ?').get(planId) as { cnt: number }).cnt;
-    const completedCount = (db.prepare("SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ? AND status = '已完成'").get(planId) as { cnt: number }).cnt;
-    // Update the plan's cached counts
-    db.prepare('UPDATE revision_plans SET task_count = ?, completed_count = ? WHERE id = ?').run(taskCount, completedCount, planId);
-    return {
-      ...mapPlanRow(row),
-      taskCount,
-      completedCount,
-    };
-  });
+  query += ' ORDER BY plan_month DESC';
 
-  return NextResponse.json({ items: plans });
+  const items = db.prepare(query).all(...params);
+  return NextResponse.json({ items });
 }
 
-// POST /api/revision-plans - Create a new revision plan
+// POST /api/revision-plans - Create a new plan
 export async function POST(request: NextRequest) {
   const db = getDb();
   const body = await request.json();
+  const { planMonth, planName } = body;
 
-  const planMonth = body.planMonth as string;
   if (!planMonth) {
     return NextResponse.json({ error: 'planMonth is required' }, { status: 400 });
   }
 
-  // Check if plan for this month already exists
-  const existing = db.prepare('SELECT id FROM revision_plans WHERE plan_month = ?').get(planMonth);
-  if (existing) {
-    return NextResponse.json({ error: '该月份已存在修订计划' }, { status: 409 });
+  const name = planName || `${planMonth.replace('-', '年')}月流程修订计划`;
+
+  try {
+    const result = db.prepare(
+      'INSERT INTO revision_plans (plan_month, plan_name) VALUES (?, ?)'
+    ).run(planMonth, name);
+
+    const plan = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(result.lastInsertRowid);
+    return NextResponse.json(plan, { status: 201 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('UNIQUE constraint failed')) {
+      return NextResponse.json({ error: '该月份计划已存在' }, { status: 409 });
+    }
+    return NextResponse.json({ error: '创建失败' }, { status: 500 });
+  }
+}
+
+// DELETE /api/revision-plans - Delete a plan (query param id)
+export async function DELETE(request: NextRequest) {
+  const db = getDb();
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
   }
 
-  const planName = body.planName || `${planMonth.replace('-', '年')}月流程修订计划`;
-  const status = body.status || '草稿';
+  const numId = parseInt(id);
+  const plan = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown> | undefined;
+  if (!plan) {
+    return NextResponse.json({ error: '计划不存在' }, { status: 404 });
+  }
 
-  const result = db.prepare(
-    `INSERT INTO revision_plans (plan_month, plan_name, status) VALUES (?, ?, ?)`
-  ).run(planMonth, planName, status);
+  // Only allow deleting draft plans
+  if (plan.status !== '草稿') {
+    return NextResponse.json({ error: '只能删除草稿状态的计划' }, { status: 400 });
+  }
 
-  const plan = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(result.lastInsertRowid) as Record<string, unknown>;
-  return NextResponse.json(mapPlanRow(plan), { status: 201 });
+  // Delete all tasks in this plan first
+  db.prepare('DELETE FROM plan_tasks WHERE plan_id = ?').run(numId);
+  db.prepare('DELETE FROM revision_plans WHERE id = ?').run(numId);
+
+  return NextResponse.json({ success: true });
 }

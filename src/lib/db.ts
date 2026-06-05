@@ -86,6 +86,14 @@ export function getDb(): Database.Database {
       process_code TEXT NOT NULL DEFAULT '',
       process_name TEXT NOT NULL DEFAULT '',
       department TEXT NOT NULL DEFAULT '',
+      l2_group TEXT NOT NULL DEFAULT '',
+      l3_segment TEXT NOT NULL DEFAULT '',
+      version TEXT NOT NULL DEFAULT '',
+      format TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT '',
+      it_coverage TEXT NOT NULL DEFAULT '',
+      it_score INTEGER NOT NULL DEFAULT 0,
+      flow_status TEXT NOT NULL DEFAULT '',
       task_type TEXT NOT NULL DEFAULT '内容修订',
       description TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT '待执行',
@@ -105,6 +113,24 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_plan_tasks_flow_item_id ON plan_tasks(flow_item_id);
     CREATE INDEX IF NOT EXISTS idx_revision_plans_month ON revision_plans(plan_month);
   `);
+
+  // Migrate plan_tasks table - add new columns if they don't exist
+  const planTaskCols = (_db.prepare("PRAGMA table_info(plan_tasks)").all() as { name: string }[]).map(c => c.name);
+  const newCols = [
+    ['l2_group', 'TEXT NOT NULL DEFAULT \'\''],
+    ['l3_segment', 'TEXT NOT NULL DEFAULT \'\''],
+    ['version', 'TEXT NOT NULL DEFAULT \'\''],
+    ['format', 'TEXT NOT NULL DEFAULT \'\''],
+    ['category', 'TEXT NOT NULL DEFAULT \'\''],
+    ['it_coverage', 'TEXT NOT NULL DEFAULT \'\''],
+    ['it_score', 'INTEGER NOT NULL DEFAULT 0'],
+    ['flow_status', 'TEXT NOT NULL DEFAULT \'\''],
+  ] as const;
+  for (const [col, def] of newCols) {
+    if (!planTaskCols.includes(col)) {
+      _db.exec(`ALTER TABLE plan_tasks ADD COLUMN ${col} ${def}`);
+    }
+  }
 
   // Seed data if flows table is empty
   const count = (_db.prepare('SELECT COUNT(*) as cnt FROM flows').get() as { cnt: number }).cnt;

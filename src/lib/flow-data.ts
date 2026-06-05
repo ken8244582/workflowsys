@@ -83,6 +83,14 @@ export interface PlanTask {
   processCode: string;
   processName: string;
   department: string;
+  l2Group: string;
+  l3Segment: string;
+  version: string;
+  format: string;
+  category: string;
+  itCoverage: string;
+  itScore: number;
+  flowStatus: string;
   taskType: '新增流程' | '内容修订' | '格式修订';
   description: string;
   status: '待执行' | '进行中' | '已完成' | '已顺延';
