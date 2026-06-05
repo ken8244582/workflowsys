@@ -476,26 +476,27 @@ export default function E2EOverviewPage() {
                       {STATUS_OPTIONS.find((s) => s.value === p.status)?.label || p.status}
                     </span>
                   </div>
-                  <div className="w-[80px] shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-[90px] shrink-0 flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
-                      className="text-muted-foreground hover:text-foreground text-xs"
+                      className="text-muted-foreground hover:text-[#1e3a5f] transition-colors"
+                      title="更新进度"
                       onClick={() => { setQuickEditId(p.id); setQuickProgress(p.currentProgress); }}
                     >
-                      进度
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                     </button>
-                    <span className="text-muted-foreground/30">|</span>
                     <button
-                      className="text-muted-foreground hover:text-foreground text-xs"
+                      className="text-muted-foreground hover:text-[#1e3a5f] transition-colors"
+                      title="编辑"
                       onClick={() => handleEditProc(p)}
                     >
-                      编辑
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                     </button>
-                    <span className="text-muted-foreground/30">|</span>
                     <button
-                      className="text-[#dc2626] hover:text-[#dc2626]/80 text-xs"
+                      className="text-muted-foreground hover:text-[#dc2626] transition-colors"
+                      title="删除"
                       onClick={() => setDeleteProcId(p.id)}
                     >
-                      删除
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                     </button>
                   </div>
                 </div>
