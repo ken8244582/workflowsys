@@ -282,13 +282,48 @@ export default function E2EListPage() {
           进度定义说明
         </summary>
         <div className="border-t px-4 py-3">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs">
-            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#1e3a5f]/70" style={{width:'28%'}} /><span><strong className="text-[#1e3a5f]">1%–70%</strong> 根据初版文件与最终成品差距评定</span></div>
-            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#1e3a5f]" style={{width:'70%'}} /><span><strong className="text-[#1e3a5f]">70%</strong> 完成初版编制并提交会签</span></div>
-            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#1e3a5f]" style={{width:'75%'}} /><span><strong className="text-[#1e3a5f]">75%</strong> 完成流程文件评审</span></div>
-            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#1e3a5f]" style={{width:'80%'}} /><span><strong className="text-[#1e3a5f]">80%</strong> 完成流程文件发布</span></div>
-            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#10b981]/70" style={{width:'90%'}} /><span><strong className="text-[#1e3a5f]">80%–100%</strong> 根据未修订完的职能流程占比评定</span></div>
-            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#10b981]" style={{width:'100%'}} /><span><strong className="text-[#10b981]">100%</strong> 全部相关职能流程修订完成</span></div>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex w-24 shrink-0 items-center gap-1.5">
+                <span className="inline-block h-2 w-16 rounded-full bg-muted"><span className="inline-block h-2 rounded-full bg-[#1e3a5f]" style={{width:'70%'}} /></span>
+              </span>
+              <span><strong className="text-[#1e3a5f]">1%–69%</strong> 根据初版文件与最终成品差距评定</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex w-24 shrink-0 items-center gap-1.5">
+                <span className="inline-block h-2 w-16 rounded-full bg-muted"><span className="inline-block h-2 rounded-full bg-[#1e3a5f]" style={{width:'70%'}} /></span>
+                <strong className="text-[#1e3a5f]">70%</strong>
+              </span>
+              <span>完成端到端流程文件初版编制并提交会签</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex w-24 shrink-0 items-center gap-1.5">
+                <span className="inline-block h-2 w-16 rounded-full bg-muted"><span className="inline-block h-2 rounded-full bg-[#1e3a5f]" style={{width:'75%'}} /></span>
+                <strong className="text-[#1e3a5f]">75%</strong>
+              </span>
+              <span>完成端到端流程文件评审</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex w-24 shrink-0 items-center gap-1.5">
+                <span className="inline-block h-2 w-16 rounded-full bg-muted"><span className="inline-block h-2 rounded-full bg-[#1e3a5f]" style={{width:'80%'}} /></span>
+                <strong className="text-[#1e3a5f]">80%</strong>
+              </span>
+              <span>完成端到端流程文件发布</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex w-24 shrink-0 items-center gap-1.5">
+                <span className="inline-block h-2 w-16 rounded-full bg-muted"><span className="inline-block h-2 rounded-full bg-[#1e3a5f]" style={{width:'90%'}} /></span>
+                <strong className="text-[#1e3a5f]">81%–99%</strong>
+              </span>
+              <span>根据未修订完的职能流程占比评定</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex w-24 shrink-0 items-center gap-1.5">
+                <span className="inline-block h-2 w-16 rounded-full bg-[#10b981]" />
+                <strong className="text-[#10b981]">100%</strong>
+              </span>
+              <span>完成端到端流程全部相关职能流程的修订</span>
+            </div>
           </div>
         </div>
       </details>
