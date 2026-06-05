@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, ClipboardList, CheckCircle2, Clock, Plus, ArrowRight, ChevronRight, BarChart3, Target, TrendingUp } from 'lucide-react';
+import { Calendar, ClipboardList, CheckCircle2, Clock, Plus, ArrowRight, ChevronRight, BarChart3, Target, TrendingUp, Trash2 } from 'lucide-react';
 import type { RevisionPlan, OwnerProgress } from '@/lib/flow-data';
 
 interface PlanWithProgress extends RevisionPlan {
@@ -23,6 +23,9 @@ export default function RevisionPlanPage() {
   const [newPlanMonth, setNewPlanMonth] = useState('');
   const [newPlanName, setNewPlanName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [deletePlanId, setDeletePlanId] = useState<number | null>(null);
+  const [deletePlanName, setDeletePlanName] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -87,6 +90,21 @@ export default function RevisionPlanPage() {
       case '已下发': return 'bg-blue-100 text-blue-700';
       case '已归档': return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const handleDeletePlan = async () => {
+    if (!deletePlanId) return;
+    setDeleting(true);
+    try {
+      await fetch(`/api/revision-plans/${deletePlanId}`, { method: 'DELETE' });
+      setDeletePlanId(null);
+      setDeletePlanName('');
+      fetchData();
+    } catch (err) {
+      console.error('Failed to delete plan:', err);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -216,16 +234,15 @@ export default function RevisionPlanPage() {
           ) : (
             <div className="space-y-2">
               {plans.map((plan) => (
-                <Link
+                <div
                   key={plan.id}
-                  href={`/functional/plan/${plan.id}`}
-                  className="block border rounded-lg p-4 hover:shadow-md hover:border-[#1e3a5f]/30 transition-all group"
+                  className="border rounded-lg p-4 hover:shadow-md hover:border-[#1e3a5f]/30 transition-all group"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <Link href={`/functional/plan/${plan.id}`} className="flex items-center gap-3 flex-1">
                       <div className="text-sm font-semibold text-[#1e3a5f]">{plan.planName}</div>
                       <Badge className={`text-[10px] px-1.5 py-0 ${statusColor(plan.status)}`}>{plan.status}</Badge>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>任务 <strong className="text-foreground">{plan.taskCount}</strong></span>
                       <span>已完成 <strong className="text-emerald-600">{plan.completedCount}</strong></span>
@@ -234,10 +251,27 @@ export default function RevisionPlanPage() {
                           {Math.round(plan.completedCount / plan.taskCount * 100)}%
                         </strong></span>
                       )}
-                      <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-[#1e3a5f]" />
+                      {plan.status === '草稿' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDeletePlanId(plan.id);
+                            setDeletePlanName(plan.planName);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Link href={`/functional/plan/${plan.id}`}>
+                        <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-[#1e3a5f]" />
+                      </Link>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -278,6 +312,27 @@ export default function RevisionPlanPage() {
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>取消</Button>
             <Button onClick={handleCreatePlan} disabled={!newPlanMonth || creating} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
               {creating ? '创建中...' : '创建'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Plan Confirmation Dialog */}
+      <Dialog open={deletePlanId !== null} onOpenChange={(open) => { if (!open) { setDeletePlanId(null); setDeletePlanName(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">确认删除计划</DialogTitle>
+            <DialogDescription>此操作不可撤销，删除后计划及所有任务将永久移除</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="text-sm text-muted-foreground">
+              确定要删除计划 <strong className="text-foreground">「{deletePlanName}」</strong> 吗？
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeletePlanId(null); setDeletePlanName(''); }}>取消</Button>
+            <Button variant="destructive" onClick={handleDeletePlan} disabled={deleting}>
+              {deleting ? '删除中...' : '确认删除'}
             </Button>
           </DialogFooter>
         </DialogContent>

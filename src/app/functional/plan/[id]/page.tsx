@@ -67,7 +67,11 @@ export default function PlanDetailPage() {
   const [showCarryDialog, setShowCarryDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
+  const [showBatchCarryDialog, setShowBatchCarryDialog] = useState(false);
   const [operating, setOperating] = useState(false);
+  const [deleteTaskName, setDeleteTaskName] = useState('');
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   // Add task dialog state
   const [addMode, setAddMode] = useState<'select' | 'manual'>('select');
@@ -248,8 +252,9 @@ export default function PlanDetailPage() {
     }
   };
 
-  const handleCarryOver = async () => {
-    if (selectedIds.size === 0) return;
+  const handleCarryOver = async (targetIds?: number[]) => {
+    const ids = targetIds || Array.from(selectedIds);
+    if (ids.length === 0) return;
     setOperating(true);
     try {
       // Get or create next month plan
@@ -278,8 +283,8 @@ export default function PlanDetailPage() {
         nextPlanId = created.id;
       }
 
-      // Carry over each selected task
-      const unfinishedIds = Array.from(selectedIds).filter(id => {
+      // Carry over each task
+      const unfinishedIds = ids.filter(id => {
         const task = tasks.find(t => t.id === id);
         return task && task.status !== '已完成';
       });
@@ -295,6 +300,7 @@ export default function PlanDetailPage() {
       );
 
       setShowCarryDialog(false);
+      setShowBatchCarryDialog(false);
       setSelectedIds(new Set());
       fetchPlan();
       fetchTasks();
@@ -306,12 +312,37 @@ export default function PlanDetailPage() {
   };
 
   const handleDeleteTask = async (taskId: number) => {
+    setOperating(true);
     try {
       await fetch(`/api/plan-tasks/${taskId}`, { method: 'DELETE' });
+      setShowDeleteDialog(false);
+      setDeleteTaskName('');
       fetchPlan();
       fetchTasks();
     } catch (err) {
       console.error('Failed to delete task:', err);
+    } finally {
+      setOperating(false);
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setOperating(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/plan-tasks/${id}`, { method: 'DELETE' })
+        )
+      );
+      setShowBatchDeleteDialog(false);
+      setSelectedIds(new Set());
+      fetchPlan();
+      fetchTasks();
+    } catch (err) {
+      console.error('Failed to batch delete tasks:', err);
+    } finally {
+      setOperating(false);
     }
   };
 
@@ -525,8 +556,11 @@ export default function PlanDetailPage() {
           <Button variant="outline" size="sm" onClick={handleCompleteTasks} className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
             <CheckCircle2 className="h-3.5 w-3.5" /> 批量标记完成
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowCarryDialog(true)} className="gap-1 text-amber-700 border-amber-300 hover:bg-amber-50">
+          <Button variant="outline" size="sm" onClick={() => setShowBatchCarryDialog(true)} className="gap-1 text-amber-700 border-amber-300 hover:bg-amber-50">
             <Forward className="h-3.5 w-3.5" /> 批量顺延至下月
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowBatchDeleteDialog(true)} className="gap-1 text-red-700 border-red-300 hover:bg-red-50">
+            <Trash2 className="h-3.5 w-3.5" /> 批量删除
           </Button>
           <Button variant="outline" size="sm" onClick={() => {
             setSelectedIds(new Set());
@@ -630,40 +664,19 @@ export default function PlanDetailPage() {
                         )}
                         {(task.status === '待执行' || task.status === '进行中') && (
                           <Button variant="ghost" size="sm" className="h-7 px-2 text-amber-600"
-                            onClick={async () => {
-                              // Single carry over
-                              const currentMonth = plan.planMonth;
-                              const [year, month] = currentMonth.split('-').map(Number);
-                              const nextMonth = month === 12
-                                ? `${year + 1}-01`
-                                : `${year}-${String(month + 1).padStart(2, '0')}`;
-                              let nextPlanId: number;
-                              const plansRes = await fetch(`/api/revision-plans?planMonth=${nextMonth}`);
-                              const plansData = await plansRes.json();
-                              if (plansData.items && plansData.items.length > 0) {
-                                nextPlanId = plansData.items[0].id;
-                              } else {
-                                const createRes = await fetch('/api/revision-plans', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ planMonth: nextMonth }),
-                                });
-                                const created = await createRes.json();
-                                nextPlanId = created.id;
-                              }
-                              await fetch(`/api/plan-tasks/${task.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ _action: 'carry_over', targetPlanId: nextPlanId }),
-                              });
-                              fetchPlan();
-                              fetchTasks();
+                            onClick={() => {
+                              setSelectedIds(new Set([task.id]));
+                              setShowCarryDialog(true);
                             }}
                           ><Forward className="h-3 w-3" />顺延</Button>
                         )}
                         {isDraft && (
                           <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500"
-                            onClick={() => handleDeleteTask(task.id)}
+                            onClick={() => {
+                              setDeleteTaskName(task.processName);
+                              setPendingDeleteId(task.id);
+                              setShowDeleteDialog(true);
+                            }}
                           ><Trash2 className="h-3 w-3" /></Button>
                         )}
                       </div>
@@ -706,19 +719,73 @@ export default function PlanDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Carry Over Confirmation Dialog */}
-      <Dialog open={showCarryDialog} onOpenChange={setShowCarryDialog}>
+      {/* Carry Over Confirmation Dialog (single) */}
+      <Dialog open={showCarryDialog} onOpenChange={(open) => { setShowCarryDialog(open); if (!open) setSelectedIds(new Set()); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>确认顺延至下月</DialogTitle>
             <DialogDescription>
-              选中的 {selectedIds.size} 项未完成任务将顺延到下月计划中，当前任务标记为"已顺延"
+              该任务将顺延到下月计划中，当前任务标记为"已顺延"。确认顺延？
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCarryDialog(false)}>取消</Button>
-            <Button onClick={handleCarryOver} disabled={operating} className="bg-amber-600 hover:bg-amber-700">
+            <Button onClick={() => handleCarryOver()} disabled={operating} className="bg-amber-600 hover:bg-amber-700">
               {operating ? '顺延中...' : '确认顺延'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Carry Over Confirmation Dialog */}
+      <Dialog open={showBatchCarryDialog} onOpenChange={setShowBatchCarryDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>确认批量顺延至下月</DialogTitle>
+            <DialogDescription>
+              选中的 {selectedIds.size} 项未完成任务将顺延到下月计划中，当前任务标记为"已顺延"。确认顺延？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBatchCarryDialog(false)}>取消</Button>
+            <Button onClick={() => handleCarryOver()} disabled={operating} className="bg-amber-600 hover:bg-amber-700">
+              {operating ? '顺延中...' : `确认顺延 ${selectedIds.size} 项`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Single Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={(open) => { setShowDeleteDialog(open); if (!open) { setPendingDeleteId(null); setDeleteTaskName(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>确认删除任务</DialogTitle>
+            <DialogDescription>
+              确定要删除任务「{deleteTaskName}」吗？此操作不可撤销。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>取消</Button>
+            <Button onClick={() => pendingDeleteId && handleDeleteTask(pendingDeleteId)} disabled={operating} className="bg-red-600 hover:bg-red-700">
+              {operating ? '删除中...' : '确认删除'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Delete Confirmation Dialog */}
+      <Dialog open={showBatchDeleteDialog} onOpenChange={setShowBatchDeleteDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>确认批量删除任务</DialogTitle>
+            <DialogDescription>
+              确定要删除选中的 {selectedIds.size} 项任务吗？此操作不可撤销。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBatchDeleteDialog(false)}>取消</Button>
+            <Button onClick={handleBatchDelete} disabled={operating} className="bg-red-600 hover:bg-red-700">
+              {operating ? '删除中...' : `确认删除 ${selectedIds.size} 项`}
             </Button>
           </DialogFooter>
         </DialogContent>
