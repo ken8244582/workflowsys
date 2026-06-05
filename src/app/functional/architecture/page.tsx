@@ -197,16 +197,19 @@ export default function ArchitecturePage() {
           { label: 'L3 业务段', value: totalL3, level: 3, color: '#059669' },
           { label: 'L4 职能流程', value: totalL4, level: 4, color: '#d97706' },
         ].map(card => (
-          <Card key={card.label} className="border-l-4" style={{ borderLeftColor: card.color }}>
-            <CardContent className="pt-4 pb-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: card.color + '12' }}>
-                <LevelIconLarge level={card.level} />
-              </div>
-              <div>
-                <div className="text-2xl font-bold tabular-nums" style={{ color: card.color }}>{card.value}</div>
-                <div className="text-xs text-gray-500">{card.label}</div>
+          <Card key={card.label} className="relative overflow-hidden transition-shadow hover:shadow-md">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-slate-500 tracking-wide uppercase">{card.label}</p>
+                  <p className="mt-2 text-3xl font-extrabold tabular-nums tracking-tight leading-none" style={{ color: card.color }}>{card.value}</p>
+                </div>
+                <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl" style={{ backgroundColor: card.color + '15' }}>
+                  <LevelIconLarge level={card.level} />
+                </div>
               </div>
             </CardContent>
+            <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: `linear-gradient(to right, ${card.color}, ${card.color}80, ${card.color})` }} />
           </Card>
         ))}
       </div>

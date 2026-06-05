@@ -8,6 +8,11 @@ import {
   PieChart, Pie, Cell, Legend, ReferenceLine,
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Building2, FileText, Shield, Wifi,
+  GitBranch, TrendingUp, CheckCircle2, Trophy,
+  ClipboardList, BarChart3, FileSearch, Send,
+} from 'lucide-react';
 
 const CHART_COLORS = ['#1e3a5f', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b', '#06b6d4', '#84cc16', '#f43f5e', '#a855f7', '#14b8a6', '#e11d48', '#7c3aed', '#0ea5e9', '#d946ef'];
 
@@ -39,31 +44,51 @@ function SectionTitle({ number, title }: { number: string; title: string }) {
 }
 
 // --- 指标卡片 ---
-function StatCard({ title, value, subtitle, accent }: {
+function StatCard({ title, value, subtitle, accent, icon }: {
   title: string;
   value: number | string;
   subtitle?: string;
   accent?: boolean;
+  icon?: React.ReactNode;
 }) {
   return (
-    <Card className={accent ? 'border-[#1e3a5f]/20 bg-[#1e3a5f]/5' : ''}>
-      <CardContent className="p-4">
-        <p className="text-xs font-medium text-muted-foreground">{title}</p>
-        <p className={`mt-1 text-2xl font-bold tabular-nums ${accent ? 'text-[#1e3a5f]' : ''}`}>{value}</p>
-        {subtitle && <p className="mt-0.5 text-[11px] text-muted-foreground">{subtitle}</p>}
+    <Card className={`relative overflow-hidden transition-shadow hover:shadow-md ${accent ? 'border-[#1e3a5f]/30 bg-gradient-to-br from-[#1e3a5f]/8 via-white to-[#1e3a5f]/3' : 'bg-white'}`}>
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-slate-500 tracking-wide uppercase">{title}</p>
+            <p className={`mt-2 text-3xl font-extrabold tabular-nums tracking-tight leading-none ${accent ? 'text-[#1e3a5f]' : 'text-slate-800'}`}>{value}</p>
+            {subtitle && <p className="mt-2 text-xs text-slate-400 font-medium">{subtitle}</p>}
+          </div>
+          {icon && (
+            <div className={`flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl ${accent ? 'bg-[#1e3a5f]/10 text-[#1e3a5f]' : 'bg-slate-100 text-slate-400'}`}>
+              {icon}
+            </div>
+          )}
+        </div>
       </CardContent>
+      {accent && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#1e3a5f] via-[#3b82f6] to-[#1e3a5f]" />}
     </Card>
   );
 }
 
 // --- 占位指标卡片 ---
-function PlaceholderStatCard({ title, description }: { title: string; description: string }) {
+function PlaceholderStatCard({ title, description, icon }: { title: string; description: string; icon?: React.ReactNode }) {
   return (
-    <Card className="border-dashed border-muted-foreground/20">
-      <CardContent className="p-4">
-        <p className="text-xs font-medium text-muted-foreground">{title}</p>
-        <p className="mt-1 text-2xl font-bold text-muted-foreground/30">--</p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground/50">{description}</p>
+    <Card className="border-dashed border-slate-300 bg-slate-50/50 relative overflow-hidden">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-slate-400 tracking-wide uppercase">{title}</p>
+            <p className="mt-2 text-3xl font-extrabold text-slate-300 tabular-nums tracking-tight leading-none">--</p>
+            <p className="mt-2 text-xs text-slate-300 font-medium">{description}</p>
+          </div>
+          {icon && (
+            <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-slate-100 text-slate-300">
+              {icon}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -319,10 +344,10 @@ function RevisionStatsCards({ data }: { data: RevisionItem[] }) {
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard title="修订计划数" value={total} subtitle={`${data[0]?.计划修订时间 || ''}`} accent />
-      <StatCard title="修订完成率" value={`${rate}%`} subtitle={`${completed} / ${total}`} accent />
-      <StatCard title="修订类" value={revision} />
-      <StatCard title="新增类" value={newAdd} />
+      <StatCard title="修订计划数" value={total} subtitle={`${data[0]?.计划修订时间 || ''}`} accent icon={<ClipboardList className="w-5 h-5" />} />
+      <StatCard title="修订完成率" value={`${rate}%`} subtitle={`${completed} / ${total}`} accent icon={<BarChart3 className="w-5 h-5" />} />
+      <StatCard title="修订类" value={revision} icon={<FileSearch className="w-5 h-5" />} />
+      <StatCard title="新增类" value={newAdd} icon={<Send className="w-5 h-5" />} />
     </div>
   );
 }
@@ -474,10 +499,10 @@ export default function DashboardPage() {
       <SectionTitle number="一、" title="职能流程工作情况" />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard title="L1 业务域" value={stats.l1DomainCount} accent />
-        <StatCard title="L4 职能流程" value={stats.l4ProcessCount} subtitle={`总条目 ${stats.totalRows}`} accent />
-        <StatCard title="集团模板占比" value={`${groupTemplateRate}%`} subtitle={`${stats.groupTemplateCount} / ${stats.l4ProcessCount}`} />
-        <StatCard title="IT 覆盖率" value={`${coverageRate}%`} subtitle={`已覆盖 ${stats.itYesCount}`} />
+        <StatCard title="L1 业务域" value={stats.l1DomainCount} accent icon={<Building2 className="w-5 h-5" />} />
+        <StatCard title="L4 职能流程" value={stats.l4ProcessCount} subtitle={`总条目 ${stats.totalRows}`} accent icon={<FileText className="w-5 h-5" />} />
+        <StatCard title="集团模板占比" value={`${groupTemplateRate}%`} subtitle={`${stats.groupTemplateCount} / ${stats.l4ProcessCount}`} icon={<Shield className="w-5 h-5" />} />
+        <StatCard title="IT 覆盖率" value={`${coverageRate}%`} subtitle={`已覆盖 ${stats.itYesCount}`} icon={<Wifi className="w-5 h-5" />} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-4">
@@ -501,10 +526,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard title="端到端流程总数" value={e2eData.length} accent />
-        <StatCard title="平均贯通率" value={`${avgE2ERate}%`} accent />
-        <StatCard title="已完成数" value={completedE2E} subtitle={`共 ${e2eData.length} 条`} />
-        <StatCard title="进度最高" value={maxProgressE2E ? `${maxProgressE2E.currentProgress}%` : '--'} subtitle={maxProgressE2E?.name} />
+        <StatCard title="端到端流程总数" value={e2eData.length} accent icon={<GitBranch className="w-5 h-5" />} />
+        <StatCard title="平均贯通率" value={`${avgE2ERate}%`} accent icon={<TrendingUp className="w-5 h-5" />} />
+        <StatCard title="已完成数" value={completedE2E} subtitle={`共 ${e2eData.length} 条`} icon={<CheckCircle2 className="w-5 h-5" />} />
+        <StatCard title="进度最高" value={maxProgressE2E ? `${maxProgressE2E.currentProgress}%` : '--'} subtitle={maxProgressE2E?.name} icon={<Trophy className="w-5 h-5" />} />
       </div>
 
       {e2eData.length > 0 ? (
@@ -538,10 +563,10 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <PlaceholderStatCard title="修订计划数" description="当前计划修订/新增流程数" />
-            <PlaceholderStatCard title="修订完成率" description="已完成修订占总计划比例" />
-            <PlaceholderStatCard title="流程评审数" description="待评审/已完成评审数量" />
-            <PlaceholderStatCard title="流程发布数" description="本期新发布流程数" />
+            <PlaceholderStatCard title="修订计划数" description="当前计划修订/新增流程数" icon={<ClipboardList className="w-5 h-5" />} />
+            <PlaceholderStatCard title="修订完成率" description="已完成修订占总计划比例" icon={<BarChart3 className="w-5 h-5" />} />
+            <PlaceholderStatCard title="流程评审数" description="待评审/已完成评审数量" icon={<FileSearch className="w-5 h-5" />} />
+            <PlaceholderStatCard title="流程发布数" description="本期新发布流程数" icon={<Send className="w-5 h-5" />} />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <PlaceholderChart title="修订进度" description="各部门修订计划完成情况" />
