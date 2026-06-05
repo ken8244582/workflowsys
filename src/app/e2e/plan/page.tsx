@@ -54,7 +54,6 @@ interface PlanFormData {
   period: number;
   planContent: string;
   planProgress: number;
-  actualProgress: number;
   status: E2EPlan['status'];
   notes: string;
 }
@@ -71,7 +70,7 @@ export default function E2EPlanPage() {
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [form, setForm] = useState<PlanFormData>({
     processId: '', planType: 'monthly', year: currentYear, period: 1,
-    planContent: '', planProgress: 100, actualProgress: 0, status: 'planned', notes: '',
+    planContent: '', planProgress: 100, status: 'planned', notes: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -98,7 +97,13 @@ export default function E2EPlanPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const processMap = new Map(processes.map((p) => [p.id, p.name]));
+  const processMap = new Map(processes.map((p) => [p.id, p]));
+
+  // 获取流程的实际进度（从流程管理数据读取）
+  const getActualProgress = (processId: string): number => {
+    const proc = processMap.get(processId);
+    return proc?.currentProgress ?? 0;
+  };
 
   // 统计卡片
   const yearPlans = plans.filter((p) => p.year === currentYear);
@@ -117,7 +122,6 @@ export default function E2EPlanPage() {
       period,
       planContent: '',
       planProgress: 100,
-      actualProgress: 0,
       status: 'planned',
       notes: '',
     });
@@ -134,7 +138,6 @@ export default function E2EPlanPage() {
       period: plan.period,
       planContent: plan.planContent,
       planProgress: plan.planProgress,
-      actualProgress: plan.actualProgress ?? 0,
       status: plan.status,
       notes: plan.notes ?? '',
     });
@@ -278,6 +281,9 @@ export default function E2EPlanPage() {
                     ) : (
                       periodPlans.map((plan) => {
                         const dot = STATUS_DOT[plan.status] || STATUS_DOT.planned;
+                        const actualProg = getActualProgress(plan.processId);
+                        const proc = processMap.get(plan.processId);
+                        const isOverPlan = actualProg >= plan.planProgress;
                         return (
                           <div
                             key={plan.id}
@@ -285,21 +291,36 @@ export default function E2EPlanPage() {
                             onClick={() => handleEditPlan(plan)}
                           >
                             <div className="flex items-start justify-between">
-                              <p className="truncate text-xs font-medium">{processMap.get(plan.processId) || '未知流程'}</p>
+                              <p className="truncate text-xs font-medium">{proc?.name || '未知流程'}</p>
                               <span className={`ml-1 shrink-0 text-[10px] ${dot.color}`}>{dot.symbol}</span>
                             </div>
                             <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{plan.planContent}</p>
-                            <div className="mt-1.5 flex items-center gap-1.5">
-                              <div className="h-1.5 flex-1 rounded-full bg-muted">
-                                <div
-                                  className="h-1.5 rounded-full transition-all"
-                                  style={{
-                                    width: `${Math.min(plan.actualProgress ?? 0, 100)}%`,
-                                    backgroundColor: plan.status === 'completed' ? '#10b981' : plan.status === 'delayed' ? '#dc2626' : '#1e3a5f',
-                                  }}
-                                />
+                            <div className="mt-1.5 space-y-1">
+                              {/* 计划进度条（橙色底 + 目标线） */}
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-8 shrink-0 text-[9px] text-muted-foreground">计划</span>
+                                <div className="relative h-2 flex-1 rounded-full bg-[#f59e0b]/20">
+                                  <div
+                                    className="absolute inset-y-0 left-0 rounded-full bg-[#f59e0b] transition-all"
+                                    style={{ width: `${Math.min(plan.planProgress, 100)}%` }}
+                                  />
+                                </div>
+                                <span className="w-7 shrink-0 text-right text-[10px] tabular-nums text-[#f59e0b]">{plan.planProgress}%</span>
                               </div>
-                              <span className="text-[10px] tabular-nums text-muted-foreground">{plan.actualProgress ?? 0}%</span>
+                              {/* 实际进度条（靛蓝） */}
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-8 shrink-0 text-[9px] text-muted-foreground">实际</span>
+                                <div className="relative h-2 flex-1 rounded-full bg-muted">
+                                  <div
+                                    className="absolute inset-y-0 left-0 rounded-full transition-all"
+                                    style={{
+                                      width: `${Math.min(actualProg, 100)}%`,
+                                      backgroundColor: isOverPlan ? '#10b981' : '#1e3a5f',
+                                    }}
+                                  />
+                                </div>
+                                <span className={`w-7 shrink-0 text-right text-[10px] tabular-nums ${isOverPlan ? 'text-[#10b981]' : 'text-[#1e3a5f]'}`}>{actualProg}%</span>
+                              </div>
                             </div>
                           </div>
                         );
@@ -320,45 +341,71 @@ export default function E2EPlanPage() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30 text-left">
-                  <th className="px-3 py-2 font-medium text-muted-foreground">期间</th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">端到端流程</th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">计划内容</th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">目标进度</th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">实际进度</th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">状态</th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">操作</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">期间</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">端到端流程</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">计划内容</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">计划进度</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">实际进度</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">状态</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {yearPlans.length === 0 ? (
-                  <tr><td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">暂无计划数据</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-12 text-center text-muted-foreground">暂无计划数据</td></tr>
                 ) : (
                   yearPlans
                     .sort((a, b) => a.period - b.period)
                     .map((plan) => {
                       const dot = STATUS_DOT[plan.status] || STATUS_DOT.planned;
+                      const actualProg = getActualProgress(plan.processId);
+                      const isOverPlan = actualProg >= plan.planProgress;
                       return (
                         <tr key={plan.id} className="border-b last:border-0 hover:bg-muted/30">
-                          <td className="whitespace-nowrap px-3 py-2 tabular-nums">
+                          <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">
                             {plan.planType === 'monthly' ? `${plan.period}月` : `Q${plan.period}`}
                           </td>
-                          <td className="px-3 py-2 font-medium">{processMap.get(plan.processId) || '未知'}</td>
-                          <td className="max-w-[200px] truncate px-3 py-2 text-muted-foreground">{plan.planContent}</td>
-                          <td className="px-3 py-2 tabular-nums">{plan.planProgress}%</td>
-                          <td className="px-3 py-2 tabular-nums">{plan.actualProgress ?? 0}%</td>
-                          <td className="px-3 py-2">
+                          <td className="whitespace-nowrap px-3 py-2 text-xs font-medium">{processMap.get(plan.processId)?.name || '未知'}</td>
+                          <td className="max-w-[200px] truncate px-3 py-2 text-xs text-muted-foreground">{plan.planContent}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-xs">
+                            <div className="flex items-center gap-2">
+                              <div className="relative h-2 w-[60px] rounded-full bg-[#f59e0b]/20">
+                                <div
+                                  className="absolute inset-y-0 left-0 rounded-full bg-[#f59e0b]"
+                                  style={{ width: `${Math.min(plan.planProgress, 100)}%` }}
+                                />
+                              </div>
+                              <span className="tabular-nums text-[#f59e0b]">{plan.planProgress}%</span>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-xs">
+                            <div className="flex items-center gap-2">
+                              <div className="relative h-2 w-[60px] rounded-full bg-muted">
+                                <div
+                                  className="absolute inset-y-0 left-0 rounded-full transition-all"
+                                  style={{
+                                    width: `${Math.min(actualProg, 100)}%`,
+                                    backgroundColor: isOverPlan ? '#10b981' : '#1e3a5f',
+                                  }}
+                                />
+                              </div>
+                              <span className={`tabular-nums ${isOverPlan ? 'text-[#10b981]' : 'text-[#1e3a5f]'}`}>{actualProg}%</span>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-xs">
                             <span className={`inline-flex items-center gap-1 ${dot.color}`}>
                               <span>{dot.symbol}</span>
                               {PLAN_STATUS_OPTIONS.find((s) => s.value === plan.status)?.label || plan.status}
                             </span>
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="whitespace-nowrap px-3 py-2 text-xs">
                             <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => handleEditPlan(plan)}>编辑</Button>
-                              <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-[#dc2626]" onClick={() => setDeleteId(plan.id)}>删除</Button>
+                              <button className="text-muted-foreground hover:text-foreground" onClick={() => handleEditPlan(plan)}>编辑</button>
+                              <span className="text-muted-foreground/30">|</span>
+                              <button className="text-[#dc2626] hover:text-[#dc2626]/80" onClick={() => setDeleteId(plan.id)}>删除</button>
                             </div>
                           </td>
                         </tr>
@@ -427,12 +474,14 @@ export default function E2EPlanPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>目标进度: {form.planProgress}%</Label>
+                <Label>计划进度: {form.planProgress}%</Label>
                 <Input type="number" min={0} max={100} value={form.planProgress} onChange={(e) => setForm({ ...form, planProgress: parseInt(e.target.value) || 0 })} />
               </div>
               <div className="space-y-1.5">
-                <Label>实际进度: {form.actualProgress}%</Label>
-                <Input type="number" min={0} max={100} value={form.actualProgress} onChange={(e) => setForm({ ...form, actualProgress: parseInt(e.target.value) || 0 })} />
+                <Label>实际进度（来自流程管理）</Label>
+                <div className="flex h-9 items-center rounded-md border bg-muted/50 px-3 text-sm tabular-nums text-muted-foreground">
+                  {form.processId ? `${getActualProgress(form.processId)}%` : '请先选择流程'}
+                </div>
               </div>
             </div>
             <div className="space-y-1.5">

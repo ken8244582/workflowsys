@@ -54,13 +54,6 @@ function ProgressRow({ process }: { process: E2EProcess }) {
             className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
             style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: barColor }}
           />
-          {/* 目标虚线 */}
-          {process.targetProgress <= 100 && (
-            <div
-              className="absolute inset-y-0 w-0 border-l-2 border-dashed border-[#f59e0b]"
-              style={{ left: `${process.targetProgress}%` }}
-            />
-          )}
           <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-foreground tabular-nums" style={{ mixBlendMode: 'difference', color: '#fff' }}>
             {pct}%
           </span>
@@ -148,7 +141,7 @@ function DeptBarChart({ data }: { data: E2EProcess[] }) {
 function YearlyPlanTimeline({ plans, processes }: { plans: E2EPlan[]; processes: E2EProcess[] }) {
   const currentYear = new Date().getFullYear();
   const yearPlans = plans.filter((p) => p.year === currentYear);
-  const processMap = new Map(processes.map((p) => [p.id, p.name]));
+  const processMap = new Map(processes.map((p) => [p.id, p]));
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const statusIcon: Record<string, string> = {
@@ -168,7 +161,7 @@ function YearlyPlanTimeline({ plans, processes }: { plans: E2EPlan[]; processes:
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">{currentYear}年度梳理计划进度</CardTitle>
-        <CardDescription>按月查看各端到端流程的梳理计划安排</CardDescription>
+        <CardDescription>按月查看各端到端流程的梳理计划安排，橙色为计划进度，蓝色为实际进度</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-12">
@@ -184,14 +177,23 @@ function YearlyPlanTimeline({ plans, processes }: { plans: E2EPlan[]; processes:
                   <p className="py-3 text-center text-[10px] text-muted-foreground/50">暂无计划</p>
                 ) : (
                   <div className="space-y-1">
-                    {allPlans.map((plan) => (
-                      <div key={plan.id} className="rounded bg-background px-1.5 py-1 text-[10px]">
-                        <p className="truncate font-medium">{processMap.get(plan.processId) || '未知'}</p>
-                        <p className={`text-[9px] ${statusTextColor[plan.status]}`}>
-                          {statusIcon[plan.status]} {plan.planProgress}%
-                        </p>
-                      </div>
-                    ))}
+                    {allPlans.map((plan) => {
+                      const proc = processMap.get(plan.processId);
+                      const actualProg = proc?.currentProgress ?? 0;
+                      const isOverPlan = actualProg >= plan.planProgress;
+                      return (
+                        <div key={plan.id} className="rounded bg-background px-1.5 py-1 text-[10px]">
+                          <p className="truncate font-medium">{proc?.name || '未知'}</p>
+                          <div className="mt-0.5 flex items-center gap-1">
+                            <span className="text-[9px] text-[#f59e0b]">{plan.planProgress}%</span>
+                            <span className={`text-[9px] ${statusTextColor[plan.status]}`}>
+                              {statusIcon[plan.status]}
+                            </span>
+                            <span className={`text-[9px] ${isOverPlan ? 'text-[#10b981]' : 'text-[#1e3a5f]'}`}>{actualProg}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -267,7 +269,7 @@ export default function E2EOverviewPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-sm">端到端流程贯通进度</CardTitle>
-              <CardDescription>蓝色条为当前完成值，黄色虚线为目标值</CardDescription>
+              <CardDescription>各端到端流程当前完成进度</CardDescription>
             </div>
             <Link href="/e2e/list" className="text-xs text-[#1e3a5f] hover:underline">管理流程 →</Link>
           </div>

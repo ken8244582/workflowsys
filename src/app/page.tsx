@@ -225,14 +225,13 @@ function E2EProgressChart({ data }: { data: E2EProcessData[] }) {
     .map((d) => ({
       name: d.name,
       current: d.currentProgress,
-      target: d.targetProgress,
     }));
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">端到端流程贯通进度</CardTitle>
-        <CardDescription>当前完成值（蓝色条）vs 目标值（虚线）</CardDescription>
+        <CardDescription>各端到端流程当前完成进度</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={380}>
@@ -241,12 +240,7 @@ function E2EProgressChart({ data }: { data: E2EProcessData[] }) {
             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
             <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={130} />
             <Tooltip formatter={(value: number, name: string) => [`${value}%`, name]} />
-            <Legend />
             <Bar dataKey="current" fill="#1e3a5f" radius={[0, 4, 4, 0]} name="当前完成值" barSize={18} />
-            <ReferenceLine x={0} stroke="transparent" />
-            {chartData.map((entry, index) => (
-              <ReferenceLine key={`target-${index}`} x={entry.target} stroke="#1e3a5f" strokeDasharray="4 4" strokeWidth={1} />
-            ))}
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
@@ -268,7 +262,6 @@ function E2EDetailTable({ data }: { data: E2EProcessData[] }) {
               <th className="whitespace-nowrap px-2 py-1.5 font-medium text-muted-foreground">端到端流程</th>
               <th className="whitespace-nowrap px-2 py-1.5 font-medium text-muted-foreground">负责部门</th>
               <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium text-muted-foreground">当前完成</th>
-              <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium text-muted-foreground">目标值</th>
               <th className="whitespace-nowrap px-2 py-1.5 font-medium text-muted-foreground">状态</th>
               <th className="whitespace-nowrap px-2 py-1.5 font-medium text-muted-foreground">进度条</th>
             </tr>
@@ -282,14 +275,12 @@ function E2EDetailTable({ data }: { data: E2EProcessData[] }) {
                   <td className="whitespace-nowrap px-2 py-1.5 font-medium">{row.name}</td>
                   <td className="whitespace-nowrap px-2 py-1.5 text-muted-foreground">{row.department}</td>
                   <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums font-semibold">{row.currentProgress}%</td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">{row.targetProgress}%</td>
                   <td className="whitespace-nowrap px-2 py-1.5">
                     <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
                   </td>
                   <td className="whitespace-nowrap px-2 py-1.5" style={{ minWidth: 160 }}>
                     <div className="relative h-4 w-full rounded-full bg-muted">
                       <div className="absolute inset-y-0 left-0 rounded-full bg-[#1e3a5f]" style={{ width: `${row.currentProgress}%` }} />
-                      <div className="absolute inset-y-0 border-l-2 border-dashed border-[#f59e0b]" style={{ left: `${row.targetProgress}%` }} />
                     </div>
                   </td>
                 </tr>
@@ -471,7 +462,7 @@ export default function DashboardPage() {
     : '0';
 
   const avgE2ERate = e2eData.length > 0 ? Math.round(e2eData.reduce((s, d) => s + d.currentProgress, 0) / e2eData.length) : 0;
-  const completedE2E = e2eData.filter(d => d.currentProgress >= d.targetProgress).length;
+  const completedE2E = e2eData.filter(d => d.currentProgress >= 100).length;
   const maxProgressE2E = e2eData.length > 0 ? e2eData.reduce((max, d) => d.currentProgress > max.currentProgress ? d : max, e2eData[0]) : null;
 
   return (
@@ -512,7 +503,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard title="端到端流程总数" value={e2eData.length} accent />
         <StatCard title="平均贯通率" value={`${avgE2ERate}%`} accent />
-        <StatCard title="已达目标数" value={completedE2E} subtitle={`共 ${e2eData.length} 条`} />
+        <StatCard title="已完成数" value={completedE2E} subtitle={`共 ${e2eData.length} 条`} />
         <StatCard title="进度最高" value={maxProgressE2E ? `${maxProgressE2E.currentProgress}%` : '--'} subtitle={maxProgressE2E?.name} />
       </div>
 

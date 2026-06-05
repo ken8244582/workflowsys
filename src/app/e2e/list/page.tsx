@@ -279,21 +279,20 @@ export default function E2EListPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30 text-left">
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">#</th>
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">流程名称</th>
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">流程所有者</th>
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">责任部门</th>
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">责任人</th>
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">当前进度</th>
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">目标</th>
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">状态</th>
-                  <th className="px-3 py-2.5 font-medium text-muted-foreground">操作</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">#</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">流程名称</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">流程所有者</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">责任部门</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">责任人</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">当前进度</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">状态</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-3 py-10 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-3 py-12 text-center text-muted-foreground">
                       {processes.length === 0 ? '暂无端到端流程数据，请点击"新增流程"添加' : '没有匹配的流程'}
                     </td>
                   </tr>
@@ -302,14 +301,14 @@ export default function E2EListPage() {
                     const badge = STATUS_BADGE[p.status] || STATUS_BADGE.not_started;
                     return (
                       <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{idx + 1}</td>
-                        <td className="px-3 py-2.5 font-medium">{p.name}</td>
-                        <td className="px-3 py-2.5 text-muted-foreground">{p.owner}</td>
-                        <td className="px-3 py-2.5 text-muted-foreground">{p.department}</td>
-                        <td className="px-3 py-2.5 text-muted-foreground">{p.responsiblePerson}</td>
-                        <td className="px-3 py-2.5">
+                        <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-muted-foreground">{idx + 1}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs font-medium">{p.name}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.owner}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.department}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.responsiblePerson}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs">
                           <div className="flex items-center gap-2">
-                            <div className="relative h-4 w-[100px] rounded-full bg-muted">
+                            <div className="relative h-4 w-[80px] rounded-full bg-muted">
                               <div
                                 className="absolute inset-y-0 left-0 rounded-full bg-[#1e3a5f] transition-all"
                                 style={{ width: `${Math.min(p.currentProgress, 100)}%` }}
@@ -323,16 +322,16 @@ export default function E2EListPage() {
                             </button>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{p.targetProgress}%</td>
-                        <td className="px-3 py-2.5">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.bg} ${badge.text}`}>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs">
+                          <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.bg} ${badge.text}`}>
                             {STATUS_OPTIONS.find((s) => s.value === p.status)?.label || p.status}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5">
+                        <td className="whitespace-nowrap px-3 py-2 text-xs">
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleEdit(p)}>编辑</Button>
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-[#dc2626] hover:text-[#dc2626]" onClick={() => setDeleteId(p.id)}>删除</Button>
+                            <button className="text-muted-foreground hover:text-foreground" onClick={() => handleEdit(p)}>编辑</button>
+                            <span className="text-muted-foreground/30">|</span>
+                            <button className="text-[#dc2626] hover:text-[#dc2626]/80" onClick={() => setDeleteId(p.id)}>删除</button>
                           </div>
                         </td>
                       </tr>
@@ -372,15 +371,9 @@ export default function E2EListPage() {
                 <Input value={form.responsiblePerson} onChange={(e) => setForm({ ...form, responsiblePerson: e.target.value })} placeholder="如：张波" />
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>当前进度: {form.currentProgress}%</Label>
-                <Slider value={[form.currentProgress]} onValueChange={([v]) => setForm({ ...form, currentProgress: v })} max={100} step={5} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>目标进度: {form.targetProgress}%</Label>
-                <Slider value={[form.targetProgress]} onValueChange={([v]) => setForm({ ...form, targetProgress: v })} max={100} step={5} />
-              </div>
+            <div className="space-y-1.5">
+              <Label>当前进度: {form.currentProgress}%</Label>
+              <Slider value={[form.currentProgress]} onValueChange={([v]) => setForm({ ...form, currentProgress: v })} max={100} step={5} />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
