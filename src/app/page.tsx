@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import {
   Building2, FileText, Shield, Wifi,
   GitBranch, TrendingUp, CheckCircle2, Trophy,
-  ClipboardList, BarChart3, FileSearch, Send,
 } from 'lucide-react';
 
 const CHART_COLORS = ['#1e3a5f', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b', '#06b6d4', '#84cc16', '#f43f5e', '#a855f7', '#14b8a6', '#e11d48', '#7c3aed', '#0ea5e9', '#d946ef'];
@@ -68,28 +67,6 @@ function StatCard({ title, value, subtitle, accent, icon }: {
         </div>
       </CardContent>
       {accent && <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#1e3a5f] via-[#3b82f6] to-[#1e3a5f]" />}
-    </Card>
-  );
-}
-
-// --- 占位指标卡片 ---
-function PlaceholderStatCard({ title, description, icon }: { title: string; description: string; icon?: React.ReactNode }) {
-  return (
-    <Card className="border-dashed border-slate-300 bg-slate-50/50 relative overflow-hidden">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-400 tracking-wide uppercase">{title}</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-300 tabular-nums tracking-tight leading-none">--</p>
-            <p className="mt-2 text-xs text-slate-300 font-medium">{description}</p>
-          </div>
-          {icon && (
-            <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-slate-100 text-slate-300">
-              {icon}
-            </div>
-          )}
-        </div>
-      </CardContent>
     </Card>
   );
 }
@@ -319,145 +296,21 @@ function E2EDetailTable({ data }: { data: E2EProcessData[] }) {
 }
 
 // =============================================
-// Section 3: 流程治理运营工作
-// =============================================
-
-interface RevisionItem {
-  计划修订时间: string;
-  流程编码: string;
-  L4流程名称: string;
-  修订前版本: string;
-  修订后版本: string;
-  修订内容: string;
-  所属部门: string;
-  修订类型: string;
-  完成时间: string;
-  完成情况: string;
-}
-
-function RevisionStatsCards({ data }: { data: RevisionItem[] }) {
-  const total = data.length;
-  const completed = data.filter((d) => d.完成情况 === '已完成').length;
-  const revision = data.filter((d) => d.修订类型 === '修订').length;
-  const newAdd = data.filter((d) => d.修订类型 === '新增').length;
-  const rate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0';
-
-  return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <StatCard title="修订计划数" value={total} subtitle={`${data[0]?.计划修订时间 || ''}`} accent icon={<ClipboardList className="w-5 h-5" />} />
-      <StatCard title="修订完成率" value={`${rate}%`} subtitle={`${completed} / ${total}`} accent icon={<BarChart3 className="w-5 h-5" />} />
-      <StatCard title="修订类" value={revision} icon={<FileSearch className="w-5 h-5" />} />
-      <StatCard title="新增类" value={newAdd} icon={<Send className="w-5 h-5" />} />
-    </div>
-  );
-}
-
-function RevisionDeptChart({ data }: { data: RevisionItem[] }) {
-  const deptMap = new Map<string, { 修订: number; 新增: number }>();
-  data.forEach((d) => {
-    if (!d.所属部门) return;
-    const entry = deptMap.get(d.所属部门) || { 修订: 0, 新增: 0 };
-    if (d.修订类型 === '修订') entry.修订++;
-    else if (d.修订类型 === '新增') entry.新增++;
-    deptMap.set(d.所属部门, entry);
-  });
-
-  const chartData = Array.from(deptMap.entries())
-    .map(([name, counts]) => ({ name, ...counts }))
-    .sort((a, b) => (b.修订 + b.新增) - (a.修订 + a.新增));
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">各业务域修订进度</CardTitle>
-        <CardDescription>修订/新增计划数量</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={75} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="修订" fill="#1e3a5f" radius={[0, 4, 4, 0]} stackId="a" />
-            <Bar dataKey="新增" fill="#f59e0b" radius={[0, 4, 4, 0]} stackId="a" />
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
-}
-
-function RevisionStatusChart({ data }: { data: RevisionItem[] }) {
-  const completed = data.filter((d) => d.完成情况 === '已完成').length;
-  const pending = data.length - completed;
-  const statusData = [
-    { name: '已完成', value: completed },
-    { name: '未完成', value: pending },
-  ];
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">修订完成情况</CardTitle>
-        <CardDescription>当前修订计划执行进度</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={200}>
-          <PieChart>
-            <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-              <Cell fill="#10b981" />
-              <Cell fill="#94a3b8" />
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
-}
-
-function PlaceholderChart({ title, description }: { title: string; description: string }) {
-  return (
-    <Card className="border-dashed border-muted-foreground/20">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
-        <CardDescription className="text-muted-foreground/50">{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex h-48 items-center justify-center rounded-md bg-muted/30">
-          <div className="text-center">
-            <svg className="mx-auto h-8 w-8 text-muted-foreground/30" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-            </svg>
-            <p className="mt-2 text-xs text-muted-foreground/40">数据接入中</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// =============================================
 // 主页面
 // =============================================
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<OverviewStats | null>(null);
-  const [revisionData, setRevisionData] = useState<RevisionItem[]>([]);
   const [e2eData, setE2eData] = useState<E2EProcessData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch('/flow-data.json').then((res) => res.json()),
-      fetch('/revision-plan.json').then((res) => res.json()),
       fetch('/api/e2e/processes').then((res) => res.json()).catch(() => []),
     ])
-      .then(([flowData, revData, e2eProcData]) => {
+      .then(([flowData, e2eProcData]) => {
         setStats(computeStats(flowData as FlowItem[]));
-        setRevisionData(revData as RevisionItem[]);
         setE2eData(Array.isArray(e2eProcData) ? e2eProcData : []);
         setLoading(false);
       })
@@ -543,36 +396,6 @@ export default function DashboardPage() {
             <p className="text-sm text-muted-foreground">暂无端到端流程数据</p>
           </CardContent>
         </Card>
-      )}
-
-      {/* ============================================ */}
-      {/* Section 3: 流程治理运营工作 */}
-      {/* ============================================ */}
-      <div className="pt-4">
-        <SectionTitle number="三、" title="流程治理运营工作情况" />
-      </div>
-
-      {revisionData.length > 0 ? (
-        <>
-          <RevisionStatsCards data={revisionData} />
-          <div className="grid gap-4 lg:grid-cols-2">
-            <RevisionDeptChart data={revisionData} />
-            <RevisionStatusChart data={revisionData} />
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <PlaceholderStatCard title="修订计划数" description="当前计划修订/新增流程数" icon={<ClipboardList className="w-5 h-5" />} />
-            <PlaceholderStatCard title="修订完成率" description="已完成修订占总计划比例" icon={<BarChart3 className="w-5 h-5" />} />
-            <PlaceholderStatCard title="流程评审数" description="待评审/已完成评审数量" icon={<FileSearch className="w-5 h-5" />} />
-            <PlaceholderStatCard title="流程发布数" description="本期新发布流程数" icon={<Send className="w-5 h-5" />} />
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <PlaceholderChart title="修订进度" description="各部门修订计划完成情况" />
-            <PlaceholderChart title="流程所有者分布" description="各负责人名下流程数量" />
-          </div>
-        </>
       )}
 
       {/* Footer */}

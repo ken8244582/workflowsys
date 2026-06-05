@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Download, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, RotateCcw, AlertTriangle } from 'lucide-react';
-import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
+
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 
 /* ========== Unified L1-L4 Hierarchy Icons ========== */
@@ -184,6 +184,8 @@ export default function FunctionalListPage() {
   const [reviseContent, setReviseContent] = useState('');
 
   // Tree state
+  const [detailItem, setDetailItem] = useState<FlowItem | null>(null);
+  const [detailDialog, setDetailDialog] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
@@ -560,9 +562,7 @@ export default function FunctionalListPage() {
                     </TableRow>
                   ) : (
                     pagedData.map((item, idx) => (
-                      <HoverCard key={item.id} openDelay={300} closeDelay={100}>
-                        <HoverCardTrigger asChild>
-                          <TableRow className={`cursor-pointer ${item.status === '已废止' ? 'opacity-50' : ''}`}>
+                          <TableRow key={item.id} className={`cursor-pointer hover:bg-blue-50/50 ${item.status === '已废止' ? 'opacity-50' : ''}`} onClick={() => { setDetailItem(item); setDetailDialog(true); }}>
                             <TableCell className="text-gray-400 text-center sticky left-0 bg-white z-10">{(page - 1) * pageSize + idx + 1}</TableCell>
                             <TableCell className="truncate max-w-[100px]">{item.l1Domain}</TableCell>
                             <TableCell className="truncate max-w-[100px]">{item.l2Group}</TableCell>
@@ -601,31 +601,6 @@ export default function FunctionalListPage() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        </HoverCardTrigger>
-                        <HoverCardContent side="right" align="start" className="w-80 p-0 shadow-lg border border-gray-200">
-                          <div className="px-4 py-2.5 bg-[#1e3a5f] text-white rounded-t-md">
-                            <div className="font-semibold text-sm truncate">{item.l4Process || '(未命名流程)'}</div>
-                            <div className="text-xs text-blue-200 mt-0.5 font-mono">{item.processCode}</div>
-                          </div>
-                          <div className="px-4 py-3 max-h-[400px] overflow-y-auto">
-                            <div className="grid grid-cols-1 gap-1.5 text-xs">
-                              {detailFields.map(f => {
-                                const val = f.key === 'itScore' ? String(item[f.key]) : item[f.key];
-                                const isEmpty = !val && val !== '0';
-                                return (
-                                  <div key={f.key} className="flex items-start gap-2">
-                                    <span className="text-gray-400 shrink-0 w-20 text-right">{f.label}</span>
-                                    <span className="text-gray-300 shrink-0">:</span>
-                                    <span className={isEmpty ? 'text-gray-300' : 'text-gray-700 font-medium'}>
-                                      {isEmpty ? '-' : val}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </HoverCardContent>
-                      </HoverCard>
                     ))
                   )}
                 </TableBody>
@@ -903,6 +878,37 @@ export default function FunctionalListPage() {
               {reinitLoading ? '初始化中...' : '确认初始化'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      <Dialog open={detailDialog} onOpenChange={setDetailDialog}>
+        <DialogContent className="sm:max-w-lg p-0 gap-0">
+          <DialogHeader className="px-5 py-3 bg-[#1e3a5f] text-white rounded-t-lg">
+            <DialogTitle className="text-white text-base font-semibold truncate">
+              {detailItem?.l4Process || '(未命名流程)'}
+            </DialogTitle>
+            <DialogDescription className="text-blue-200 text-xs font-mono mt-0.5">
+              {detailItem?.processCode || '-'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-5 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              {detailFields.map(f => {
+                const val = detailItem ? (f.key === 'itScore' ? String(detailItem[f.key]) : detailItem[f.key as keyof FlowItem] as string) : '';
+                const isEmpty = !val && val !== '0';
+                return (
+                  <div key={f.key} className="flex items-start gap-2">
+                    <span className="text-gray-400 shrink-0 min-w-[80px] text-right">{f.label}</span>
+                    <span className="text-gray-300 shrink-0">:</span>
+                    <span className={isEmpty ? 'text-gray-300' : 'text-gray-700 font-medium'}>
+                      {isEmpty ? '-' : val}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
