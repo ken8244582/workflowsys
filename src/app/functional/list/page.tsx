@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Download, Upload, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, ChevronUp, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Search, Download, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, RotateCcw, AlertTriangle } from 'lucide-react';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 
 /* ========== Unified L1-L4 Hierarchy Icons ========== */
@@ -291,21 +292,6 @@ export default function FunctionalListPage() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleImport = async () => {
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.xlsx,.xls';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/flows/import', { method: 'POST', body: formData });
-      if (res.ok) { fetchData(); alert('导入成功'); }
-      else { alert('导入失败'); }
-    };
-    input.click();
-  };
-
   const handleCreate = () => {
     setCurrentItem(null);
     setEditForm({ l1Domain: '', l1Owner: '', l2Group: '', l2Owner: '', l3Segment: '', l3Owner: '', processCode: '', l4Process: '', version: 'C1.0', department: '', l4Owner: '', format: '集团模板', category: '流程', itCoverage: '否', itSubCategory: '', itScore: 0, status: '试运行' });
@@ -431,6 +417,27 @@ export default function FunctionalListPage() {
     return <span className="text-xs font-mono">{score}</span>;
   };
 
+  /* ========== Row Detail Hover Card ========== */
+  const detailFields = [
+    { label: 'L1业务域', key: 'l1Domain' as const },
+    { label: 'L1流程所有者', key: 'l1Owner' as const },
+    { label: 'L2业务组', key: 'l2Group' as const },
+    { label: 'L2流程所有者', key: 'l2Owner' as const },
+    { label: 'L3业务段', key: 'l3Segment' as const },
+    { label: 'L3流程所有者', key: 'l3Owner' as const },
+    { label: '流程编码', key: 'processCode' as const },
+    { label: 'L4职能流程', key: 'l4Process' as const },
+    { label: '最新版本号', key: 'version' as const },
+    { label: '流程所属部门', key: 'department' as const },
+    { label: 'L4流程所有者', key: 'l4Owner' as const },
+    { label: '格式', key: 'format' as const },
+    { label: '分类', key: 'category' as const },
+    { label: '是否IT覆盖', key: 'itCoverage' as const },
+    { label: 'IT支撑分类', key: 'itSubCategory' as const },
+    { label: 'IT支撑分', key: 'itScore' as const },
+    { label: '状态', key: 'status' as const },
+  ];
+
   const levelConfig: Record<number, { icon: React.ReactNode; color: string; bgColor: string; borderColor: string }> = {
     1: { icon: <LevelIcon level={1} className="shrink-0" />, color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-l-blue-400' },
     2: { icon: <LevelIcon level={2} className="shrink-0" />, color: 'text-indigo-600', bgColor: 'bg-indigo-50', borderColor: 'border-l-indigo-300' },
@@ -492,9 +499,6 @@ export default function FunctionalListPage() {
           <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleImport} variant="outline" size="sm" className="h-7 text-xs">
-            <Upload className="h-3.5 w-3.5 mr-1" /> 导入
-          </Button>
           <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
             <Download className="h-3.5 w-3.5 mr-1" /> 导出
           </Button>
@@ -556,45 +560,72 @@ export default function FunctionalListPage() {
                     </TableRow>
                   ) : (
                     pagedData.map((item, idx) => (
-                      <TableRow key={item.id} className={item.status === '已废止' ? 'opacity-50' : ''}>
-                        <TableCell className="text-gray-400 text-center sticky left-0 bg-white z-10">{(page - 1) * pageSize + idx + 1}</TableCell>
-                        <TableCell className="truncate max-w-[100px]" title={item.l1Domain}>{item.l1Domain}</TableCell>
-                        <TableCell className="truncate max-w-[100px]" title={item.l2Group}>{item.l2Group}</TableCell>
-                        <TableCell className="truncate max-w-[100px]" title={item.l3Segment}>{item.l3Segment}</TableCell>
-                        <TableCell className="font-mono text-gray-500 truncate max-w-[120px]" title={item.processCode}>{item.processCode}</TableCell>
-                        <TableCell className="font-medium truncate max-w-[150px]" title={item.l4Process}>{item.l4Process}</TableCell>
-                        <TableCell className="text-center font-mono">{item.version}</TableCell>
-                        <TableCell className="truncate max-w-[60px]" title={item.l4Owner}>{item.l4Owner}</TableCell>
-                        <TableCell className="text-center">{formatBadge(item.format)}</TableCell>
-                        <TableCell className="text-center">{categoryBadge(item.category)}</TableCell>
-                        <TableCell className="text-center">{itBadge(item.itCoverage)}</TableCell>
-                        <TableCell className="text-center">{itScoreDisplay(item.itScore, item.itCoverage)}</TableCell>
-                        <TableCell className="text-center sticky right-[80px] bg-white z-10">{statusBadge(item.status)}</TableCell>
-                        <TableCell className="text-center sticky right-0 bg-white z-10">
-                          <div className="flex items-center justify-center gap-0.5">
-                            {item.status === '已废止' ? (
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
-                                <Undo2 className="h-3.5 w-3.5" />
-                              </Button>
-                            ) : (
-                              <>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="修订" onClick={() => handleRevise(item)}>
-                                  <RotateCw className="h-3.5 w-3.5 text-blue-500" />
+                      <HoverCard key={item.id} openDelay={300} closeDelay={100}>
+                        <HoverCardTrigger asChild>
+                          <TableRow className={`cursor-pointer ${item.status === '已废止' ? 'opacity-50' : ''}`}>
+                            <TableCell className="text-gray-400 text-center sticky left-0 bg-white z-10">{(page - 1) * pageSize + idx + 1}</TableCell>
+                            <TableCell className="truncate max-w-[100px]">{item.l1Domain}</TableCell>
+                            <TableCell className="truncate max-w-[100px]">{item.l2Group}</TableCell>
+                            <TableCell className="truncate max-w-[100px]">{item.l3Segment}</TableCell>
+                            <TableCell className="font-mono text-gray-500 truncate max-w-[120px]">{item.processCode}</TableCell>
+                            <TableCell className="font-medium truncate max-w-[150px]">{item.l4Process}</TableCell>
+                            <TableCell className="text-center font-mono">{item.version}</TableCell>
+                            <TableCell className="truncate max-w-[60px]">{item.l4Owner}</TableCell>
+                            <TableCell className="text-center">{formatBadge(item.format)}</TableCell>
+                            <TableCell className="text-center">{categoryBadge(item.category)}</TableCell>
+                            <TableCell className="text-center">{itBadge(item.itCoverage)}</TableCell>
+                            <TableCell className="text-center">{itScoreDisplay(item.itScore, item.itCoverage)}</TableCell>
+                            <TableCell className="text-center sticky right-[80px] bg-white z-10">{statusBadge(item.status)}</TableCell>
+                            <TableCell className="text-center sticky right-0 bg-white z-10">
+                              <div className="flex items-center justify-center gap-0.5" onClick={e => e.stopPropagation()}>
+                                {item.status === '已废止' ? (
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
+                                    <Undo2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                ) : (
+                                  <>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="修订" onClick={() => handleRevise(item)}>
+                                      <RotateCw className="h-3.5 w-3.5 text-blue-500" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
+                                      <Pencil className="h-3.5 w-3.5 text-gray-500" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="废止" onClick={() => { setCurrentItem(item); setReviseType('abolish'); setReviseReason(''); setReviseDialog(true); }}>
+                                      <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                    </Button>
+                                  </>
+                                )}
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
+                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
                                 </Button>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
-                                  <Pencil className="h-3.5 w-3.5 text-gray-500" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="废止" onClick={() => { setCurrentItem(item); setReviseType('abolish'); setReviseReason(''); setReviseDialog(true); }}>
-                                  <XCircle className="h-3.5 w-3.5 text-red-400" />
-                                </Button>
-                              </>
-                            )}
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
-                              <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-                            </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="right" align="start" className="w-80 p-0 shadow-lg border border-gray-200">
+                          <div className="px-4 py-2.5 bg-[#1e3a5f] text-white rounded-t-md">
+                            <div className="font-semibold text-sm truncate">{item.l4Process || '(未命名流程)'}</div>
+                            <div className="text-xs text-blue-200 mt-0.5 font-mono">{item.processCode}</div>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                          <div className="px-4 py-3 max-h-[400px] overflow-y-auto">
+                            <div className="grid grid-cols-1 gap-1.5 text-xs">
+                              {detailFields.map(f => {
+                                const val = f.key === 'itScore' ? String(item[f.key]) : item[f.key];
+                                const isEmpty = !val && val !== '0';
+                                return (
+                                  <div key={f.key} className="flex items-start gap-2">
+                                    <span className="text-gray-400 shrink-0 w-20 text-right">{f.label}</span>
+                                    <span className="text-gray-300 shrink-0">:</span>
+                                    <span className={isEmpty ? 'text-gray-300' : 'text-gray-700 font-medium'}>
+                                      {isEmpty ? '-' : val}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
                     ))
                   )}
                 </TableBody>

@@ -18,13 +18,6 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { label: '统计概览', href: '/' },
   {
-    label: '指标管理',
-    children: [
-      { label: '职能流程指标清单', href: '/functional/indicators' },
-      { label: '端到端流程指标清单', href: '/e2e/indicators' },
-    ],
-  },
-  {
     label: '职能流程',
     children: [
       { label: '流程架构', href: '/functional/architecture' },

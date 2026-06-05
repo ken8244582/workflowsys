@@ -4,24 +4,34 @@ import * as XLSX from 'xlsx';
 
 function mapRowToDb(row: Record<string, string>) {
   return {
-    l1_domain: row['L1业务域'] || row['l1_domain'] || row['l1Domain'] || '',
-    l1_owner: row['L1所有者'] || row['l1_owner'] || row['l1Owner'] || '',
-    l2_group: row['L2业务组'] || row['l2_group'] || row['l2Group'] || '',
-    l2_owner: row['L2所有者'] || row['l2_owner'] || row['l2Owner'] || '',
-    l3_segment: row['L3业务段'] || row['l3_segment'] || row['l3Segment'] || '',
-    l3_owner: row['L3所有者'] || row['l3_owner'] || row['l3Owner'] || '',
+    l1_domain: row['L1-业务域'] || row['L1业务域'] || row['l1_domain'] || row['l1Domain'] || '',
+    l1_owner: row['L1流程所有者'] || row['L1所有者'] || row['l1_owner'] || row['l1Owner'] || '',
+    l2_group: row['L2-业务组'] || row['L2业务组'] || row['l2_group'] || row['l2Group'] || '',
+    l2_owner: row['L2流程所有者'] || row['L2所有者'] || row['l2_owner'] || row['l2Owner'] || '',
+    l3_segment: row['L3-业务段'] || row['L3业务段'] || row['l3_segment'] || row['l3Segment'] || '',
+    l3_owner: row['L3流程所有者'] || row['L3所有者'] || row['l3_owner'] || row['l3Owner'] || '',
     process_code: row['流程编码'] || row['process_code'] || row['processCode'] || '',
     l4_process: row['L4职能流程'] || row['l4_process'] || row['l4Process'] || '',
-    version: row['版本号'] || row['version'] || '',
-    department: row['所属部门'] || row['department'] || '',
-    l4_owner: row['L4所有者'] || row['l4_owner'] || row['l4Owner'] || '',
+    version: row['最新版本号'] || row['版本号'] || row['version'] || '',
+    department: row['流程所属部门'] || row['所属部门'] || row['department'] || '',
+    l4_owner: row['L4流程所有者'] || row['L4所有者'] || row['l4_owner'] || row['l4Owner'] || '',
     format: row['格式'] || row['format'] || '',
     category: row['分类'] || row['category'] || '',
-    it_coverage: row['IT覆盖'] || row['it_coverage'] || row['itCoverage'] || '',
+    it_coverage: row['是否IT覆盖'] || row['IT覆盖'] || row['it_coverage'] || row['itCoverage'] || '',
     it_sub_category: row['IT支撑分类'] || row['it_sub_category'] || row['itSubCategory'] || '',
     it_score: parseInt(row['IT支撑分'] || row['it_score'] || row['itScore'] || '0') || 0,
     status: row['状态'] || row['status'] || '',
   };
+}
+
+/**
+ * Detect if the first row is a merged title row (not a data header).
+ */
+function detectTitleRow(rows: Record<string, string>[]): boolean {
+  if (rows.length === 0) return false;
+  const firstKey = Object.keys(rows[0])[0] || '';
+  const hasEmptyKeys = Object.keys(rows[0]).some(k => k.startsWith('__EMPTY'));
+  return hasEmptyKeys && !firstKey.includes('业务域') && !firstKey.includes('流程编码') && !firstKey.includes('序号');
 }
 
 // POST /api/flows/import - Import flows from Excel or JSON
@@ -39,7 +49,6 @@ export async function POST(request: NextRequest) {
   let rows: Record<string, string>[] = [];
 
   if (fileName.endsWith('.json')) {
-    // Parse JSON file
     try {
       const jsonData = JSON.parse(buffer.toString('utf-8'));
       if (!Array.isArray(jsonData)) {
@@ -50,10 +59,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'JSON文件解析失败' }, { status: 400 });
     }
   } else {
-    // Parse Excel file
     const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: '' });
+    // Prefer the sheet named "L1-L4流程文件清单", otherwise fall back to first sheet
+    const targetSheetName = workbook.SheetNames.find(n => n.includes('L1-L4') || n.includes('流程文件清单')) || workbook.SheetNames[0];
+    const sheet = workbook.Sheets[targetSheetName];
+
+    // First read to detect if there's a title row
+    const testRows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: '' });
+    const hasTitleRow = detectTitleRow(testRows);
+
+    // Re-read with correct range (skip title row if present)
+    const dataStartRow = hasTitleRow ? 1 : 0;
+    rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, {
+      defval: '',
+      range: dataStartRow,
+    });
+
+    // Convert all values to strings for consistent mapping
+    rows = rows.map(row => {
+      const mapped: Record<string, string> = {};
+      Object.entries(row).forEach(([k, v]) => {
+        mapped[k] = String(v ?? '');
+      });
+      return mapped;
+    });
   }
 
   if (rows.length === 0) {
