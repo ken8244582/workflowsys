@@ -458,12 +458,12 @@ export default function E2EOverviewPage() {
                   <PopoverContent className="w-[360px] p-3" side="bottom" align="start">
                     <div className="text-xs font-medium text-foreground mb-2">进度定义说明</div>
                     <div className="space-y-1.5 text-xs text-muted-foreground">
-                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#3b82f6]">1%-69%</span><span>根据初版文件与最终成品差距评定</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#1e3a5f]">70%</span><span>完成端到端流程文件初版编制并提交会签</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#1e3a5f]">75%</span><span>完成端到端流程文件评审</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#1e3a5f]">80%</span><span>完成端到端流程文件发布</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#f59e0b]">81%-99%</span><span>根据未修订完的职能流程占比评定</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#10b981]">100%</span><span>完成全部相关职能流程的修订</span></div>
+                      <div className="flex gap-2"><span className="w-14 shrink-0 text-right font-medium text-[#1e3a5f]">1%-69%</span><span>根据初版文件与最终成品差距评定</span></div>
+                      <div className="flex gap-2"><span className="w-14 shrink-0 text-right font-medium text-[#1e3a5f]">70%</span><span>完成端到端流程文件初版编制并提交会签</span></div>
+                      <div className="flex gap-2"><span className="w-14 shrink-0 text-right font-medium text-[#1e3a5f]">75%</span><span>完成端到端流程文件评审</span></div>
+                      <div className="flex gap-2"><span className="w-14 shrink-0 text-right font-medium text-[#1e3a5f]">80%</span><span>完成端到端流程文件发布</span></div>
+                      <div className="flex gap-2"><span className="w-14 shrink-0 text-right font-medium text-[#f59e0b]">81%-99%</span><span>根据未修订完的职能流程占比评定</span></div>
+                      <div className="flex gap-2"><span className="w-14 shrink-0 text-right font-medium text-[#10b981]">100%</span><span>完成全部相关职能流程的修订</span></div>
                     </div>
                   </PopoverContent>
                 </Popover>
