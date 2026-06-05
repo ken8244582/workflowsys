@@ -66,6 +66,44 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_flows_status ON flows(status);
     CREATE INDEX IF NOT EXISTS idx_revision_type ON revision_records(revision_type);
     CREATE INDEX IF NOT EXISTS idx_revision_l1_domain ON revision_records(l1_domain);
+
+    CREATE TABLE IF NOT EXISTS revision_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_month TEXT NOT NULL,
+      plan_name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT '草稿',
+      task_count INTEGER NOT NULL DEFAULT 0,
+      completed_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      UNIQUE(plan_month)
+    );
+
+    CREATE TABLE IF NOT EXISTS plan_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_id INTEGER NOT NULL,
+      flow_item_id INTEGER,
+      process_code TEXT NOT NULL DEFAULT '',
+      process_name TEXT NOT NULL DEFAULT '',
+      department TEXT NOT NULL DEFAULT '',
+      task_type TEXT NOT NULL DEFAULT '内容修订',
+      description TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT '待执行',
+      completed_at TEXT,
+      carried_from_plan_id INTEGER,
+      carried_to_plan_id INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      remarks TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (plan_id) REFERENCES revision_plans(id),
+      FOREIGN KEY (flow_item_id) REFERENCES flows(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_plan_tasks_plan_id ON plan_tasks(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_plan_tasks_department ON plan_tasks(department);
+    CREATE INDEX IF NOT EXISTS idx_plan_tasks_status ON plan_tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_plan_tasks_flow_item_id ON plan_tasks(flow_item_id);
+    CREATE INDEX IF NOT EXISTS idx_revision_plans_month ON revision_plans(plan_month);
   `);
 
   // Seed data if flows table is empty
@@ -188,5 +226,38 @@ export function mapRevisionRow(row: Record<string, unknown>) {
     revisionType: row.revision_type as string,
     description: row.description as string,
     operator: row.operator as string,
+  };
+}
+
+export function mapPlanRow(row: Record<string, unknown>) {
+  return {
+    id: row.id as number,
+    planMonth: row.plan_month as string,
+    planName: row.plan_name as string,
+    status: row.status as string,
+    taskCount: row.task_count as number,
+    completedCount: row.completed_count as number,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+export function mapPlanTaskRow(row: Record<string, unknown>) {
+  return {
+    id: row.id as number,
+    planId: row.plan_id as number,
+    flowItemId: row.flow_item_id as number | null,
+    processCode: row.process_code as string,
+    processName: row.process_name as string,
+    department: row.department as string,
+    taskType: row.task_type as string,
+    description: row.description as string,
+    status: row.status as string,
+    completedAt: row.completed_at as string | null,
+    carriedFromPlanId: row.carried_from_plan_id as number | null,
+    carriedToPlanId: row.carried_to_plan_id as number | null,
+    sortOrder: row.sort_order as number,
+    remarks: row.remarks as string,
+    createdAt: row.created_at as string,
   };
 }

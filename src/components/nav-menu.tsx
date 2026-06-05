@@ -27,9 +27,10 @@ const menuItems: MenuItem[] = [
   {
     label: '职能流程',
     children: [
-      { label: '职能流程架构', href: '/functional/architecture' },
-      { label: '职能流程清单', href: '/functional/list' },
-      { label: '职能流程修订记录', href: '/functional/revision' },
+      { label: '流程架构', href: '/functional/architecture' },
+      { label: '流程清单', href: '/functional/list' },
+      { label: '修订记录', href: '/functional/revision' },
+      { label: '修订计划', href: '/functional/plan' },
     ],
   },
   {

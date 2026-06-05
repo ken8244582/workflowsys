@@ -65,6 +65,45 @@ export interface OverviewStats {
   itDistribution: { status: string; count: number }[];
 }
 
+export interface RevisionPlan {
+  id: number;
+  planMonth: string;
+  planName: string;
+  status: '草稿' | '已下发' | '已归档';
+  taskCount: number;
+  completedCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlanTask {
+  id: number;
+  planId: number;
+  flowItemId: number | null;
+  processCode: string;
+  processName: string;
+  department: string;
+  taskType: '新增流程' | '内容修订' | '格式修订';
+  description: string;
+  status: '待执行' | '进行中' | '已完成' | '已顺延';
+  completedAt: string | null;
+  carriedFromPlanId: number | null;
+  carriedToPlanId: number | null;
+  sortOrder: number;
+  remarks: string;
+  createdAt: string;
+}
+
+export interface DepartmentProgress {
+  department: string;
+  total: number;
+  completed: number;
+  pending: number;
+  inProgress: number;
+  carriedOver: number;
+  completionRate: number;
+}
+
 export function computeStats(data: FlowItem[]): OverviewStats {
   const l4Data = data.filter((d) => d.l4Process);
 
