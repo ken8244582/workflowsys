@@ -1,66 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, mapPlanRow } from '@/lib/db';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-// GET /api/revision-plans - List revision plans
-export async function GET(request: NextRequest) {
-  const db = getDb();
-  const { searchParams } = new URL(request.url);
+// Helper to update plan counts
+export async function updatePlanCounts(planId: number) {
+  const supabase = getSupabaseClient();
+  const { data: tasks } = await supabase
+    .from('plan_tasks')
+    .select('status')
+    .eq('plan_id', planId);
 
-  const conditions: string[] = [];
-  const params: unknown[] = [];
+  const taskCount = tasks?.length || 0;
+  const completedCount = tasks?.filter((t: Record<string, unknown>) => t.status === '已完成').length || 0;
 
-  const status = searchParams.get('status');
-  if (status) { conditions.push('status = ?'); params.push(status); }
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  await supabase
+    .from('revision_plans')
+    .update({ task_count: taskCount, completed_count: completedCount, updated_at: now })
+    .eq('id', planId);
+}
 
-  const planMonth = searchParams.get('planMonth');
-  if (planMonth) { conditions.push('plan_month = ?'); params.push(planMonth); }
+// GET /api/revision-plans - List all revision plans
+export async function GET() {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('revision_plans')
+    .select('*')
+    .order('plan_month', { ascending: false });
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-  const rows = db.prepare(
-    `SELECT * FROM revision_plans ${whereClause} ORDER BY plan_month DESC`
-  ).all(...params) as Record<string, unknown>[];
+  const items = (data || []).map((row: Record<string, unknown>) => ({
+    id: row.id,
+    planMonth: row.plan_month,
+    planName: row.plan_name,
+    status: row.status,
+    taskCount: row.task_count || 0,
+    completedCount: row.completed_count || 0,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
 
-  // Recalculate counts for each plan
-  const plans = rows.map(row => {
-    const planId = row.id as number;
-    const taskCount = (db.prepare('SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ?').get(planId) as { cnt: number }).cnt;
-    const completedCount = (db.prepare("SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ? AND status = '已完成'").get(planId) as { cnt: number }).cnt;
-    // Update the plan's cached counts
-    db.prepare('UPDATE revision_plans SET task_count = ?, completed_count = ? WHERE id = ?').run(taskCount, completedCount, planId);
-    return {
-      ...mapPlanRow(row),
-      taskCount,
-      completedCount,
-    };
-  });
-
-  return NextResponse.json({ items: plans });
+  return NextResponse.json({ items });
 }
 
 // POST /api/revision-plans - Create a new revision plan
 export async function POST(request: NextRequest) {
-  const db = getDb();
+  const supabase = getSupabaseClient();
   const body = await request.json();
+  const { planMonth, planName } = body;
 
-  const planMonth = body.planMonth as string;
-  if (!planMonth) {
-    return NextResponse.json({ error: 'planMonth is required' }, { status: 400 });
+  if (!planMonth || !planName) {
+    return NextResponse.json({ error: '计划月份和名称不能为空' }, { status: 400 });
   }
 
-  // Check if plan for this month already exists
-  const existing = db.prepare('SELECT id FROM revision_plans WHERE plan_month = ?').get(planMonth);
-  if (existing) {
-    return NextResponse.json({ error: '该月份已存在修订计划' }, { status: 409 });
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+  const { data, error } = await supabase
+    .from('revision_plans')
+    .insert({
+      plan_month: planMonth,
+      plan_name: planName,
+      status: '草稿',
+      task_count: 0,
+      completed_count: 0,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ error: '该月份已存在计划' }, { status: 400 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const planName = body.planName || `${planMonth.replace('-', '年')}月流程修订计划`;
-  const status = body.status || '草稿';
+  const plan = {
+    id: data.id,
+    planMonth: data.plan_month,
+    planName: data.plan_name,
+    status: data.status,
+    taskCount: data.task_count,
+    completedCount: data.completed_count,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
 
-  const result = db.prepare(
-    `INSERT INTO revision_plans (plan_month, plan_name, status) VALUES (?, ?, ?)`
-  ).run(planMonth, planName, status);
-
-  const plan = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(result.lastInsertRowid) as Record<string, unknown>;
-  return NextResponse.json(mapPlanRow(plan), { status: 201 });
+  return NextResponse.json(plan, { status: 201 });
 }

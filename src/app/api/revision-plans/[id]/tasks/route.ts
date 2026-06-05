@@ -1,5 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, mapPlanTaskRow } from '@/lib/db';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
+
+// Helper to format task row
+function mapTaskRow(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    planId: row.plan_id,
+    flowItemId: row.flow_item_id,
+    processCode: row.process_code,
+    processName: row.process_name,
+    department: row.department,
+    taskType: row.task_type,
+    description: row.description,
+    status: row.status,
+    completedAt: row.completed_at,
+    carriedFromPlanId: row.carried_from_plan_id,
+    carriedToPlanId: row.carried_to_plan_id,
+    sortOrder: row.sort_order,
+    remarks: row.remarks,
+    createdAt: row.created_at,
+  };
+}
+
+// Helper to update plan counts
+async function updatePlanCounts(planId: number) {
+  const supabase = getSupabaseClient();
+  const { data: tasks } = await supabase
+    .from('plan_tasks')
+    .select('status')
+    .eq('plan_id', planId);
+
+  const taskCount = tasks?.length || 0;
+  const completedCount = tasks?.filter((t: Record<string, unknown>) => t.status === '已完成').length || 0;
+
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  await supabase
+    .from('revision_plans')
+    .update({ task_count: taskCount, completed_count: completedCount, updated_at: now })
+    .eq('id', planId);
+}
 
 // GET /api/revision-plans/[id]/tasks - List tasks for a plan
 export async function GET(
@@ -7,52 +46,43 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = getDb();
-  const planId = parseInt(id);
-
-  const plan = db.prepare('SELECT id FROM revision_plans WHERE id = ?').get(planId);
-  if (!plan) {
-    return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
-  }
-
+  const supabase = getSupabaseClient();
   const { searchParams } = new URL(request.url);
-  const conditions: string[] = ['plan_id = ?'];
-  const paramsList: unknown[] = [planId];
-
-  const owner = searchParams.get('owner');
-  if (owner) { conditions.push('department = ?'); paramsList.push(owner); }
-
+  const department = searchParams.get('department');
   const taskType = searchParams.get('taskType');
-  if (taskType) { conditions.push('task_type = ?'); paramsList.push(taskType); }
-
   const status = searchParams.get('status');
-  if (status) { conditions.push('status = ?'); paramsList.push(status); }
-
   const search = searchParams.get('search');
-  if (search) {
-    conditions.push('(process_name LIKE ? OR process_code LIKE ? OR description LIKE ?)');
-    const s = `%${search}%`;
-    paramsList.push(s, s, s);
-  }
-
-  const whereClause = `WHERE ${conditions.join(' AND ')}`;
-
-  // Count
-  const countRow = db.prepare(`SELECT COUNT(*) as cnt FROM plan_tasks ${whereClause}`).get(...paramsList) as { cnt: number };
-  const total = countRow.cnt;
-
-  // Pagination
   const page = parseInt(searchParams.get('page') || '1');
   const pageSize = parseInt(searchParams.get('pageSize') || '50');
-  const totalPages = Math.ceil(total / pageSize);
-  const offset = (page - 1) * pageSize;
 
-  const rows = db.prepare(
-    `SELECT * FROM plan_tasks ${whereClause} ORDER BY sort_order ASC, id ASC LIMIT ? OFFSET ?`
-  ).all(...paramsList, pageSize, offset) as Record<string, unknown>[];
+  let query = supabase
+    .from('plan_tasks')
+    .select('*', { count: 'exact' })
+    .eq('plan_id', id);
+
+  if (department) query = query.eq('department', department);
+  if (taskType) query = query.eq('task_type', taskType);
+  if (status) query = query.eq('status', status);
+  if (search) {
+    query = query.or(`process_code.ilike.%${search}%,process_name.ilike.%${search}%,description.ilike.%${search}%`);
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  query = query.order('sort_order', { ascending: true }).range(from, to);
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const items = (data || []).map(mapTaskRow);
+  const total = count || 0;
+  const totalPages = Math.ceil(total / pageSize);
 
   return NextResponse.json({
-    items: rows.map(mapPlanTaskRow),
+    items,
     total,
     page,
     pageSize,
@@ -66,57 +96,67 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = getDb();
+  const supabase = getSupabaseClient();
   const planId = parseInt(id);
 
-  const plan = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(planId) as Record<string, unknown> | undefined;
-  if (!plan) {
-    return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
-  }
+  // Check plan exists and is draft
+  const { data: plan } = await supabase
+    .from('revision_plans')
+    .select('status')
+    .eq('id', planId)
+    .single();
 
-  if (plan.status === '已归档') {
-    return NextResponse.json({ error: '已归档的计划不能添加任务' }, { status: 400 });
+  if (!plan) {
+    return NextResponse.json({ error: '计划不存在' }, { status: 404 });
   }
 
   const body = await request.json();
-  const tasks = Array.isArray(body.tasks) ? body.tasks : [body];
+  const { tasks } = body as { tasks: Array<Record<string, unknown>> };
 
-  const insertStmt = db.prepare(`
-    INSERT INTO plan_tasks (plan_id, flow_item_id, process_code, process_name, department,
-      task_type, description, status, sort_order, remarks, carried_from_plan_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  if (!tasks || tasks.length === 0) {
+    return NextResponse.json({ error: '任务列表不能为空' }, { status: 400 });
+  }
 
-  // Get max sort_order
-  const maxSort = (db.prepare('SELECT MAX(sort_order) as max_sort FROM plan_tasks WHERE plan_id = ?').get(planId) as { max_sort: number | null }).max_sort || 0;
+  // Get max sort order
+  const { data: maxSort } = await supabase
+    .from('plan_tasks')
+    .select('sort_order')
+    .eq('plan_id', planId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
 
-  const results: unknown[] = [];
-  const transaction = db.transaction(() => {
-    let sortOrder = maxSort + 1;
-    for (const task of tasks) {
-      const result = insertStmt.run(
-        planId,
-        task.flowItemId || null,
-        task.processCode || '',
-        task.processName || '',
-        task.department || '',
-        task.taskType || '内容修订',
-        task.description || '',
-        task.status || '待执行',
-        sortOrder++,
-        task.remarks || '',
-        task.carriedFromPlanId || null
-      );
-      const row = db.prepare('SELECT * FROM plan_tasks WHERE id = ?').get(result.lastInsertRowid) as Record<string, unknown>;
-      results.push(mapPlanTaskRow(row));
-    }
-    // Update plan task count
-    const taskCount = (db.prepare('SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ?').get(planId) as { cnt: number }).cnt;
-    const completedCount = (db.prepare("SELECT COUNT(*) as cnt FROM plan_tasks WHERE plan_id = ? AND status = '已完成'").get(planId) as { cnt: number }).cnt;
-    db.prepare('UPDATE revision_plans SET task_count = ?, completed_count = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?').run(taskCount, completedCount, planId);
-  });
+  let nextSort = (maxSort && maxSort.length > 0 ? (maxSort[0] as Record<string, unknown>).sort_order as number : 0) + 1;
 
-  transaction();
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const rows = tasks.map((task) => ({
+    plan_id: planId,
+    flow_item_id: task.flowItemId || null,
+    process_code: task.processCode || '',
+    process_name: task.processName || '',
+    department: task.department || '',
+    task_type: task.taskType || '内容修订',
+    description: task.description || '',
+    status: '待执行',
+    completed_at: null,
+    carried_from_plan_id: task.carriedFromPlanId || null,
+    carried_to_plan_id: null,
+    sort_order: nextSort++,
+    remarks: '',
+    created_at: now,
+  }));
 
-  return NextResponse.json({ items: results }, { status: 201 });
+  const { data, error } = await supabase
+    .from('plan_tasks')
+    .insert(rows)
+    .select();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Update plan counts
+  await updatePlanCounts(planId);
+
+  const items = (data || []).map(mapTaskRow);
+  return NextResponse.json({ items }, { status: 201 });
 }

@@ -1,118 +1,200 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, mapPlanRow } from '@/lib/db';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-// GET /api/revision-plans/[id] - Get single plan with stats
+// Helper: compute department progress from plan tasks
+async function computeDepartmentProgress(planId: number) {
+  const supabase = getSupabaseClient();
+  const { data: tasks } = await supabase
+    .from('plan_tasks')
+    .select('department, status')
+    .eq('plan_id', planId);
+
+  const deptMap: Record<string, { total: number; completed: number; pending: number; inProgress: number; carriedOver: number }> = {};
+  for (const task of tasks || []) {
+    const dept = task.department || '未指定';
+    if (!deptMap[dept]) {
+      deptMap[dept] = { total: 0, completed: 0, pending: 0, inProgress: 0, carriedOver: 0 };
+    }
+    deptMap[dept].total++;
+    if (task.status === '已完成') deptMap[dept].completed++;
+    else if (task.status === '进行中') deptMap[dept].inProgress++;
+    else if (task.status === '待执行') deptMap[dept].pending++;
+    if (task.status === '已顺延') deptMap[dept].carriedOver++;
+  }
+
+  return Object.entries(deptMap).map(([department, stats]) => ({
+    department,
+    ...stats,
+    completionRate: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0,
+  }));
+}
+
+// Helper: update plan counts
+async function updatePlanCounts(planId: number) {
+  const supabase = getSupabaseClient();
+  const { count: taskCount } = await supabase
+    .from('plan_tasks')
+    .select('*', { count: 'exact', head: true })
+    .eq('plan_id', planId);
+
+  const { count: completedCount } = await supabase
+    .from('plan_tasks')
+    .select('*', { count: 'exact', head: true })
+    .eq('plan_id', planId)
+    .eq('status', '已完成');
+
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  await supabase
+    .from('revision_plans')
+    .update({
+      task_count: taskCount || 0,
+      completed_count: completedCount || 0,
+      updated_at: now,
+    })
+    .eq('id', planId);
+}
+
+// GET /api/revision-plans/[id] - Get plan details with department progress
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = getDb();
-  const row = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(parseInt(id)) as Record<string, unknown> | undefined;
-  if (!row) {
+  const supabase = getSupabaseClient();
+
+  const { data: plan, error } = await supabase
+    .from('revision_plans')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !plan) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // Get owner (L4所有者) progress
-  const ownerRows = db.prepare(`
-    SELECT department as owner,
-      COUNT(*) as total,
-      SUM(CASE WHEN status = '已完成' THEN 1 ELSE 0 END) as completed,
-      SUM(CASE WHEN status = '待执行' THEN 1 ELSE 0 END) as pending,
-      SUM(CASE WHEN status = '进行中' THEN 1 ELSE 0 END) as in_progress,
-      SUM(CASE WHEN status = '已顺延' THEN 1 ELSE 0 END) as carried_over
-    FROM plan_tasks WHERE plan_id = ? GROUP BY department ORDER BY department
-  `).all(parseInt(id)) as { owner: string; total: number; completed: number; pending: number; in_progress: number; carried_over: number }[];
-
-  const ownerProgress = ownerRows.map(d => ({
-    owner: d.owner,
-    total: d.total,
-    completed: d.completed,
-    pending: d.pending,
-    inProgress: d.in_progress,
-    carriedOver: d.carried_over,
-    completionRate: d.total > 0 ? Math.round((d.completed / d.total) * 1000) / 10 : 0,
-  }));
+  const departmentProgress = await computeDepartmentProgress(parseInt(id));
 
   return NextResponse.json({
-    ...mapPlanRow(row),
-    ownerProgress,
+    id: plan.id,
+    planMonth: plan.plan_month,
+    planName: plan.plan_name,
+    status: plan.status,
+    taskCount: plan.task_count,
+    completedCount: plan.completed_count,
+    createdAt: plan.created_at,
+    updatedAt: plan.updated_at,
+    departmentProgress,
   });
 }
 
-// PUT /api/revision-plans/[id] - Update plan (change status, etc.)
+// PUT /api/revision-plans/[id] - Update plan (publish/withdraw/archive)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = getDb();
-  const numId = parseInt(id);
+  const body = await request.json();
+  const action = body._action;
+  const supabase = getSupabaseClient();
 
-  const existing = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown> | undefined;
-  if (!existing) {
+  const { data: plan, error: fetchError } = await supabase
+    .from('revision_plans')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (fetchError || !plan) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const body = await request.json();
-  const action = body._action;
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
   if (action === 'publish') {
-    // 发布/下发计划
-    db.prepare("UPDATE revision_plans SET status = '已下发', updated_at = datetime('now','localtime') WHERE id = ?").run(numId);
-    const updated = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown>;
-    return NextResponse.json(mapPlanRow(updated));
+    if (plan.status !== '草稿') {
+      return NextResponse.json({ error: '只能下发草稿状态的计划' }, { status: 400 });
+    }
+    const { data, error } = await supabase
+      .from('revision_plans')
+      .update({ status: '已下发', updated_at: now })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      id: data.id, planMonth: data.plan_month, planName: data.plan_name,
+      status: data.status, taskCount: data.task_count, completedCount: data.completed_count,
+      createdAt: data.created_at, updatedAt: data.updated_at,
+    });
   }
 
   if (action === 'withdraw') {
-    // 撤回计划到草稿状态
-    const currentStatus = existing.status as string;
-    if (currentStatus !== '已下发') {
+    if (plan.status !== '已下发') {
       return NextResponse.json({ error: '只能撤回已下发的计划' }, { status: 400 });
     }
-    db.prepare("UPDATE revision_plans SET status = '草稿', updated_at = datetime('now','localtime') WHERE id = ?").run(numId);
-    const updated = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown>;
-    return NextResponse.json(mapPlanRow(updated));
+    const { data, error } = await supabase
+      .from('revision_plans')
+      .update({ status: '草稿', updated_at: now })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      id: data.id, planMonth: data.plan_month, planName: data.plan_name,
+      status: data.status, taskCount: data.task_count, completedCount: data.completed_count,
+      createdAt: data.created_at, updatedAt: data.updated_at,
+    });
   }
 
   if (action === 'archive') {
-    // 归档计划
-    db.prepare("UPDATE revision_plans SET status = '已归档', updated_at = datetime('now','localtime') WHERE id = ?").run(numId);
-    const updated = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown>;
-    return NextResponse.json(mapPlanRow(updated));
+    if (plan.status !== '已下发') {
+      return NextResponse.json({ error: '只能归档已下发的计划' }, { status: 400 });
+    }
+    const { data, error } = await supabase
+      .from('revision_plans')
+      .update({ status: '已归档', updated_at: now })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      id: data.id, planMonth: data.plan_month, planName: data.plan_name,
+      status: data.status, taskCount: data.task_count, completedCount: data.completed_count,
+      createdAt: data.created_at, updatedAt: data.updated_at,
+    });
   }
 
-  // General update
-  const planName = body.planName || existing.plan_name;
-  db.prepare('UPDATE revision_plans SET plan_name = ?, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?').run(planName, numId);
-  const updated = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown>;
-  return NextResponse.json(mapPlanRow(updated));
+  return NextResponse.json({ error: '未知操作' }, { status: 400 });
 }
 
-// DELETE /api/revision-plans/[id] - Delete plan and its tasks
+// DELETE /api/revision-plans/[id] - Delete a plan (draft only)
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = getDb();
-  const numId = parseInt(id);
+  const supabase = getSupabaseClient();
 
-  const existing = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown> | undefined;
-  if (!existing) {
+  const { data: plan } = await supabase
+    .from('revision_plans')
+    .select('status')
+    .eq('id', id)
+    .single();
+
+  if (!plan) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // Only allow deleting draft plans
-  if (existing.status !== '草稿') {
+  if (plan.status !== '草稿') {
     return NextResponse.json({ error: '只能删除草稿状态的计划' }, { status: 400 });
   }
 
-  const transaction = db.transaction(() => {
-    db.prepare('DELETE FROM plan_tasks WHERE plan_id = ?').run(numId);
-    db.prepare('DELETE FROM revision_plans WHERE id = ?').run(numId);
-  });
-  transaction();
+  // Delete tasks first
+  await supabase.from('plan_tasks').delete().eq('plan_id', id);
+  // Delete plan
+  const { error } = await supabase.from('revision_plans').delete().eq('id', id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
 }
+
+export { updatePlanCounts, computeDepartmentProgress };

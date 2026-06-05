@@ -1,15 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // GET /api/revisions/export - Export revision records as Excel
 export async function GET() {
   try {
-    const db = getDb();
-    const rows = db.prepare('SELECT * FROM revision_records ORDER BY id DESC').all() as Record<string, unknown>[];
+    const supabase = getSupabaseClient();
+    const { data: rows, error } = await supabase
+      .from('revision_records')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (error) {
+      console.error('Supabase query error:', error);
+      return NextResponse.json({ error: '查询失败' }, { status: 500 });
+    }
 
     // Use xlsx to generate Excel
     const XLSX = await import('xlsx');
-    const data = rows.map((row) => ({
+    const data = (rows as Record<string, unknown>[]).map((row) => ({
       '修订日期时间': row.revision_date as string,
       '流程编码': row.process_code as string,
       'L4职能流程': row.l4_process as string,
