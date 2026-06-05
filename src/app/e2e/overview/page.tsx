@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import {
   Dialog,
   DialogContent,
@@ -446,7 +447,27 @@ export default function E2EOverviewPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-sm">端到端流程贯通进度</CardTitle>
-              <CardDescription>各端到端流程当前完成进度</CardDescription>
+              <CardDescription className="flex items-center gap-1">
+                各端到端流程当前完成进度
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-[#1e3a5f] transition-colors" title="进度定义说明">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[360px] p-3" side="bottom" align="start">
+                    <div className="text-xs font-medium text-foreground mb-2">进度定义说明</div>
+                    <div className="space-y-1.5 text-xs text-muted-foreground">
+                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#3b82f6]">1%-69%</span><span>根据初版文件与最终成品差距评定</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#1e3a5f]">70%</span><span>完成端到端流程文件初版编制并提交会签</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#1e3a5f]">75%</span><span>完成端到端流程文件评审</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#1e3a5f]">80%</span><span>完成端到端流程文件发布</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#f59e0b]">81%-99%</span><span>根据未修订完的职能流程占比评定</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 font-medium text-[#10b981]">100%</span><span>完成全部相关职能流程的修订</span></div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </CardDescription>
             </div>
             <Link href="/e2e/list" className="text-xs text-[#1e3a5f] hover:underline">管理流程 →</Link>
           </div>

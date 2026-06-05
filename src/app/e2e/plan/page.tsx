@@ -459,13 +459,13 @@ export default function E2EPlanPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30 text-left">
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">期间</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">端到端流程</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">计划内容</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">计划进度</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">实际进度</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">状态</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">操作</th>
+                  <th className="w-[60px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">期间</th>
+                  <th className="w-[160px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">端到端流程</th>
+                  <th className="w-[140px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">计划内容</th>
+                  <th className="min-w-[160px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">计划进度</th>
+                  <th className="min-w-[160px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">实际进度</th>
+                  <th className="w-[80px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">状态</th>
+                  <th className="w-[60px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -485,20 +485,20 @@ export default function E2EPlanPage() {
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-xs font-medium">{processMap.get(plan.processId)?.name || '未知'}</td>
                           <td className="max-w-[200px] truncate px-3 py-2 text-xs text-muted-foreground">{plan.planContent}</td>
-                          <td className="whitespace-nowrap px-3 py-2 text-xs">
+                          <td className="px-3 py-2 text-xs">
                             <div className="flex items-center gap-2">
-                              <div className="relative h-2 w-[60px] rounded-full bg-[#f59e0b]/20">
+                              <div className="relative h-2.5 w-full rounded-full bg-[#f59e0b]/20">
                                 <div
                                   className="absolute inset-y-0 left-0 rounded-full bg-[#f59e0b]"
                                   style={{ width: `${Math.min(plan.planProgress, 100)}%` }}
                                 />
                               </div>
-                              <span className="tabular-nums text-[#f59e0b]">{plan.planProgress}%</span>
+                              <span className="shrink-0 tabular-nums text-[#f59e0b]">{plan.planProgress}%</span>
                             </div>
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-xs">
+                          <td className="px-3 py-2 text-xs">
                             <div className="flex items-center gap-2">
-                              <div className="relative h-2 w-[60px] rounded-full bg-muted">
+                              <div className="relative h-2.5 w-full rounded-full bg-muted">
                                 <div
                                   className="absolute inset-y-0 left-0 rounded-full transition-all"
                                   style={{
@@ -507,7 +507,7 @@ export default function E2EPlanPage() {
                                   }}
                                 />
                               </div>
-                              <span className={`tabular-nums ${isOverPlan ? 'text-[#10b981]' : 'text-[#1e3a5f]'}`}>{actualProg}%</span>
+                              <span className={`shrink-0 tabular-nums ${isOverPlan ? 'text-[#10b981]' : 'text-[#1e3a5f]'}`}>{actualProg}%</span>
                             </div>
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-xs">

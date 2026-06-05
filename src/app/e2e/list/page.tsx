@@ -275,6 +275,24 @@ export default function E2EListPage() {
         </CardContent>
       </Card>
 
+      {/* 进度定义说明 */}
+      <details className="group rounded-lg border bg-white">
+        <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+          <svg className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6"/></svg>
+          进度定义说明
+        </summary>
+        <div className="border-t px-4 py-3">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs">
+            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#1e3a5f]/70" style={{width:'28%'}} /><span><strong className="text-[#1e3a5f]">1%–70%</strong> 根据初版文件与最终成品差距评定</span></div>
+            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#1e3a5f]" style={{width:'70%'}} /><span><strong className="text-[#1e3a5f]">70%</strong> 完成初版编制并提交会签</span></div>
+            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#1e3a5f]" style={{width:'75%'}} /><span><strong className="text-[#1e3a5f]">75%</strong> 完成流程文件评审</span></div>
+            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#1e3a5f]" style={{width:'80%'}} /><span><strong className="text-[#1e3a5f]">80%</strong> 完成流程文件发布</span></div>
+            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#10b981]/70" style={{width:'90%'}} /><span><strong className="text-[#1e3a5f]">80%–100%</strong> 根据未修订完的职能流程占比评定</span></div>
+            <div className="flex items-start gap-2"><span className="mt-0.5 inline-block h-1.5 w-8 shrink-0 rounded-full bg-[#10b981]" style={{width:'100%'}} /><span><strong className="text-[#10b981]">100%</strong> 全部相关职能流程修订完成</span></div>
+          </div>
+        </div>
+      </details>
+
       {/* 数据表格 */}
       <Card>
         <CardContent className="p-0">
@@ -282,14 +300,14 @@ export default function E2EListPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30 text-left">
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">#</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">流程名称</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">流程所有者</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">责任部门</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">责任人</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">当前进度</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">状态</th>
-                  <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">操作</th>
+                  <th className="w-[40px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">#</th>
+                  <th className="w-[160px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">流程名称</th>
+                  <th className="w-[90px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">流程所有者</th>
+                  <th className="w-[110px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">责任部门</th>
+                  <th className="w-[70px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">责任人</th>
+                  <th className="min-w-[240px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">当前进度</th>
+                  <th className="w-[80px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">状态</th>
+                  <th className="w-[60px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -309,9 +327,9 @@ export default function E2EListPage() {
                         <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.owner}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.department}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.responsiblePerson}</td>
-                        <td className="whitespace-nowrap px-3 py-2 text-xs">
-                          <div className="flex items-center gap-2">
-                            <div className="relative h-4 w-[80px] rounded-full bg-muted">
+                        <td className="px-3 py-2 text-xs">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-5 w-full rounded-full bg-muted">
                               <div
                                 className="absolute inset-y-0 left-0 rounded-full bg-[#1e3a5f] transition-all"
                                 style={{ width: `${Math.min(p.currentProgress, 100)}%` }}
@@ -319,7 +337,7 @@ export default function E2EListPage() {
                             </div>
                             <button
                               onClick={() => { setQuickEditId(p.id); setQuickProgress(p.currentProgress); }}
-                              className="tabular-nums text-xs font-semibold text-[#1e3a5f] hover:underline"
+                              className="shrink-0 tabular-nums text-xs font-semibold text-[#1e3a5f] hover:underline"
                             >
                               {p.currentProgress}%
                             </button>
