@@ -18,11 +18,11 @@ import {
   ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Forward, Trash2, Search, Filter,
   ClipboardList, Clock, CheckCircle, TrendingUp, FileText, AlertCircle,
 } from 'lucide-react';
-import type { RevisionPlan, PlanTask, DepartmentProgress } from '@/lib/flow-data';
+import type { RevisionPlan, PlanTask, OwnerProgress } from '@/lib/flow-data';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 
 interface PlanDetail extends RevisionPlan {
-  departmentProgress: DepartmentProgress[];
+  ownerProgress: OwnerProgress[];
 }
 
 interface FlowItem {
@@ -32,6 +32,7 @@ interface FlowItem {
   l1Domain: string;
   l2Group: string;
   l3Segment: string;
+  l4Owner: string;
   version: string;
   format: string;
   category: string;
@@ -45,7 +46,7 @@ export default function PlanDetailPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const planId = params.id as string;
-  const departmentFilter = searchParams.get('department') || '';
+  const ownerFilter = searchParams.get('owner') || '';
 
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [tasks, setTasks] = useState<PlanTask[]>([]);
@@ -56,7 +57,7 @@ export default function PlanDetailPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Filters
-  const [filterDept, setFilterDept] = useState<string[]>(departmentFilter ? [departmentFilter] : []);
+  const [filterOwner, setFilterOwner] = useState<string[]>(ownerFilter ? [ownerFilter] : []);
   const [filterType, setFilterType] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -77,7 +78,7 @@ export default function PlanDetailPage() {
   const [newTaskDesc, setNewTaskDesc] = useState('');
   // Manual mode
   const [manualName, setManualName] = useState('');
-  const [manualDept, setManualDept] = useState('');
+  const [manualOwner, setManualOwner] = useState('');
   const [manualCode, setManualCode] = useState('');
 
   const fetchPlan = useCallback(async () => {
@@ -97,7 +98,7 @@ export default function PlanDetailPage() {
       const params = new URLSearchParams();
       params.set('page', page.toString());
       params.set('pageSize', pageSize.toString());
-      if (filterDept.length > 0) params.set('department', filterDept[0]); // API supports single, first used
+      if (filterOwner.length > 0) params.set('owner', filterOwner[0]);
       if (filterType.length > 0) params.set('taskType', filterType[0]);
       if (filterStatus.length > 0) params.set('status', filterStatus[0]);
       if (searchText) params.set('search', searchText);
@@ -111,7 +112,7 @@ export default function PlanDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [planId, page, pageSize, filterDept, filterType, filterStatus, searchText]);
+  }, [planId, page, pageSize, filterOwner, filterType, filterStatus, searchText]);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
@@ -135,7 +136,7 @@ export default function PlanDetailPage() {
     setNewTaskType('内容修订');
     setNewTaskDesc('');
     setManualName('');
-    setManualDept('');
+    setManualOwner('');
     setManualCode('');
   };
 
@@ -151,7 +152,7 @@ export default function PlanDetailPage() {
               flowItemId: flow.id,
               processCode: flow.processCode,
               processName: flow.l4Process,
-              department: flow.l1Domain,
+              department: flow.l4Owner,
               taskType: newTaskType,
               description: newTaskDesc,
             });
@@ -162,7 +163,7 @@ export default function PlanDetailPage() {
         tasksToAdd.push({
           processCode: manualCode,
           processName: manualName,
-          department: manualDept,
+          department: manualOwner,
           taskType: newTaskType,
           description: newTaskDesc,
         });
@@ -198,6 +199,27 @@ export default function PlanDetailPage() {
       fetchPlan();
     } catch (err) {
       console.error('Failed to publish plan:', err);
+    } finally {
+      setOperating(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    setOperating(true);
+    try {
+      const res = await fetch(`/api/revision-plans/${planId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _action: 'withdraw' }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+      } else {
+        fetchPlan();
+      }
+    } catch (err) {
+      console.error('Failed to withdraw plan:', err);
     } finally {
       setOperating(false);
     }
@@ -308,7 +330,7 @@ export default function PlanDetailPage() {
   };
 
   // Dynamic filter options from tasks data
-  const deptOptions = plan?.departmentProgress?.map(d => d.department) || [];
+  const ownerOptions = plan?.ownerProgress?.map(d => d.owner) || [];
   const typeOptions = TASK_TYPES;
   const statusOptions = TASK_STATUSES;
 
@@ -345,7 +367,7 @@ export default function PlanDetailPage() {
     const s = flowSearch.toLowerCase();
     return f.l4Process.toLowerCase().includes(s)
       || f.processCode.toLowerCase().includes(s)
-      || f.l1Domain.toLowerCase().includes(s);
+      || f.l4Owner.toLowerCase().includes(s);
   });
 
   return (
@@ -378,6 +400,9 @@ export default function PlanDetailPage() {
             <>
               <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
                 <Plus className="h-4 w-4" /> 添加任务
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleWithdraw} className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50">
+                <RotateCcw className="h-4 w-4" /> 撤回草稿
               </Button>
             </>
           )}
@@ -428,28 +453,28 @@ export default function PlanDetailPage() {
         </Card>
       </div>
 
-      {/* Department Progress (only show for published) */}
-      {plan.departmentProgress && plan.departmentProgress.length > 0 && (
+      {/* Owner Progress (only show for published) */}
+      {plan.ownerProgress && plan.ownerProgress.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              部门完成情况
+              L4所有者完成情况
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {plan.departmentProgress.map(dept => (
-              <div key={dept.department} className="flex items-center gap-2 text-sm">
-                <div className="w-36 shrink-0 truncate font-medium">{dept.department}</div>
+            {plan.ownerProgress.map(ow => (
+              <div key={ow.owner} className="flex items-center gap-2 text-sm">
+                <div className="w-36 shrink-0 truncate font-medium">{ow.owner}</div>
                 <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-[#1e3a5f] to-[#3b82f6] rounded-full transition-all duration-500"
-                    style={{ width: `${dept.completionRate}%` }}
+                    style={{ width: `${ow.completionRate}%` }}
                   />
                 </div>
                 <div className="w-20 text-right text-xs tabular-nums">
-                  <span className="font-semibold">{dept.completed}</span>/{dept.total}
-                  <span className={`ml-1 font-semibold ${dept.completionRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {dept.completionRate}%
+                  <span className="font-semibold">{ow.completed}</span>/{ow.total}
+                  <span className={`ml-1 font-semibold ${ow.completionRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {ow.completionRate}%
                   </span>
                 </div>
               </div>
@@ -463,10 +488,10 @@ export default function PlanDetailPage() {
         <CardContent className="p-3">
           <div className="flex flex-wrap items-center gap-3">
             <MultiSelectFilter
-              label="所属部门"
-              options={deptOptions}
-              selected={filterDept}
-              onChange={setFilterDept}
+              label="L4所有者"
+              options={ownerOptions}
+              selected={filterOwner}
+              onChange={setFilterOwner}
             />
             <MultiSelectFilter
               label="任务类型"
@@ -526,7 +551,7 @@ export default function PlanDetailPage() {
                 <TableHead className="w-10 text-center">序号</TableHead>
                 <TableHead>流程编码</TableHead>
                 <TableHead>流程名称</TableHead>
-                <TableHead>所属部门</TableHead>
+                <TableHead>L4所有者</TableHead>
                 <TableHead>任务类型</TableHead>
                 <TableHead>修订要求</TableHead>
                 <TableHead>状态</TableHead>
@@ -558,7 +583,7 @@ export default function PlanDetailPage() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">{task.department}</TableCell>
+                    <TableCell className="text-sm">{task.owner}</TableCell>
                     <TableCell>{taskTypeBadge(task.taskType)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{task.description || '--'}</TableCell>
                     <TableCell>{statusBadge(task.status)}</TableCell>
@@ -669,7 +694,7 @@ export default function PlanDetailPage() {
           <DialogHeader>
             <DialogTitle>确认下发计划</DialogTitle>
             <DialogDescription>
-              下发后各部门将可见修订任务，计划状态将变为"已下发"
+              下发后各L4所有者将可见修订任务，计划状态将变为"已下发"
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -762,7 +787,7 @@ export default function PlanDetailPage() {
                           />
                           <span className="font-mono text-xs text-muted-foreground w-36 shrink-0">{flow.processCode}</span>
                           <span className="truncate flex-1">{flow.l4Process}</span>
-                          <span className="text-xs text-muted-foreground shrink-0">{flow.l1Domain}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">{flow.l4Owner}</span>
                         </label>
                       ))
                     )}
@@ -800,14 +825,14 @@ export default function PlanDetailPage() {
                   <Input value={manualCode} onChange={e => setManualCode(e.target.value)} placeholder="可选" />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-sm font-medium mb-1 block">所属部门</label>
+                  <label className="text-sm font-medium mb-1 block">L4所有者</label>
                   <select
-                    value={manualDept}
-                    onChange={e => setManualDept(e.target.value)}
+                    value={manualOwner}
+                    onChange={e => setManualOwner(e.target.value)}
                     className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    <option value="">选择部门</option>
-                    {deptOptions.map(d => <option key={d} value={d}>{d}</option>)}
+                    <option value="">选择L4所有者</option>
+                    {ownerOptions.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
               </div>

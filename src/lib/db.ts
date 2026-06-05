@@ -249,7 +249,7 @@ export function mapPlanTaskRow(row: Record<string, unknown>) {
     flowItemId: row.flow_item_id as number | null,
     processCode: row.process_code as string,
     processName: row.process_name as string,
-    department: row.department as string,
+    owner: row.department as string,
     taskType: row.task_type as string,
     description: row.description as string,
     status: row.status as string,

@@ -82,7 +82,7 @@ export interface PlanTask {
   flowItemId: number | null;
   processCode: string;
   processName: string;
-  department: string;
+  owner: string;
   taskType: '新增流程' | '内容修订' | '格式修订';
   description: string;
   status: '待执行' | '进行中' | '已完成' | '已顺延';
@@ -94,8 +94,8 @@ export interface PlanTask {
   createdAt: string;
 }
 
-export interface DepartmentProgress {
-  department: string;
+export interface OwnerProgress {
+  owner: string;
   total: number;
   completed: number;
   pending: number;

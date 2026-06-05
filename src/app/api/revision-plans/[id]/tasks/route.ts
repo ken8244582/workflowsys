@@ -19,8 +19,8 @@ export async function GET(
   const conditions: string[] = ['plan_id = ?'];
   const paramsList: unknown[] = [planId];
 
-  const department = searchParams.get('department');
-  if (department) { conditions.push('department = ?'); paramsList.push(department); }
+  const owner = searchParams.get('owner');
+  if (owner) { conditions.push('department = ?'); paramsList.push(owner); }
 
   const taskType = searchParams.get('taskType');
   if (taskType) { conditions.push('task_type = ?'); paramsList.push(taskType); }

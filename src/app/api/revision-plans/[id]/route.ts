@@ -13,19 +13,19 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // Get department progress
-  const deptRows = db.prepare(`
-    SELECT department,
+  // Get owner (L4所有者) progress
+  const ownerRows = db.prepare(`
+    SELECT department as owner,
       COUNT(*) as total,
       SUM(CASE WHEN status = '已完成' THEN 1 ELSE 0 END) as completed,
       SUM(CASE WHEN status = '待执行' THEN 1 ELSE 0 END) as pending,
       SUM(CASE WHEN status = '进行中' THEN 1 ELSE 0 END) as in_progress,
       SUM(CASE WHEN status = '已顺延' THEN 1 ELSE 0 END) as carried_over
     FROM plan_tasks WHERE plan_id = ? GROUP BY department ORDER BY department
-  `).all(parseInt(id)) as { department: string; total: number; completed: number; pending: number; in_progress: number; carried_over: number }[];
+  `).all(parseInt(id)) as { owner: string; total: number; completed: number; pending: number; in_progress: number; carried_over: number }[];
 
-  const departmentProgress = deptRows.map(d => ({
-    department: d.department,
+  const ownerProgress = ownerRows.map(d => ({
+    owner: d.owner,
     total: d.total,
     completed: d.completed,
     pending: d.pending,
@@ -36,7 +36,7 @@ export async function GET(
 
   return NextResponse.json({
     ...mapPlanRow(row),
-    departmentProgress,
+    ownerProgress,
   });
 }
 
@@ -60,6 +60,17 @@ export async function PUT(
   if (action === 'publish') {
     // 发布/下发计划
     db.prepare("UPDATE revision_plans SET status = '已下发', updated_at = datetime('now','localtime') WHERE id = ?").run(numId);
+    const updated = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown>;
+    return NextResponse.json(mapPlanRow(updated));
+  }
+
+  if (action === 'withdraw') {
+    // 撤回计划到草稿状态
+    const currentStatus = existing.status as string;
+    if (currentStatus !== '已下发') {
+      return NextResponse.json({ error: '只能撤回已下发的计划' }, { status: 400 });
+    }
+    db.prepare("UPDATE revision_plans SET status = '草稿', updated_at = datetime('now','localtime') WHERE id = ?").run(numId);
     const updated = db.prepare('SELECT * FROM revision_plans WHERE id = ?').get(numId) as Record<string, unknown>;
     return NextResponse.json(mapPlanRow(updated));
   }

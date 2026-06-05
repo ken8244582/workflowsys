@@ -10,10 +10,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, ClipboardList, CheckCircle2, Clock, Plus, ArrowRight, ChevronRight, BarChart3, Target, TrendingUp } from 'lucide-react';
-import type { RevisionPlan, DepartmentProgress } from '@/lib/flow-data';
+import type { RevisionPlan, OwnerProgress } from '@/lib/flow-data';
 
 interface PlanWithProgress extends RevisionPlan {
-  departmentProgress?: DepartmentProgress[];
+  ownerProgress?: OwnerProgress[];
 }
 
 export default function RevisionPlanPage() {
@@ -31,12 +31,12 @@ export default function RevisionPlanPage() {
       const data = await res.json();
       const planItems: PlanWithProgress[] = data.items || [];
 
-      // Fetch department progress for the latest published plan
+      // Fetch owner progress for the latest published plan
       const publishedPlan = planItems.find(p => p.status === '已下发');
       if (publishedPlan) {
         const detailRes = await fetch(`/api/revision-plans/${publishedPlan.id}`);
         const detail = await detailRes.json();
-        publishedPlan.departmentProgress = detail.departmentProgress || [];
+        publishedPlan.ownerProgress = detail.ownerProgress || [];
       }
 
       setPlans(planItems);
@@ -144,44 +144,44 @@ export default function RevisionPlanPage() {
         </Card>
       </div>
 
-      {/* Department Progress */}
-      {currentPlan && currentPlan.departmentProgress && currentPlan.departmentProgress.length > 0 && (
+      {/* Owner Progress */}
+      {currentPlan && currentPlan.ownerProgress && currentPlan.ownerProgress.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-[#1e3a5f]" />
-              部门完成情况
+              L4所有者完成情况
               <span className="text-xs text-muted-foreground font-normal ml-2">
                 {currentPlan.planMonth} 已下发计划
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {currentPlan.departmentProgress.map((dept) => (
-              <div key={dept.department} className="flex items-center gap-3 group">
-                <div className="w-44 shrink-0 text-sm font-medium truncate">{dept.department}</div>
+            {currentPlan.ownerProgress.map((ow) => (
+              <div key={ow.owner} className="flex items-center gap-3 group">
+                <div className="w-44 shrink-0 text-sm font-medium truncate">{ow.owner}</div>
                 <div className="flex-1 relative h-7 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-[#1e3a5f] to-[#3b82f6] rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                    style={{ width: `${dept.completionRate}%` }}
+                    style={{ width: `${ow.completionRate}%` }}
                   >
-                    {dept.completionRate >= 15 && (
-                      <span className="text-[11px] font-semibold text-white">{dept.completed}/{dept.total}</span>
+                    {ow.completionRate >= 15 && (
+                      <span className="text-[11px] font-semibold text-white">{ow.completed}/{ow.total}</span>
                     )}
                   </div>
-                  {dept.completionRate < 15 && (
+                  {ow.completionRate < 15 && (
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-muted-foreground">
-                      {dept.completed}/{dept.total}
+                      {ow.completed}/{ow.total}
                     </span>
                   )}
                 </div>
                 <div className="w-14 text-sm font-semibold text-right tabular-nums">
-                  <span className={dept.completionRate >= 80 ? 'text-emerald-600' : dept.completionRate >= 50 ? 'text-amber-600' : 'text-red-500'}>
-                    {dept.completionRate}%
+                  <span className={ow.completionRate >= 80 ? 'text-emerald-600' : ow.completionRate >= 50 ? 'text-amber-600' : 'text-red-500'}>
+                    {ow.completionRate}%
                   </span>
                 </div>
                 <Link
-                  href={`/functional/plan/${currentPlan.id}?department=${encodeURIComponent(dept.department)}`}
+                  href={`/functional/plan/${currentPlan.id}?owner=${encodeURIComponent(ow.owner)}`}
                   className="opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Button variant="ghost" size="sm" className="h-7 px-2 text-[#1e3a5f]">
