@@ -642,9 +642,11 @@ export default function PlanDetailPage() {
                 ) : tasks.length === 0 ? (
                   <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">暂无任务</TableCell></TableRow>
                 ) : (
-                  tasks.map((task, idx) => (
-                    <TableRow key={task.id} className={task.status === '已完成' ? 'bg-emerald-50/30' : task.status === '已顺延' ? 'bg-amber-50/30' : ''}>
-                      <TableCell className="sticky left-0 bg-inherit z-10">
+                  tasks.map((task, idx) => {
+                    const stickyBg = task.status === '已完成' ? 'bg-emerald-50/30' : task.status === '已顺延' ? 'bg-amber-50/30' : 'bg-white';
+                    return (
+                    <TableRow key={task.id} className={stickyBg}>
+                      <TableCell className={`sticky left-0 ${stickyBg} z-10 shadow-[2px_0_0_0_rgba(0,0,0,0.04)]`}>
                         <Checkbox
                           checked={selectedIds.has(task.id)}
                           onCheckedChange={() => toggleSelect(task.id)}
@@ -679,7 +681,7 @@ export default function PlanDetailPage() {
                       <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{task.description || '--'}</TableCell>
                       <TableCell>{statusBadge(task.status)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{task.completedAt || '--'}</TableCell>
-                      <TableCell className="sticky right-0 bg-inherit z-10">
+                      <TableCell className={`sticky right-0 ${stickyBg} z-10 shadow-[-2px_0_0_0_rgba(0,0,0,0.04)]`}>
                         <div className="flex items-center justify-center gap-1">
                           {task.status === '待执行' && (
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-600"
@@ -739,7 +741,7 @@ export default function PlanDetailPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                    )})
                 )}
               </TableBody>
             </Table>

@@ -539,20 +539,20 @@ export default function FunctionalListPage() {
               <Table className="text-xs">
                 <TableHeader>
                   <TableRow className="bg-gray-50/80">
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky left-0 top-0 bg-gray-50/95 z-20">序号</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50/95 z-10">L1业务域</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50/95 z-10">L2业务组</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50/95 z-10">L3业务段</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50/95 z-10">流程编码</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50/95 z-10">L4职能流程</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50/95 z-10">版本</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50/95 z-10">L4所有者</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50/95 z-10">格式</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50/95 z-10">分类</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50/95 z-10">IT覆盖</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50/95 z-10">IT支撑分</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-[80px] top-0 bg-gray-50/95 z-20">状态</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50/95 z-20">操作</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky left-0 top-0 bg-gray-50 z-20">序号</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50 z-10">L1业务域</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50 z-10">L2业务组</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50 z-10">L3业务段</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50 z-10">流程编码</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50 z-10">L4职能流程</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">版本</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap sticky top-0 bg-gray-50 z-10">L4所有者</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">格式</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">分类</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">IT覆盖</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">IT支撑分</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-[80px] top-0 bg-gray-50 z-20">状态</TableHead>
+                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
