@@ -555,11 +555,11 @@ export default function PlanDetailPage() {
       {/* Task Table */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[60vh]">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50/80">
-                  <TableHead className="w-10 sticky left-0 bg-gray-50/80 z-10">
+                <TableRow className="bg-gray-50 sticky top-0 z-20">
+                  <TableHead className="w-10 sticky left-0 bg-gray-50 z-30">
                     <Checkbox
                       checked={tasks.length > 0 && selectedIds.size === tasks.length}
                       onCheckedChange={toggleAll}
@@ -576,7 +576,7 @@ export default function PlanDetailPage() {
                   <TableHead className="min-w-[120px]">修订要求</TableHead>
                   <TableHead className="min-w-[70px]">状态</TableHead>
                   <TableHead className="min-w-[100px]">完成时间</TableHead>
-                  <TableHead className="w-28 text-center sticky right-0 bg-gray-50/80 z-10">操作</TableHead>
+                  <TableHead className="w-28 text-center sticky right-0 bg-gray-50 z-30">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -800,10 +800,10 @@ export default function PlanDetailPage() {
             <DialogDescription>从流程清单选择已有流程添加为修订任务</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            {/* Task type and description */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Task type and description - side by side, aligned top */}
+            <div className="grid grid-cols-[140px_1fr] gap-4 items-start">
               <div>
-                <label className="text-sm font-medium mb-1 block">任务类型</label>
+                <label className="text-sm font-medium mb-1.5 block">任务类型</label>
                 <select
                   value={newTaskType}
                   onChange={e => setNewTaskType(e.target.value)}
@@ -813,10 +813,10 @@ export default function PlanDetailPage() {
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">修订要求</label>
+                <label className="text-sm font-medium mb-1.5 block">修订要求</label>
                 <textarea
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-                  rows={3}
+                  rows={2}
                   maxLength={500}
                   value={newTaskDesc}
                   onChange={e => setNewTaskDesc(e.target.value)}
@@ -839,8 +839,8 @@ export default function PlanDetailPage() {
             <div className="border rounded-md overflow-auto max-h-[320px]">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/80 sticky top-0 z-10">
-                    <TableHead className="w-10 bg-gray-50/80">
+                  <TableRow className="bg-gray-50 sticky top-0 z-10">
+                    <TableHead className="w-10 bg-gray-50">
                       <Checkbox
                         checked={filteredFlows.length > 0 && selectedFlowIds.size === filteredFlows.filter(f => f.l4Process).length}
                         onCheckedChange={() => {
@@ -853,13 +853,13 @@ export default function PlanDetailPage() {
                         }}
                       />
                     </TableHead>
-                    <TableHead className="min-w-[140px] bg-gray-50/80">流程编码</TableHead>
-                    <TableHead className="min-w-[180px] bg-gray-50/80">L4职能流程</TableHead>
-                    <TableHead className="min-w-[80px] bg-gray-50/80">最新版本号</TableHead>
-                    <TableHead className="min-w-[80px] bg-gray-50/80">L4所有者</TableHead>
-                    <TableHead className="min-w-[80px] bg-gray-50/80">流程所属部门</TableHead>
-                    <TableHead className="min-w-[70px] bg-gray-50/80">格式</TableHead>
-                    <TableHead className="min-w-[60px] bg-gray-50/80">分类</TableHead>
+                    <TableHead className="min-w-[140px] bg-gray-50">流程编码</TableHead>
+                    <TableHead className="min-w-[180px] bg-gray-50">L4职能流程</TableHead>
+                    <TableHead className="min-w-[80px] bg-gray-50">最新版本号</TableHead>
+                    <TableHead className="min-w-[80px] bg-gray-50">L4所有者</TableHead>
+                    <TableHead className="min-w-[80px] bg-gray-50">流程所属部门</TableHead>
+                    <TableHead className="min-w-[70px] bg-gray-50">格式</TableHead>
+                    <TableHead className="min-w-[60px] bg-gray-50">分类</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -913,15 +913,18 @@ export default function PlanDetailPage() {
 
             {/* Selected summary */}
             {selectedFlowIds.size > 0 && (
-              <div className="bg-blue-50 rounded-md p-2">
-                <p className="text-xs text-blue-700 font-medium mb-1">已选 {selectedFlowIds.size} 个流程</p>
+              <div className="bg-blue-50 rounded-md p-2 max-h-24 overflow-y-auto">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-blue-700 font-medium">已选 {selectedFlowIds.size} 个流程</p>
+                  <button className="text-[10px] text-blue-500 hover:text-red-500" onClick={() => setSelectedFlowIds(new Set())}>清空</button>
+                </div>
                 <div className="flex flex-wrap gap-1">
                   {Array.from(selectedFlowIds).map(fid => {
                     const f = flowItems.find(fl => fl.id === fid);
                     return f ? (
-                      <Badge key={fid} variant="secondary" className="text-[10px]">
-                        {f.l4Process}
-                        <button className="ml-1 hover:text-red-500" onClick={() => {
+                      <Badge key={fid} variant="secondary" className="text-[10px] max-w-[120px] truncate">
+                        <span className="truncate">{f.l4Process || f.processCode}</span>
+                        <button className="ml-1 hover:text-red-500 flex-shrink-0" onClick={() => {
                           const next = new Set(selectedFlowIds);
                           next.delete(fid);
                           setSelectedFlowIds(next);
