@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { beijingNow } from '@/lib/utils';
 
 // Helper: compute department progress from plan tasks
 async function computeDepartmentProgress(planId: number) {
@@ -43,7 +44,7 @@ async function updatePlanCounts(planId: number) {
     .eq('plan_id', planId)
     .eq('status', '已完成');
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = beijingNow();
   await supabase
     .from('revision_plans')
     .update({
@@ -107,7 +108,7 @@ export async function PUT(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = beijingNow();
 
   if (action === 'publish') {
     if (plan.status !== '草稿') {

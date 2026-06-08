@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { beijingNow } from '@/lib/utils';
 
 // Helper to update plan counts
 async function updatePlanCounts(planId: number) {
@@ -18,7 +19,7 @@ async function updatePlanCounts(planId: number) {
     .update({
       task_count: taskCount || 0,
       completed_count: completedCount || 0,
-      updated_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      updated_at: beijingNow(),
     })
     .eq('id', planId);
 }
@@ -68,7 +69,7 @@ export async function PUT(
     return NextResponse.json({ error: '任务不存在' }, { status: 404 });
   }
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = beijingNow();
 
   if (action === 'complete') {
     if (task.status === '已完成') {

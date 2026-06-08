@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { beijingNow } from '@/lib/utils';
 
 // Helper to update plan counts
 export async function updatePlanCounts(planId: number) {
@@ -12,7 +13,7 @@ export async function updatePlanCounts(planId: number) {
   const taskCount = tasks?.length || 0;
   const completedCount = tasks?.filter((t: Record<string, unknown>) => t.status === '已完成').length || 0;
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = beijingNow();
   await supabase
     .from('revision_plans')
     .update({ task_count: taskCount, completed_count: completedCount, updated_at: now })
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '计划月份和名称不能为空' }, { status: 400 });
   }
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = beijingNow();
 
   const { data, error } = await supabase
     .from('revision_plans')

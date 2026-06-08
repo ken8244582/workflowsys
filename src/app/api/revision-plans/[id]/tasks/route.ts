@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { beijingNow } from '@/lib/utils';
 
 // Helper to format task row
 function mapTaskRow(row: Record<string, unknown>) {
@@ -37,7 +38,7 @@ async function updatePlanCounts(planId: number) {
   const taskCount = tasks?.length || 0;
   const completedCount = tasks?.filter((t: Record<string, unknown>) => t.status === '已完成').length || 0;
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = beijingNow();
   await supabase
     .from('revision_plans')
     .update({ task_count: taskCount, completed_count: completedCount, updated_at: now })
@@ -131,7 +132,7 @@ export async function POST(
 
   let nextSort = (maxSort && maxSort.length > 0 ? (maxSort[0] as Record<string, unknown>).sort_order as number : 0) + 1;
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = beijingNow();
   const rows = tasks.map((task) => ({
     plan_id: planId,
     flow_item_id: task.flowItemId || null,

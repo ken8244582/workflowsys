@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import type { FlowItem } from '@/lib/flow-data';
+import { beijingNow } from '@/lib/utils';
 
 function mapFlowRow(row: Record<string, unknown>): FlowItem {
   return {
@@ -69,7 +70,7 @@ export async function PUT(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const now = new Date().toLocaleString('zh-CN', { hour12: false });
+  const now = beijingNow();
 
   if (action === 'abolish') {
     // 废止流程

@@ -644,9 +644,10 @@ export default function PlanDetailPage() {
                   <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">暂无任务</TableCell></TableRow>
                 ) : (
                   tasks.map((task, idx) => {
-                    const stickyBg = task.status === '已完成' ? 'bg-emerald-50/30' : task.status === '已顺延' ? 'bg-amber-50/30' : 'bg-white';
+                    const rowBg = task.status === '已完成' ? 'bg-emerald-50/30' : task.status === '已顺延' ? 'bg-amber-50/30' : '';
+                    const stickyBg = task.status === '已完成' ? 'bg-emerald-50' : task.status === '已顺延' ? 'bg-amber-50' : 'bg-white';
                     return (
-                    <TableRow key={task.id} className={stickyBg}>
+                    <TableRow key={task.id} className={rowBg}>
                       <TableCell className={`sticky left-0 ${stickyBg} z-10 shadow-[2px_0_0_0_rgba(0,0,0,0.04)]`}>
                         <Checkbox
                           checked={selectedIds.has(task.id)}
