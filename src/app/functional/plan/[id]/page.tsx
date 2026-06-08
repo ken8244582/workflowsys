@@ -16,13 +16,24 @@ import {
 } from '@/components/ui/table';
 import {
   ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Forward, Trash2, Search,
-  ClipboardList, Clock, CheckCircle, TrendingUp,
+  ClipboardList, Clock, CheckCircle, TrendingUp, Download,
 } from 'lucide-react';
 import type { RevisionPlan, PlanTask, OwnerProgress } from '@/lib/flow-data';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 
+interface DeptProgress {
+  department: string;
+  total: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  carriedOver: number;
+  completionRate: number;
+}
+
 interface PlanDetail extends RevisionPlan {
   ownerProgress: OwnerProgress[];
+  departmentProgress: DeptProgress[];
 }
 
 interface FlowItem {
@@ -148,7 +159,8 @@ export default function PlanDetailPage() {
             flowItemId: flow.id,
             processCode: flow.processCode,
             processName: flow.l4Process,
-            department: flow.l4Owner,
+            owner: flow.l4Owner,
+            department: flow.department,
             taskType: newTaskType,
             description: newTaskDesc,
             version: flow.version || '',
@@ -190,6 +202,24 @@ export default function PlanDetailPage() {
       console.error('Failed to publish plan:', err);
     } finally {
       setOperating(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`/api/revision-plans/${planId}/export`);
+      if (!res.ok) throw new Error('导出失败');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${plan?.planName || '修订计划'}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('导出失败:', err);
     }
   };
 
@@ -399,6 +429,9 @@ export default function PlanDetailPage() {
           }`}>{plan.status}</Badge>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5">
+            <Download className="h-4 w-4" /> 导出
+          </Button>
           {isDraft && (
             <>
               <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
@@ -466,32 +499,56 @@ export default function PlanDetailPage() {
         </Card>
       </div>
 
-      {/* Owner Progress */}
-      {plan.ownerProgress && plan.ownerProgress.length > 0 && (
+      {/* Department Progress */}
+      {plan.departmentProgress && plan.departmentProgress.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              L4所有者完成情况
+              部门修订完成进度
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {plan.ownerProgress.map(ow => (
-              <div key={ow.owner} className="flex items-center gap-2 text-sm">
-                <div className="w-36 shrink-0 truncate font-medium">{ow.owner}</div>
-                <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#1e3a5f] to-[#3b82f6] rounded-full transition-all duration-500"
-                    style={{ width: `${ow.completionRate}%` }}
-                  />
-                </div>
-                <div className="w-20 text-right text-xs tabular-nums">
-                  <span className="font-semibold">{ow.completed}</span>/{ow.total}
-                  <span className={`ml-1 font-semibold ${ow.completionRate >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {ow.completionRate}%
-                  </span>
-                </div>
-              </div>
-            ))}
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50">
+                    <th className="text-left py-2 px-3 font-medium sticky left-0 bg-gray-50 z-[1]">部门</th>
+                    <th className="text-center py-2 px-3 font-medium">任务总数</th>
+                    <th className="text-center py-2 px-3 font-medium">待执行</th>
+                    <th className="text-center py-2 px-3 font-medium">进行中</th>
+                    <th className="text-center py-2 px-3 font-medium">已完成</th>
+                    <th className="text-center py-2 px-3 font-medium">已顺延</th>
+                    <th className="text-center py-2 px-3 font-medium min-w-[120px]">完成进度</th>
+                    <th className="text-center py-2 px-3 font-medium">完成率</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {plan.departmentProgress.map(dept => (
+                    <tr key={dept.department} className="border-b last:border-0 hover:bg-gray-50/50">
+                      <td className="py-2 px-3 font-medium sticky left-0 bg-white z-[1]">{dept.department}</td>
+                      <td className="text-center py-2 px-3 tabular-nums">{dept.total}</td>
+                      <td className="text-center py-2 px-3 tabular-nums text-gray-500">{dept.pending}</td>
+                      <td className="text-center py-2 px-3 tabular-nums text-blue-600">{dept.inProgress}</td>
+                      <td className="text-center py-2 px-3 tabular-nums text-emerald-600">{dept.completed}</td>
+                      <td className="text-center py-2 px-3 tabular-nums text-amber-600">{dept.carriedOver}</td>
+                      <td className="py-2 px-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${dept.completionRate >= 80 ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : dept.completionRate >= 50 ? 'bg-gradient-to-r from-[#1e3a5f] to-[#3b82f6]' : 'bg-gradient-to-r from-amber-500 to-amber-400'}`}
+                              style={{ width: `${Math.max(dept.completionRate, 2)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                      <td className={`text-center py-2 px-3 font-semibold tabular-nums ${dept.completionRate >= 80 ? 'text-emerald-600' : dept.completionRate >= 50 ? 'text-blue-600' : 'text-amber-600'}`}>
+                        {dept.completionRate}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}

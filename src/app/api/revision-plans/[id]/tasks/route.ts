@@ -137,7 +137,7 @@ export async function POST(
     flow_item_id: task.flowItemId || null,
     process_code: task.processCode || '',
     process_name: task.processName || '',
-    owner: task.department || '',
+    owner: task.owner || task.department || '',
     department: task.department || '',
     task_type: task.taskType || '内容修订',
     description: task.description || '',
