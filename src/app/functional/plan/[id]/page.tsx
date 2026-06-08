@@ -18,6 +18,7 @@ import {
   ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Forward, Trash2, Search,
   ClipboardList, Clock, CheckCircle, TrendingUp, Download,
 } from 'lucide-react';
+import { PaginationBar } from '@/components/pagination-bar';
 import type { RevisionPlan, PlanTask, OwnerProgress } from '@/lib/flow-data';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 
@@ -64,7 +65,7 @@ export default function PlanDetailPage() {
   const [tasks, setTasks] = useState<PlanTask[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(50);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -750,15 +751,16 @@ export default function PlanDetailPage() {
       </Card>
 
       {/* Pagination */}
-      {total > pageSize && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>共 {total} 条</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一页</Button>
-            <span>{page} / {Math.ceil(total / pageSize)}</span>
-            <Button variant="outline" size="sm" disabled={page >= Math.ceil(total / pageSize)} onClick={() => setPage(p => p + 1)}>下一页</Button>
-          </div>
-        </div>
+      {total > 0 && (
+        <PaginationBar
+          page={page}
+          totalPages={Math.max(1, Math.ceil(total / pageSize))}
+          total={total}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        />
       )}
 
       {/* Publish Dialog */}

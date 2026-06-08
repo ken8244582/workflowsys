@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, ClipboardList, CheckCircle2, Clock, Plus, ArrowRight, ChevronRight, BarChart3, Target, TrendingUp, Trash2 } from 'lucide-react';
 import type { RevisionPlan, OwnerProgress } from '@/lib/flow-data';
+import { PaginationBar } from '@/components/pagination-bar';
 
 interface PlanWithProgress extends RevisionPlan {
   ownerProgress?: OwnerProgress[];
@@ -26,6 +27,8 @@ export default function RevisionPlanPage() {
   const [deletePlanId, setDeletePlanId] = useState<number | null>(null);
   const [deletePlanName, setDeletePlanName] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [planPage, setPlanPage] = useState(1);
+  const [planPageSize, setPlanPageSize] = useState(10);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -232,8 +235,9 @@ export default function RevisionPlanPage() {
               暂无修订计划，点击右上角创建
             </div>
           ) : (
-            <div className="space-y-2">
-              {plans.map((plan) => (
+            <>
+              <div className="space-y-2">
+                {plans.slice((planPage - 1) * planPageSize, planPage * planPageSize).map((plan) => (
                 <div
                   key={plan.id}
                   className="border rounded-lg p-4 hover:shadow-md hover:border-[#1e3a5f]/30 transition-all group"
@@ -272,8 +276,20 @@ export default function RevisionPlanPage() {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              {plans.length > 0 && (
+                <PaginationBar
+                  page={planPage}
+                  totalPages={Math.max(1, Math.ceil(plans.length / planPageSize))}
+                  total={plans.length}
+                  pageSize={planPageSize}
+                  pageSizeOptions={[5, 10, 20, 50]}
+                  onPageChange={setPlanPage}
+                  onPageSizeChange={(s) => { setPlanPageSize(s); setPlanPage(1); }}
+                />
+              )}
+            </>
           )}
         </CardContent>
       </Card>
