@@ -3,49 +3,54 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useAuth } from '@/components/auth-provider';
+import type { MenuItem } from '@/components/auth-provider';
 
+// Static menu items for fallback / initial render
 interface SubMenu {
   label: string;
   href: string;
 }
 
-interface MenuItem {
+interface MenuGroup {
   label: string;
   href?: string;
   children?: SubMenu[];
 }
 
-const menuItems: MenuItem[] = [
-  { label: '统计概览', href: '/' },
-  {
-    label: '职能流程',
-    children: [
-      { label: '流程架构', href: '/functional/architecture' },
-      { label: '流程清单', href: '/functional/list' },
-      { label: '修订记录', href: '/functional/revision' },
-      { label: '修订计划', href: '/functional/plan' },
-    ],
-  },
-  {
-    label: '端到端流程',
-    children: [
-      { label: '流程概览', href: '/e2e/overview' },
-      { label: '流程管理', href: '/e2e/list' },
-      { label: '梳理计划', href: '/e2e/plan' },
-    ],
-  },
-];
+function buildMenuTree(menus: MenuItem[]): MenuGroup[] {
+  const topMenus = menus.filter(m => m.parent_id === null).sort((a, b) => a.sort_order - b.sort_order);
+  return topMenus.map(top => {
+    const children = menus
+      .filter(m => m.parent_id === top.id)
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    if (children.length > 0) {
+      return {
+        label: top.name,
+        children: children.map(c => ({ label: c.name, href: c.path || '#' })),
+      };
+    }
+    return {
+      label: top.name,
+      href: top.path || '#',
+    };
+  });
+}
 
 export function NavMenu() {
   const pathname = usePathname();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const { menus, user, logout } = useAuth();
+
+  const menuItems = buildMenuTree(menus);
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
 
-  const isParentActive = (item: MenuItem) => {
+  const isParentActive = (item: MenuGroup) => {
     if (item.children) {
       return item.children.some((child) => pathname.startsWith(child.href));
     }
@@ -53,7 +58,7 @@ export function NavMenu() {
   };
 
   return (
-    <nav className="ml-6 flex items-center gap-0.5">
+    <nav className="ml-6 flex flex-1 items-center gap-0.5">
       {menuItems.map((item) => {
         const hasChildren = item.children && item.children.length > 0;
         const active = item.href ? isActive(item.href) : isParentActive(item);
@@ -123,6 +128,22 @@ export function NavMenu() {
           </div>
         );
       })}
+
+      {/* User info & logout */}
+      {user && (
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {user.displayName || user.username}
+            {user.isSuperAdmin && <span className="ml-1 text-[#f59e0b]">[管理员]</span>}
+          </span>
+          <button
+            onClick={logout}
+            className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            退出
+          </button>
+        </div>
+      )}
     </nav>
   );
 }
