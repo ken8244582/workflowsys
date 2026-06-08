@@ -14,6 +14,8 @@ import { Search, Download, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight
 
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 import { PaginationBar } from '@/components/pagination-bar';
+import { TruncateDiv } from '@/components/truncate-cell';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 /* ========== Unified L1-L4 Hierarchy Icons ========== */
 function LevelIcon({ level, className }: { level: number; className?: string }) {
@@ -404,6 +406,7 @@ export default function FunctionalListPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
@@ -480,13 +483,13 @@ export default function FunctionalListPage() {
                     pagedData.map((item, idx) => (
                           <TableRow key={item.id} className={`cursor-pointer hover:bg-blue-50/50 ${item.status === '已废止' ? 'opacity-50' : ''}`} onClick={() => { setDetailItem(item); setDetailDialog(true); }}>
                             <TableCell className="text-gray-400 text-center sticky left-0 bg-white z-10">{(page - 1) * pageSize + idx + 1}</TableCell>
-                            <TableCell className="truncate max-w-[100px]">{item.l1Domain}</TableCell>
-                            <TableCell className="truncate max-w-[100px]">{item.l2Group}</TableCell>
-                            <TableCell className="truncate max-w-[100px]">{item.l3Segment}</TableCell>
-                            <TableCell className="font-mono text-gray-500 truncate max-w-[120px]">{item.processCode}</TableCell>
-                            <TableCell className="font-medium truncate max-w-[150px]">{item.l4Process}</TableCell>
+                            <TableCell><TruncateDiv content={item.l1Domain} maxWidth="100px" /></TableCell>
+                            <TableCell><TruncateDiv content={item.l2Group} maxWidth="100px" /></TableCell>
+                            <TableCell><TruncateDiv content={item.l3Segment} maxWidth="100px" /></TableCell>
+                            <TableCell><TruncateDiv content={item.processCode} maxWidth="120px" className="font-mono text-gray-500" /></TableCell>
+                            <TableCell><TruncateDiv content={item.l4Process} maxWidth="150px" className="font-medium" /></TableCell>
                             <TableCell className="text-center font-mono">{item.version}</TableCell>
-                            <TableCell className="truncate max-w-[60px]">{item.l4Owner}</TableCell>
+                            <TableCell><TruncateDiv content={item.l4Owner} maxWidth="60px" /></TableCell>
                             <TableCell className="text-center">{formatBadge(item.format)}</TableCell>
                             <TableCell className="text-center">{categoryBadge(item.category)}</TableCell>
                             <TableCell className="text-center">{itBadge(item.itCoverage)}</TableCell>
@@ -827,6 +830,7 @@ export default function FunctionalListPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+      </TooltipProvider>
   );
 }

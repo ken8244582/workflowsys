@@ -19,6 +19,8 @@ import {
   ClipboardList, Clock, CheckCircle, TrendingUp, Download,
 } from 'lucide-react';
 import { PaginationBar } from '@/components/pagination-bar';
+import { TruncateDiv } from '@/components/truncate-cell';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { RevisionPlan, PlanTask, OwnerProgress } from '@/lib/flow-data';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 
@@ -415,6 +417,7 @@ export default function PlanDetailPage() {
   });
 
   return (
+    <TooltipProvider>
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -657,15 +660,15 @@ export default function PlanDetailPage() {
                       <TableCell className="text-center text-muted-foreground">{(page - 1) * pageSize + idx + 1}</TableCell>
                       <TableCell className="font-mono text-xs">{task.processCode || <span className="text-muted-foreground">--</span>}</TableCell>
                       <TableCell>
-                        <div className="font-medium">{task.processName}</div>
+                        <TruncateDiv content={task.processName || ''} maxWidth="240px" className="font-medium" />
                         {task.carriedFromPlanId && (
                           <div className="text-[10px] text-amber-600 flex items-center gap-0.5 mt-0.5">
                             <Forward className="h-3 w-3" /> 顺延自上月计划
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">{task.owner || <span className="text-muted-foreground">--</span>}</TableCell>
-                      <TableCell className="text-sm">{task.department || <span className="text-muted-foreground">--</span>}</TableCell>
+                      <TableCell className="text-sm"><TruncateDiv content={task.owner || ''} maxWidth="80px" /></TableCell>
+                      <TableCell className="text-sm"><TruncateDiv content={task.department || ''} maxWidth="100px" /></TableCell>
                       <TableCell className="text-sm">
                         {task.format === '集团模板' ? <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
                          task.format === '旧格式' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
@@ -680,7 +683,7 @@ export default function PlanDetailPage() {
                          <span className="text-muted-foreground">--</span>}
                       </TableCell>
                       <TableCell>{taskTypeBadge(task.taskType)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{task.description || '--'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground"><TruncateDiv content={task.description || ''} maxWidth="200px" /></TableCell>
                       <TableCell>{statusBadge(task.status)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{task.completedAt || '--'}</TableCell>
                       <TableCell className={`sticky right-0 ${stickyBg} z-10 shadow-[-2px_0_0_0_rgba(0,0,0,0.04)]`}>
@@ -1010,6 +1013,7 @@ export default function PlanDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+      </TooltipProvider>
   );
 }
