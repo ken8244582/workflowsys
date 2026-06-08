@@ -92,6 +92,10 @@ export interface PlanTask {
   sortOrder: number;
   remarks: string;
   createdAt: string;
+  version: string;
+  department: string;
+  format: string;
+  category: string;
 }
 
 export interface OwnerProgress {

@@ -9,7 +9,8 @@ function mapTaskRow(row: Record<string, unknown>) {
     flowItemId: row.flow_item_id,
     processCode: row.process_code,
     processName: row.process_name,
-    department: row.department,
+    owner: row.owner || row.department || '',
+    department: row.department || '',
     taskType: row.task_type,
     description: row.description,
     status: row.status,
@@ -19,6 +20,9 @@ function mapTaskRow(row: Record<string, unknown>) {
     sortOrder: row.sort_order,
     remarks: row.remarks,
     createdAt: row.created_at,
+    version: row.version || '',
+    format: row.format || '',
+    category: row.category || '',
   };
 }
 
@@ -133,6 +137,7 @@ export async function POST(
     flow_item_id: task.flowItemId || null,
     process_code: task.processCode || '',
     process_name: task.processName || '',
+    owner: task.department || '',
     department: task.department || '',
     task_type: task.taskType || '内容修订',
     description: task.description || '',
@@ -143,6 +148,9 @@ export async function POST(
     sort_order: nextSort++,
     remarks: '',
     created_at: now,
+    version: task.version || '',
+    format: task.format || '',
+    category: task.category || '',
   }));
 
   const { data, error } = await supabase

@@ -85,6 +85,7 @@ export const planTasks = pgTable("plan_tasks", {
 	flowItemId: integer("flow_item_id"),
 	processCode: text("process_code").default('').notNull(),
 	processName: text("process_name").default('').notNull(),
+	owner: text("owner").default('').notNull(),
 	department: text().default('').notNull(),
 	taskType: text("task_type").default('内容修订').notNull(),
 	description: text().default('').notNull(),
@@ -94,6 +95,9 @@ export const planTasks = pgTable("plan_tasks", {
 	carriedToPlanId: integer("carried_to_plan_id"),
 	sortOrder: integer("sort_order").default(0).notNull(),
 	remarks: text().default('').notNull(),
+	version: text("version").default('').notNull(),
+	format: text("format").default('').notNull(),
+	category: text("category").default('').notNull(),
 	createdAt: text("created_at").default('').notNull(),
 }, (table) => [
 	index("idx_plan_tasks_department").using("btree", table.department.asc().nullsLast().op("text_ops")),

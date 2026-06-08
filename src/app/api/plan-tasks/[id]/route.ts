@@ -31,7 +31,7 @@ function mapTaskRow(row: Record<string, unknown>) {
     flowItemId: row.flow_item_id,
     processCode: row.process_code,
     processName: row.process_name,
-    department: row.department,
+    owner: row.owner || row.department || '',
     taskType: row.task_type,
     description: row.description,
     status: row.status,
@@ -41,6 +41,10 @@ function mapTaskRow(row: Record<string, unknown>) {
     sortOrder: row.sort_order,
     remarks: row.remarks,
     createdAt: row.created_at,
+    version: row.version || '',
+    department: row.department || '',
+    format: row.format || '',
+    category: row.category || '',
   };
 }
 
@@ -180,7 +184,8 @@ export async function PUT(
         flow_item_id: task.flow_item_id,
         process_code: task.process_code,
         process_name: task.process_name,
-        department: task.department,
+        owner: task.owner || task.department || '',
+        department: task.department || '',
         task_type: task.task_type,
         description: task.description,
         status: '待执行',
@@ -190,6 +195,9 @@ export async function PUT(
         sort_order: nextSort,
         remarks: `顺延自${currentMonth}`,
         created_at: now,
+        version: task.version || '',
+        format: task.format || '',
+        category: task.category || '',
       })
       .select()
       .single();

@@ -15,8 +15,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Forward, Trash2, Search, Filter,
-  ClipboardList, Clock, CheckCircle, TrendingUp, FileText, AlertCircle,
+  ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Forward, Trash2, Search,
+  ClipboardList, Clock, CheckCircle, TrendingUp,
 } from 'lucide-react';
 import type { RevisionPlan, PlanTask, OwnerProgress } from '@/lib/flow-data';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
@@ -34,6 +34,7 @@ interface FlowItem {
   l3Segment: string;
   l4Owner: string;
   version: string;
+  department: string;
   format: string;
   category: string;
 }
@@ -74,16 +75,11 @@ export default function PlanDetailPage() {
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   // Add task dialog state
-  const [addMode, setAddMode] = useState<'select' | 'manual'>('select');
   const [flowItems, setFlowItems] = useState<FlowItem[]>([]);
   const [selectedFlowIds, setSelectedFlowIds] = useState<Set<number>>(new Set());
   const [flowSearch, setFlowSearch] = useState('');
   const [newTaskType, setNewTaskType] = useState('内容修订');
   const [newTaskDesc, setNewTaskDesc] = useState('');
-  // Manual mode
-  const [manualName, setManualName] = useState('');
-  const [manualOwner, setManualOwner] = useState('');
-  const [manualCode, setManualCode] = useState('');
 
   const fetchPlan = useCallback(async () => {
     try {
@@ -139,38 +135,27 @@ export default function PlanDetailPage() {
     setFlowSearch('');
     setNewTaskType('内容修订');
     setNewTaskDesc('');
-    setManualName('');
-    setManualOwner('');
-    setManualCode('');
   };
 
   const handleAddTasks = async () => {
     setOperating(true);
     try {
       const tasksToAdd = [];
-      if (addMode === 'select') {
-        for (const fid of selectedFlowIds) {
-          const flow = flowItems.find(f => f.id === fid);
-          if (flow) {
-            tasksToAdd.push({
-              flowItemId: flow.id,
-              processCode: flow.processCode,
-              processName: flow.l4Process,
-              department: flow.l4Owner,
-              taskType: newTaskType,
-              description: newTaskDesc,
-            });
-          }
+      for (const fid of selectedFlowIds) {
+        const flow = flowItems.find(f => f.id === fid);
+        if (flow) {
+          tasksToAdd.push({
+            flowItemId: flow.id,
+            processCode: flow.processCode,
+            processName: flow.l4Process,
+            department: flow.l4Owner,
+            taskType: newTaskType,
+            description: newTaskDesc,
+            version: flow.version || '',
+            format: flow.format || '',
+            category: flow.category || '',
+          });
         }
-      } else {
-        if (!manualName) return;
-        tasksToAdd.push({
-          processCode: manualCode,
-          processName: manualName,
-          department: manualOwner,
-          taskType: newTaskType,
-          description: newTaskDesc,
-        });
       }
       if (tasksToAdd.length === 0) return;
 
@@ -257,14 +242,12 @@ export default function PlanDetailPage() {
     if (ids.length === 0) return;
     setOperating(true);
     try {
-      // Get or create next month plan
       const currentMonth = plan!.planMonth;
       const [year, month] = currentMonth.split('-').map(Number);
       const nextMonth = month === 12
         ? `${year + 1}-01`
         : `${year}-${String(month + 1).padStart(2, '0')}`;
 
-      // Ensure next month plan exists
       let nextPlanId: number;
       const plansRes = await fetch(`/api/revision-plans?planMonth=${nextMonth}`);
       const plansData = await plansRes.json();
@@ -283,7 +266,6 @@ export default function PlanDetailPage() {
         nextPlanId = created.id;
       }
 
-      // Carry over each task
       const unfinishedIds = ids.filter(id => {
         const task = tasks.find(t => t.id === id);
         return task && task.status !== '已完成';
@@ -484,7 +466,7 @@ export default function PlanDetailPage() {
         </Card>
       </div>
 
-      {/* Owner Progress (only show for published) */}
+      {/* Owner Progress */}
       {plan.ownerProgress && plan.ownerProgress.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
@@ -573,119 +555,127 @@ export default function PlanDetailPage() {
       {/* Task Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/80">
-                <TableHead className="w-10">
-                  <Checkbox
-                    checked={tasks.length > 0 && selectedIds.size === tasks.length}
-                    onCheckedChange={toggleAll}
-                  />
-                </TableHead>
-                <TableHead className="w-10 text-center">序号</TableHead>
-                <TableHead>流程编码</TableHead>
-                <TableHead>流程名称</TableHead>
-                <TableHead>L4所有者</TableHead>
-                <TableHead>任务类型</TableHead>
-                <TableHead>修订要求</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>完成时间</TableHead>
-                <TableHead className="w-28 text-center">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">加载中...</TableCell></TableRow>
-              ) : tasks.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">暂无任务</TableCell></TableRow>
-              ) : (
-                tasks.map((task, idx) => (
-                  <TableRow key={task.id} className={task.status === '已完成' ? 'bg-emerald-50/30' : task.status === '已顺延' ? 'bg-amber-50/30' : ''}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(task.id)}
-                        onCheckedChange={() => toggleSelect(task.id)}
-                      />
-                    </TableCell>
-                    <TableCell className="text-center text-muted-foreground">{(page - 1) * pageSize + idx + 1}</TableCell>
-                    <TableCell className="font-mono text-xs">{task.processCode || <span className="text-muted-foreground">--</span>}</TableCell>
-                    <TableCell>
-                      <div className="font-medium">{task.processName}</div>
-                      {task.carriedFromPlanId && (
-                        <div className="text-[10px] text-amber-600 flex items-center gap-0.5 mt-0.5">
-                          <Forward className="h-3 w-3" /> 顺延自上月计划
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/80">
+                  <TableHead className="w-10 sticky left-0 bg-gray-50/80 z-10">
+                    <Checkbox
+                      checked={tasks.length > 0 && selectedIds.size === tasks.length}
+                      onCheckedChange={toggleAll}
+                    />
+                  </TableHead>
+                  <TableHead className="w-10 text-center">序号</TableHead>
+                  <TableHead className="min-w-[140px]">流程编码</TableHead>
+                  <TableHead className="min-w-[180px]">流程名称</TableHead>
+                  <TableHead className="min-w-[80px]">L4所有者</TableHead>
+                  <TableHead className="min-w-[70px]">流程所属部门</TableHead>
+                  <TableHead className="min-w-[60px]">格式</TableHead>
+                  <TableHead className="min-w-[60px]">分类</TableHead>
+                  <TableHead className="min-w-[80px]">任务类型</TableHead>
+                  <TableHead className="min-w-[120px]">修订要求</TableHead>
+                  <TableHead className="min-w-[70px]">状态</TableHead>
+                  <TableHead className="min-w-[100px]">完成时间</TableHead>
+                  <TableHead className="w-28 text-center sticky right-0 bg-gray-50/80 z-10">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">加载中...</TableCell></TableRow>
+                ) : tasks.length === 0 ? (
+                  <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">暂无任务</TableCell></TableRow>
+                ) : (
+                  tasks.map((task, idx) => (
+                    <TableRow key={task.id} className={task.status === '已完成' ? 'bg-emerald-50/30' : task.status === '已顺延' ? 'bg-amber-50/30' : ''}>
+                      <TableCell className="sticky left-0 bg-inherit z-10">
+                        <Checkbox
+                          checked={selectedIds.has(task.id)}
+                          onCheckedChange={() => toggleSelect(task.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center text-muted-foreground">{(page - 1) * pageSize + idx + 1}</TableCell>
+                      <TableCell className="font-mono text-xs">{task.processCode || <span className="text-muted-foreground">--</span>}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{task.processName}</div>
+                        {task.carriedFromPlanId && (
+                          <div className="text-[10px] text-amber-600 flex items-center gap-0.5 mt-0.5">
+                            <Forward className="h-3 w-3" /> 顺延自上月计划
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">{task.owner || <span className="text-muted-foreground">--</span>}</TableCell>
+                      <TableCell className="text-sm">{task.department || <span className="text-muted-foreground">--</span>}</TableCell>
+                      <TableCell className="text-sm">{task.format || <span className="text-muted-foreground">--</span>}</TableCell>
+                      <TableCell className="text-sm">{task.category || <span className="text-muted-foreground">--</span>}</TableCell>
+                      <TableCell>{taskTypeBadge(task.taskType)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{task.description || '--'}</TableCell>
+                      <TableCell>{statusBadge(task.status)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{task.completedAt || '--'}</TableCell>
+                      <TableCell className="sticky right-0 bg-inherit z-10">
+                        <div className="flex items-center justify-center gap-1">
+                          {task.status === '待执行' && (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-600"
+                              onClick={async () => {
+                                await fetch(`/api/plan-tasks/${task.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ _action: 'start' }),
+                                });
+                                fetchTasks();
+                              }}
+                            >开始</Button>
+                          )}
+                          {task.status === '进行中' && (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-emerald-600"
+                              onClick={async () => {
+                                await fetch(`/api/plan-tasks/${task.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ _action: 'complete' }),
+                                });
+                                fetchPlan();
+                                fetchTasks();
+                              }}
+                            >完成</Button>
+                          )}
+                          {task.status === '已完成' && (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500"
+                              onClick={async () => {
+                                await fetch(`/api/plan-tasks/${task.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ _action: 'undo_complete' }),
+                                });
+                                fetchPlan();
+                                fetchTasks();
+                              }}
+                            ><RotateCcw className="h-3 w-3" />撤回</Button>
+                          )}
+                          {(task.status === '待执行' || task.status === '进行中') && (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-amber-600"
+                              onClick={() => {
+                                setSelectedIds(new Set([task.id]));
+                                setShowCarryDialog(true);
+                              }}
+                            ><Forward className="h-3 w-3" />顺延</Button>
+                          )}
+                          {isDraft && (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500"
+                              onClick={() => {
+                                setDeleteTaskName(task.processName);
+                                setPendingDeleteId(task.id);
+                                setShowDeleteDialog(true);
+                              }}
+                            ><Trash2 className="h-3 w-3" /></Button>
+                          )}
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">{task.owner}</TableCell>
-                    <TableCell>{taskTypeBadge(task.taskType)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{task.description || '--'}</TableCell>
-                    <TableCell>{statusBadge(task.status)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{task.completedAt || '--'}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-center gap-1">
-                        {task.status === '待执行' && (
-                          <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-600"
-                            onClick={async () => {
-                              await fetch(`/api/plan-tasks/${task.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ _action: 'start' }),
-                              });
-                              fetchTasks();
-                            }}
-                          >开始</Button>
-                        )}
-                        {task.status === '进行中' && (
-                          <Button variant="ghost" size="sm" className="h-7 px-2 text-emerald-600"
-                            onClick={async () => {
-                              await fetch(`/api/plan-tasks/${task.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ _action: 'complete' }),
-                              });
-                              fetchPlan();
-                              fetchTasks();
-                            }}
-                          >完成</Button>
-                        )}
-                        {task.status === '已完成' && (
-                          <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500"
-                            onClick={async () => {
-                              await fetch(`/api/plan-tasks/${task.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ _action: 'undo_complete' }),
-                              });
-                              fetchPlan();
-                              fetchTasks();
-                            }}
-                          ><RotateCcw className="h-3 w-3" />撤回</Button>
-                        )}
-                        {(task.status === '待执行' || task.status === '进行中') && (
-                          <Button variant="ghost" size="sm" className="h-7 px-2 text-amber-600"
-                            onClick={() => {
-                              setSelectedIds(new Set([task.id]));
-                              setShowCarryDialog(true);
-                            }}
-                          ><Forward className="h-3 w-3" />顺延</Button>
-                        )}
-                        {isDraft && (
-                          <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500"
-                            onClick={() => {
-                              setDeleteTaskName(task.processName);
-                              setPendingDeleteId(task.id);
-                              setShowDeleteDialog(true);
-                            }}
-                          ><Trash2 className="h-3 w-3" /></Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -793,25 +783,13 @@ export default function PlanDetailPage() {
 
       {/* Add Task Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh]">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>添加修订任务</DialogTitle>
-            <DialogDescription>从流程清单选择已有流程，或手动填写新增流程信息</DialogDescription>
+            <DialogDescription>从流程清单选择已有流程添加为修订任务</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2 overflow-y-auto max-h-[60vh]">
-            {/* Mode toggle */}
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" checked={addMode === 'select'} onChange={() => setAddMode('select')} className="accent-[#1e3a5f]" />
-                <span className="text-sm font-medium">从流程清单选择</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" checked={addMode === 'manual'} onChange={() => setAddMode('manual')} className="accent-[#1e3a5f]" />
-                <span className="text-sm font-medium">手动填写</span>
-              </label>
-            </div>
-
-            {/* Common fields */}
+          <div className="space-y-3 py-2 overflow-y-auto max-h-[60vh]">
+            {/* Task type and description */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium mb-1 block">任务类型</label>
@@ -829,21 +807,57 @@ export default function PlanDetailPage() {
               </div>
             </div>
 
-            {addMode === 'select' ? (
-              <>
-                <div>
-                  <Input
-                    placeholder="搜索流程名称/编码..."
-                    value={flowSearch}
-                    onChange={e => setFlowSearch(e.target.value)}
-                    className="mb-2"
-                  />
-                  <div className="border rounded-md max-h-[280px] overflow-y-auto">
-                    {filteredFlows.length === 0 ? (
-                      <div className="text-center py-4 text-sm text-muted-foreground">无匹配流程</div>
-                    ) : (
-                      filteredFlows.slice(0, 100).map(flow => (
-                        <label key={flow.id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer text-sm border-b last:border-0">
+            {/* Search */}
+            <div>
+              <Input
+                placeholder="搜索流程名称/编码/所有者..."
+                value={flowSearch}
+                onChange={e => setFlowSearch(e.target.value)}
+              />
+            </div>
+
+            {/* Flow selection table with horizontal scroll */}
+            <div className="border rounded-md overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80">
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={filteredFlows.length > 0 && selectedFlowIds.size === filteredFlows.filter(f => f.l4Process).length}
+                        onCheckedChange={() => {
+                          const validFlows = filteredFlows.filter(f => f.l4Process);
+                          if (selectedFlowIds.size === validFlows.length) {
+                            setSelectedFlowIds(new Set());
+                          } else {
+                            setSelectedFlowIds(new Set(validFlows.map(f => f.id)));
+                          }
+                        }}
+                      />
+                    </TableHead>
+                    <TableHead className="min-w-[140px]">流程编码</TableHead>
+                    <TableHead className="min-w-[180px]">L4职能流程</TableHead>
+                    <TableHead className="min-w-[80px]">最新版本号</TableHead>
+                    <TableHead className="min-w-[80px]">L4所有者</TableHead>
+                    <TableHead className="min-w-[80px]">流程所属部门</TableHead>
+                    <TableHead className="min-w-[70px]">格式</TableHead>
+                    <TableHead className="min-w-[60px]">分类</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredFlows.length === 0 ? (
+                    <TableRow><TableCell colSpan={8} className="text-center py-4 text-sm text-muted-foreground">无匹配流程</TableCell></TableRow>
+                  ) : (
+                    filteredFlows.slice(0, 100).map(flow => (
+                      <TableRow
+                        key={flow.id}
+                        className={`cursor-pointer ${selectedFlowIds.has(flow.id) ? 'bg-blue-50' : ''}`}
+                        onClick={() => {
+                          const next = new Set(selectedFlowIds);
+                          if (next.has(flow.id)) next.delete(flow.id); else next.add(flow.id);
+                          setSelectedFlowIds(next);
+                        }}
+                      >
+                        <TableCell>
                           <Checkbox
                             checked={selectedFlowIds.has(flow.id)}
                             onCheckedChange={() => {
@@ -852,55 +866,39 @@ export default function PlanDetailPage() {
                               setSelectedFlowIds(next);
                             }}
                           />
-                          <span className="font-mono text-xs text-muted-foreground w-36 shrink-0">{flow.processCode}</span>
-                          <span className="truncate flex-1">{flow.l4Process}</span>
-                          <span className="text-xs text-muted-foreground shrink-0">{flow.l4Owner}</span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-                {selectedFlowIds.size > 0 && (
-                  <div className="bg-blue-50 rounded-md p-2">
-                    <p className="text-xs text-blue-700 font-medium mb-1">已选 {selectedFlowIds.size} 个流程</p>
-                    <div className="flex flex-wrap gap-1">
-                      {Array.from(selectedFlowIds).map(fid => {
-                        const f = flowItems.find(fl => fl.id === fid);
-                        return f ? (
-                          <Badge key={fid} variant="secondary" className="text-[10px]">
-                            {f.l4Process}
-                            <button className="ml-1 hover:text-red-500" onClick={() => {
-                              const next = new Set(selectedFlowIds);
-                              next.delete(fid);
-                              setSelectedFlowIds(next);
-                            }}>×</button>
-                          </Badge>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">流程名称 *</label>
-                  <Input value={manualName} onChange={e => setManualName(e.target.value)} placeholder="输入流程名称" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">流程编码</label>
-                  <Input value={manualCode} onChange={e => setManualCode(e.target.value)} placeholder="可选" />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-sm font-medium mb-1 block">L4所有者</label>
-                  <select
-                    value={manualOwner}
-                    onChange={e => setManualOwner(e.target.value)}
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">选择L4所有者</option>
-                    {ownerOptions.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{flow.processCode || '--'}</TableCell>
+                        <TableCell className="font-medium text-sm">{flow.l4Process || '--'}</TableCell>
+                        <TableCell className="text-sm">{flow.version || '--'}</TableCell>
+                        <TableCell className="text-sm">{flow.l4Owner || '--'}</TableCell>
+                        <TableCell className="text-sm">{flow.department || '--'}</TableCell>
+                        <TableCell className="text-sm">{flow.format || '--'}</TableCell>
+                        <TableCell className="text-sm">{flow.category || '--'}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Selected summary */}
+            {selectedFlowIds.size > 0 && (
+              <div className="bg-blue-50 rounded-md p-2">
+                <p className="text-xs text-blue-700 font-medium mb-1">已选 {selectedFlowIds.size} 个流程</p>
+                <div className="flex flex-wrap gap-1">
+                  {Array.from(selectedFlowIds).map(fid => {
+                    const f = flowItems.find(fl => fl.id === fid);
+                    return f ? (
+                      <Badge key={fid} variant="secondary" className="text-[10px]">
+                        {f.l4Process}
+                        <button className="ml-1 hover:text-red-500" onClick={() => {
+                          const next = new Set(selectedFlowIds);
+                          next.delete(fid);
+                          setSelectedFlowIds(next);
+                        }}>x</button>
+                      </Badge>
+                    ) : null;
+                  })}
                 </div>
               </div>
             )}
@@ -909,10 +907,10 @@ export default function PlanDetailPage() {
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>取消</Button>
             <Button
               onClick={handleAddTasks}
-              disabled={operating || (addMode === 'select' ? selectedFlowIds.size === 0 : !manualName)}
+              disabled={operating || selectedFlowIds.size === 0}
               className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
             >
-              {operating ? '添加中...' : `确认添加${addMode === 'select' ? ` (${selectedFlowIds.size}项)` : ''}`}
+              {operating ? '添加中...' : `确认添加 (${selectedFlowIds.size}项)`}
             </Button>
           </DialogFooter>
         </DialogContent>
