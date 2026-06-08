@@ -169,6 +169,121 @@ export default function MenusPage() {
     return <div className="text-center py-20 text-muted-foreground">无权限访问此页面</div>;
   }
 
+  // Build flat rows for the table (avoids nested tbody)
+  const tableRows: React.ReactNode[] = [];
+  topMenus.forEach(top => {
+    const subMenus = getSubMenus(top.id);
+    const isExpanded = expandedIds.has(top.id);
+
+    tableRows.push(
+      <tr key={top.id} className="border-b border-border hover:bg-muted/10">
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            {subMenus.length > 0 ? (
+              <button onClick={() => toggleExpand(top.id)} className="text-muted-foreground hover:text-foreground shrink-0">
+                <svg className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
+            ) : (
+              <span className="w-4 inline-block shrink-0" />
+            )}
+            <span className="font-medium text-foreground">{top.name}</span>
+          </div>
+        </td>
+        <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{top.path || '-'}</td>
+        <td className="px-4 py-3 text-muted-foreground text-xs">{top.icon || '-'}</td>
+        <td className="px-4 py-3 text-muted-foreground">{top.sort_order}</td>
+        <td className="px-4 py-3">
+          {top.is_visible ? <span className="text-green-600">是</span> : <span className="text-red-500">否</span>}
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setSelectedMenu(top);
+                setFormName(top.name);
+                setFormPath(top.path || '');
+                setFormIcon(top.icon || '');
+                setFormParentId(top.parent_id);
+                setFormSortOrder(top.sort_order);
+                setFormIsVisible(top.is_visible);
+                setError('');
+                setShowEditDialog(true);
+              }}
+              className="text-[#1e3a5f] hover:underline text-xs"
+            >
+              编辑
+            </button>
+            <button
+              onClick={() => {
+                resetForm();
+                setFormParentId(top.id);
+                setShowAddDialog(true);
+              }}
+              className="text-green-600 hover:underline text-xs"
+            >
+              添加子菜单
+            </button>
+            <button
+              onClick={() => handleDeleteMenu(top.id, subMenus.length > 0)}
+              className="text-red-500 hover:underline text-xs"
+            >
+              删除
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+
+    if (isExpanded) {
+      subMenus.forEach(sub => {
+        tableRows.push(
+          <tr key={sub.id} className="border-b border-border last:border-0 hover:bg-muted/10 bg-muted/5">
+            <td className="px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="w-4 inline-block shrink-0" />
+                <span className="ml-4 text-foreground">{sub.name}</span>
+              </div>
+            </td>
+            <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{sub.path || '-'}</td>
+            <td className="px-4 py-3 text-muted-foreground text-xs">{sub.icon || '-'}</td>
+            <td className="px-4 py-3 text-muted-foreground">{sub.sort_order}</td>
+            <td className="px-4 py-3">
+              {sub.is_visible ? <span className="text-green-600">是</span> : <span className="text-red-500">否</span>}
+            </td>
+            <td className="px-4 py-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedMenu(sub);
+                    setFormName(sub.name);
+                    setFormPath(sub.path || '');
+                    setFormIcon(sub.icon || '');
+                    setFormParentId(sub.parent_id);
+                    setFormSortOrder(sub.sort_order);
+                    setFormIsVisible(sub.is_visible);
+                    setError('');
+                    setShowEditDialog(true);
+                  }}
+                  className="text-[#1e3a5f] hover:underline text-xs"
+                >
+                  编辑
+                </button>
+                <button
+                  onClick={() => handleDeleteMenu(sub.id, false)}
+                  className="text-red-500 hover:underline text-xs"
+                >
+                  删除
+                </button>
+              </div>
+            </td>
+          </tr>
+        );
+      });
+    }
+  });
+
   return (
     <div>
       <div className="mb-6">
@@ -194,129 +309,26 @@ export default function MenusPage() {
         <div className="text-center py-10 text-muted-foreground">加载中...</div>
       ) : (
         <div className="rounded-lg border border-border bg-white overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">菜单名称</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">路径</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">图标</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">排序</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">可见</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">操作</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[30%]">菜单名称</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[20%]">路径</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[15%]">图标</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[8%]">排序</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[8%]">可见</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[19%]">操作</th>
               </tr>
             </thead>
             <tbody>
-              {topMenus.map(top => {
-                const subMenus = getSubMenus(top.id);
-                const isExpanded = expandedIds.has(top.id);
-
-                return (
-                  <tbody key={top.id}>
-                    <tr className="border-b border-border hover:bg-muted/10">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {subMenus.length > 0 && (
-                            <button onClick={() => toggleExpand(top.id)} className="text-muted-foreground hover:text-foreground">
-                              <svg className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                              </svg>
-                            </button>
-                          )}
-                          {subMenus.length === 0 && <span className="w-4" />}
-                          <span className="font-medium text-foreground">{top.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{top.path || '-'}</td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{top.icon || '-'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{top.sort_order}</td>
-                      <td className="px-4 py-3">
-                        {top.is_visible ? <span className="text-green-600">是</span> : <span className="text-red-500">否</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedMenu(top);
-                              setFormName(top.name);
-                              setFormPath(top.path || '');
-                              setFormIcon(top.icon || '');
-                              setFormParentId(top.parent_id);
-                              setFormSortOrder(top.sort_order);
-                              setFormIsVisible(top.is_visible);
-                              setError('');
-                              setShowEditDialog(true);
-                            }}
-                            className="text-[#1e3a5f] hover:underline text-xs"
-                          >
-                            编辑
-                          </button>
-                          <button
-                            onClick={() => {
-                              resetForm();
-                              setFormParentId(top.id);
-                              setShowAddDialog(true);
-                            }}
-                            className="text-green-600 hover:underline text-xs"
-                          >
-                            添加子菜单
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMenu(top.id, subMenus.length > 0)}
-                            className="text-red-500 hover:underline text-xs"
-                          >
-                            删除
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {isExpanded && subMenus.map(sub => (
-                      <tr key={sub.id} className="border-b border-border last:border-0 hover:bg-muted/10 bg-muted/5">
-                        <td className="px-4 py-3">
-                          <span className="ml-8 text-foreground">{sub.name}</span>
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{sub.path || '-'}</td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{sub.icon || '-'}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{sub.sort_order}</td>
-                        <td className="px-4 py-3">
-                          {sub.is_visible ? <span className="text-green-600">是</span> : <span className="text-red-500">否</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => {
-                                setSelectedMenu(sub);
-                                setFormName(sub.name);
-                                setFormPath(sub.path || '');
-                                setFormIcon(sub.icon || '');
-                                setFormParentId(sub.parent_id);
-                                setFormSortOrder(sub.sort_order);
-                                setFormIsVisible(sub.is_visible);
-                                setError('');
-                                setShowEditDialog(true);
-                              }}
-                              className="text-[#1e3a5f] hover:underline text-xs"
-                            >
-                              编辑
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMenu(sub.id, false)}
-                              className="text-red-500 hover:underline text-xs"
-                            >
-                              删除
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                );
-              })}
-              {topMenus.length === 0 && (
+              {tableRows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
                     暂无数据
                   </td>
                 </tr>
+              ) : (
+                tableRows
               )}
             </tbody>
           </table>
