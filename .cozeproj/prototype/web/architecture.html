@@ -37,10 +37,13 @@
     }
   </style>
   <style>
-    .l2-scroll::-webkit-scrollbar { height: 6px; }
-    .l2-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
-    .l2-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    .l2-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.l1-content { display: flex; flex-direction: row; align-items: flex-start; flex-wrap: nowrap; }
+.l1-content.is-hidden { display: none; }
+.l2-col { flex-shrink: 0; display: flex; flex-direction: column; }
+.l2-scroll::-webkit-scrollbar { height: 6px; }
+.l2-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+.l2-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.l2-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     .l2-col-body::-webkit-scrollbar { width: 4px; }
     .l2-col-body::-webkit-scrollbar-track { background: transparent; }
     .l2-col-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
@@ -162,13 +165,13 @@
       </div>
 
       <!-- L2横向列区域 -->
-      <div class="flex-1 overflow-auto l2-scroll bg-background" id="l1-content-area">
+      <div class="overflow-auto l2-scroll bg-background" style="flex:1;min-width:0;" id="l1-content-area">
 
         <!-- ===== L1内容-01产品和技术研发 ===== -->
-        <div class="l1-content flex flex-row items-start" data-l1-id="1">
+        <div class="l1-content" data-l1-id="1">
 
           <!-- L2列-01需求管理 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -180,7 +183,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <!-- L3-01 -->
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
@@ -310,7 +313,7 @@
           </div>
 
           <!-- L2列-02新产品采购 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -322,7 +325,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -401,7 +404,7 @@
           </div>
 
           <!-- L2列-03供应商寻源准入选择 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -413,7 +416,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -524,10 +527,10 @@
         </div><!-- end l1-content data-l1-id=1 -->
 
         <!-- ===== L1内容-08采购管理 ===== -->
-        <div class="l1-content hidden flex flex-row items-start" data-l1-id="2">
+        <div class="l1-content is-hidden" data-l1-id="2">
 
           <!-- L2列-01需求管理 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -539,7 +542,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -591,7 +594,7 @@
           <!-- L2列-02~08 简略展示 -->
 
           <!-- L2列-02新产品采购 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -603,7 +606,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -676,7 +679,7 @@
           </div>
 
           <!-- L2列-03供应商寻源准入选择 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -688,7 +691,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -856,7 +859,7 @@
           </div>
 
           <!-- L2列-04供应商管理 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -868,7 +871,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -968,7 +971,7 @@
           </div>
 
           <!-- L2列-05采购需求管理 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -980,7 +983,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -1054,7 +1057,7 @@
           </div>
 
           <!-- L2列-06采购计划与执行 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -1066,7 +1069,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -1234,7 +1237,7 @@
           </div>
 
           <!-- L2列-07采购监督管理 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -1246,7 +1249,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -1346,7 +1349,7 @@
           </div>
 
           <!-- L2列-08固定资产商务管理 -->
-          <div class="l2-col shrink-0 border-r border-outline-variant flex flex-col" style="width:280px;min-width:280px;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -1358,7 +1361,7 @@
                 <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+            <div class="l2-col-body px-3 py-2" style="flex:1;">
               <div class="l3-section mb-3">
                 <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
                   <div class="flex items-center gap-2 min-w-0">
@@ -1715,8 +1718,8 @@
         $(this).find('.l1-stats-text').css('color','#475569');
         $(this).find('.l1-stats-strong').css('color','#1e293b');
         // 切换内容
-        $('.l1-content').addClass('hidden');
-        $(`.l1-content[data-l1-id="${id}"]`).removeClass('hidden');
+        $('.l1-content').addClass('is-hidden');
+        $('.l1-content[data-l1-id="'+id+'"]').removeClass('is-hidden');
         // 更新标题栏
         var d = l1Data[id];
         if (d) {
