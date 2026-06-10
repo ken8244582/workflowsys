@@ -1,0 +1,12 @@
+{
+  "elements": [
+    {
+      "type": "html",
+      "options": {
+        "path": ".cozeproj/prototype/web/architecture.html"
+      },
+      "title": "流程架构",
+      "size": "web"
+    }
+  ]
+}
