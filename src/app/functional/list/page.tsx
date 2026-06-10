@@ -118,7 +118,7 @@ export default function FunctionalListPage() {
   const [archDeleting, setArchDeleting] = useState(false);
 
   const [archAddOpen, setArchAddOpen] = useState(false);
-  const [archAddLevel, setArchAddLevel] = useState<'L2' | 'L3'>('L2');
+  const [archAddLevel, setArchAddLevel] = useState<'L1' | 'L2' | 'L3'>('L2');
   const [archAddName, setArchAddName] = useState('');
   const [archAddOwner, setArchAddOwner] = useState('');
   const [archAddL1Name, setArchAddL1Name] = useState('');
@@ -288,7 +288,7 @@ export default function FunctionalListPage() {
     }
   };
 
-  const handleArchAddClick = (level: 'L2' | 'L3', l1Name: string, l2Name: string) => {
+  const handleArchAddClick = (level: 'L1' | 'L2' | 'L3', l1Name: string, l2Name: string) => {
     setArchAddLevel(level);
     setArchAddName('');
     setArchAddOwner('');
@@ -305,9 +305,9 @@ export default function FunctionalListPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          l1Domain: archAddL1Name,
-          l1Owner: '',
-          l2Group: archAddLevel === 'L2' ? archAddName : archAddL2Name,
+          l1Domain: archAddLevel === 'L1' ? archAddName : archAddL1Name,
+          l1Owner: archAddLevel === 'L1' ? archAddOwner : '',
+          l2Group: archAddLevel === 'L2' ? archAddName : (archAddLevel === 'L1' ? '默认组' : archAddL2Name),
           l2Owner: archAddLevel === 'L2' ? archAddOwner : '',
           l3Segment: archAddLevel === 'L3' ? archAddName : '默认段',
           l3Owner: archAddLevel === 'L3' ? archAddOwner : '',
@@ -694,7 +694,9 @@ export default function FunctionalListPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">职能流程层级结构</CardTitle>
-              <span className="text-xs text-gray-400">支持编辑、删除、新增层级节点</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleArchAddClick('L1', '', '')}>
+                <Plus className="h-3.5 w-3.5 mr-1" />添加L1业务域
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
