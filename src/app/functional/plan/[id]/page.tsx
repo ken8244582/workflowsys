@@ -53,7 +53,7 @@ interface FlowItem {
   category: string;
 }
 
-const TASK_TYPES = ['新增流程', '内容修订', '格式修订'];
+const TASK_TYPES = ['新增流程', '修订流程', '废止流程'];
 const TASK_STATUSES = ['待执行', '进行中', '已完成', '已顺延'];
 
 export default function PlanDetailPage() {
@@ -92,7 +92,7 @@ export default function PlanDetailPage() {
   const [flowItems, setFlowItems] = useState<FlowItem[]>([]);
   const [selectedFlowIds, setSelectedFlowIds] = useState<Set<number>>(new Set());
   const [flowSearch, setFlowSearch] = useState('');
-  const [newTaskType, setNewTaskType] = useState('内容修订');
+  const [newTaskType, setNewTaskType] = useState('修订流程');
   const [newTaskDesc, setNewTaskDesc] = useState('');
 
   const fetchPlan = useCallback(async () => {
@@ -147,7 +147,7 @@ export default function PlanDetailPage() {
     fetchFlowItems();
     setSelectedFlowIds(new Set());
     setFlowSearch('');
-    setNewTaskType('内容修订');
+    setNewTaskType('修订流程');
     setNewTaskDesc('');
   };
 
@@ -865,9 +865,9 @@ export default function PlanDetailPage() {
             <DialogDescription>从流程清单选择已有流程添加为修订任务</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            {/* Task type and description - side by side, aligned top */}
-            <div className="grid grid-cols-[140px_1fr] gap-4 items-start">
-              <div>
+            {/* Task type and description - same row, aligned */}
+            <div className="flex gap-4 items-start">
+              <div className="w-[160px] shrink-0">
                 <label className="text-sm font-medium mb-1.5 block">任务类型</label>
                 <select
                   value={newTaskType}
@@ -877,7 +877,7 @@ export default function PlanDetailPage() {
                   {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <label className="text-sm font-medium mb-1.5 block">修订要求</label>
                 <textarea
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
@@ -885,7 +885,7 @@ export default function PlanDetailPage() {
                   maxLength={500}
                   value={newTaskDesc}
                   onChange={e => setNewTaskDesc(e.target.value)}
-                  placeholder="可选，最多500字"
+                  placeholder={newTaskType === '废止流程' ? '请填写废止原因...' : '可选，最多500字'}
                 />
                 <div className="text-right text-xs text-muted-foreground mt-0.5">{newTaskDesc.length}/500</div>
               </div>
