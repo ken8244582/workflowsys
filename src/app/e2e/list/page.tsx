@@ -49,12 +49,12 @@ interface ProcessFormData {
   name: string;
   owner: string;
   department: string;
-  responsiblePerson: string;
-  currentProgress: number;
-  targetProgress: number;
+  responsible_person: string;
+  current_progress: number;
+  target_progress: number;
   status: E2EProcess['status'];
-  startDate: string;
-  completedDate: string;
+  start_date: string;
+  completed_date: string;
   description: string;
 }
 
@@ -62,12 +62,12 @@ const emptyForm: ProcessFormData = {
   name: '',
   owner: '',
   department: '',
-  responsiblePerson: '',
-  currentProgress: 0,
-  targetProgress: 100,
+  responsible_person: '',
+  current_progress: 0,
+  target_progress: 100,
   status: 'not_started',
-  startDate: '',
-  completedDate: '',
+  start_date: '',
+  completed_date: '',
   description: '',
 };
 
@@ -120,7 +120,7 @@ export default function E2EListPage() {
     if (filterStatus !== 'all' && p.status !== filterStatus) return false;
     if (searchText) {
       const s = searchText.toLowerCase();
-      if (!p.name.toLowerCase().includes(s) && !p.responsiblePerson.toLowerCase().includes(s) && !p.department.toLowerCase().includes(s)) {
+      if (!p.name.toLowerCase().includes(s) && !p.responsible_person.toLowerCase().includes(s) && !p.department.toLowerCase().includes(s)) {
         return false;
       }
     }
@@ -141,12 +141,12 @@ export default function E2EListPage() {
       name: process.name,
       owner: process.owner,
       department: process.department,
-      responsiblePerson: process.responsiblePerson,
-      currentProgress: process.currentProgress,
-      targetProgress: process.targetProgress,
+      responsible_person: process.responsible_person,
+      current_progress: process.current_progress,
+      target_progress: process.target_progress,
       status: process.status,
-      startDate: process.startDate || '',
-      completedDate: process.completedDate || '',
+      start_date: process.start_date || '',
+      completed_date: process.completed_date || '',
       description: process.description || '',
     });
     setShowDialog(true);
@@ -154,11 +154,11 @@ export default function E2EListPage() {
 
   // 保存（新增/编辑）
   const handleSave = async () => {
-    if (!form.name.trim() || !form.owner.trim() || !form.department.trim() || !form.responsiblePerson.trim()) return;
+    if (!form.name.trim() || !form.owner.trim() || !form.department.trim() || !form.responsible_person.trim()) return;
     setSaving(true);
     try {
       // 根据 currentProgress 自动计算 status，防止进度与状态不一致
-      const autoStatus = form.currentProgress >= 100 ? 'completed' as const : form.currentProgress > 0 ? 'in_progress' as const : 'not_started' as const;
+      const autoStatus = form.current_progress >= 100 ? 'completed' as const : form.current_progress > 0 ? 'in_progress' as const : 'not_started' as const;
       const payload = { ...form, status: autoStatus };
       if (editingId) {
         await fetch(`/api/e2e/processes/${editingId}`, {
@@ -205,7 +205,7 @@ export default function E2EListPage() {
       await fetch(`/api/e2e/processes/${quickEditId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentProgress: quickProgress, status: newStatus }),
+        body: JSON.stringify({ current_progress: quickProgress, status: newStatus }),
       });
       setQuickEditId(null);
       await fetchProcesses();
@@ -350,20 +350,20 @@ export default function E2EListPage() {
                         <td className="whitespace-nowrap px-3 py-2 text-xs font-medium">{p.name}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.owner}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.department}</td>
-                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.responsiblePerson}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.responsible_person}</td>
                         <td className="px-3 py-2 text-xs">
                           <div className="flex items-center gap-3">
                             <div className="relative h-5 w-full rounded-full bg-muted">
                               <div
                                 className="absolute inset-y-0 left-0 rounded-full bg-[#1e3a5f] transition-all"
-                                style={{ width: `${Math.min(p.currentProgress, 100)}%` }}
+                                style={{ width: `${Math.min(p.current_progress, 100)}%` }}
                               />
                             </div>
                             <button
-                              onClick={() => { setQuickEditId(p.id); setQuickProgress(p.currentProgress); }}
+                              onClick={() => { setQuickEditId(p.id); setQuickProgress(p.current_progress); }}
                               className="shrink-0 tabular-nums text-xs font-semibold text-[#1e3a5f] hover:underline"
                             >
-                              {p.currentProgress}%
+                              {p.current_progress}%
                             </button>
                           </div>
                         </td>
@@ -416,12 +416,12 @@ export default function E2EListPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>责任人 *</Label>
-                <Input value={form.responsiblePerson} onChange={(e) => setForm({ ...form, responsiblePerson: e.target.value })} placeholder="如：张波" />
+                <Input value={form.responsible_person} onChange={(e) => setForm({ ...form, responsible_person: e.target.value })} placeholder="如：张波" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>当前进度: {form.currentProgress}%</Label>
-              <Slider value={[form.currentProgress]} onValueChange={([v]) => setForm({ ...form, currentProgress: v })} max={100} step={5} />
+              <Label>当前进度: {form.current_progress}%</Label>
+              <Slider value={[form.current_progress]} onValueChange={([v]) => setForm({ ...form, current_progress: v })} max={100} step={5} />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
@@ -435,11 +435,11 @@ export default function E2EListPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>开始日期</Label>
-                <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+                <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
               </div>
               <div className="space-y-1.5">
                 <Label>完成日期</Label>
-                <Input type="date" value={form.completedDate} onChange={(e) => setForm({ ...form, completedDate: e.target.value })} />
+                <Input type="date" value={form.completed_date} onChange={(e) => setForm({ ...form, completed_date: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -449,7 +449,7 @@ export default function E2EListPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>取消</Button>
-            <Button onClick={handleSave} disabled={saving || !form.name.trim() || !form.owner.trim() || !form.department.trim() || !form.responsiblePerson.trim()} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+            <Button onClick={handleSave} disabled={saving || !form.name.trim() || !form.owner.trim() || !form.department.trim() || !form.responsible_person.trim()} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
               {saving ? '保存中...' : '保存'}
             </Button>
           </DialogFooter>

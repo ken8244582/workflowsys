@@ -1,19 +1,23 @@
 import { NextResponse } from 'next/server';
 import { loginUser, seedInitialData, getUserById } from '@/lib/sys-data';
-import { getSessionCookieName, getSessionMaxAge } from '@/lib/auth';
+import { generateSessionToken, setSessionCookie, isJwtConfigured } from '@/lib/auth';
 
 // Seed on first request
 let seeded = false;
 
 export async function POST(request: Request) {
   try {
+    // Check JWT configuration
+    if (!isJwtConfigured()) {
+      return NextResponse.json({ error: '系统配置错误：JWT_SECRET 未配置，请联系管理员' }, { status: 500 });
+    }
+
     // Seed initial data if not done
     if (!seeded) {
       try {
         await seedInitialData();
       } catch (seedError) {
         console.error('[auth/login] seedInitialData failed:', seedError);
-        // Continue with login even if seeding fails
       }
       seeded = true;
     }
@@ -32,6 +36,15 @@ export async function POST(request: Request) {
 
     const userRecord = await getUserById(result.payload.userId);
 
+    // Generate JWT token and set on response cookie
+    const token = await generateSessionToken({
+      userId: result.payload.userId,
+      username: result.payload.username,
+      displayName: userRecord?.display_name || result.payload.username,
+      isSuperAdmin: result.payload.isSuperAdmin,
+      mustChangePassword: userRecord?.must_change_password || false,
+    });
+
     const response = NextResponse.json({
       success: true,
       user: {
@@ -39,22 +52,14 @@ export async function POST(request: Request) {
         username: result.payload.username,
         displayName: userRecord?.display_name || result.payload.username,
         isSuperAdmin: result.payload.isSuperAdmin,
-        mustChangePassword: result.payload.mustChangePassword,
+        mustChangePassword: userRecord?.must_change_password || false,
       },
     });
 
-    response.cookies.set(getSessionCookieName(), result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: getSessionMaxAge(),
-      path: '/',
-    });
-
+    setSessionCookie(response, token);
     return response;
   } catch (error) {
     console.error('[auth/login] Error:', error);
-    const message = error instanceof Error ? error.message : '登录失败';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: '登录失败，请稍后重试' }, { status: 500 });
   }
 }

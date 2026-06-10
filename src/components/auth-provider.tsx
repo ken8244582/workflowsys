@@ -68,6 +68,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Global 401 handler: if any API returns 401, redirect to login
+  useEffect(() => {
+    const handleFetchError = (event: ErrorEvent) => {
+      // This catches unhandled errors but for 401s we handle it at the component level
+    };
+
+    // Monkey-patch fetch to detect 401 responses globally
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.status === 401) {
+        // Session expired — redirect to login
+        setUser(null);
+        setMenus([]);
+        setAuthenticated(false);
+        router.push('/login');
+      }
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [router]);
+
   useEffect(() => {
     refreshSession();
   }, [refreshSession]);

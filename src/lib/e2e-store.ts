@@ -1,151 +1,228 @@
-import path from 'path';
-import fs from 'fs';
+/**
+ * e2e-store.ts — E2E process & plan data access via Supabase database
+ * Migrated from JSON file storage to database persistence (Bug B001 fix)
+ */
+import { getSupabaseClient } from './supabase';
+import { beijingNow } from './utils';
 
-// ---- 数据类型 ----
+// ---- Types ----
 
 export interface E2EProcess {
   id: string;
   name: string;
   owner: string;
   department: string;
-  responsiblePerson: string;
-  currentProgress: number;
-  targetProgress: number;
-  status: 'not_started' | 'in_progress' | 'completed';
-  startDate?: string;
-  completedDate?: string;
-  description?: string;
+  responsible_person: string;
+  current_progress: number;
+  target_progress: number;
+  status: string;
+  start_date: string;
+  completed_date: string;
+  description: string;
+  created_by: string;
+  created_at_ts: string;
+  updated_by: string;
+  updated_at_ts: string;
 }
 
 export interface E2EPlan {
   id: string;
-  processId: string;
-  planType: 'monthly' | 'quarterly';
+  process_id: string;
+  plan_type: string;
   year: number;
   period: number;
-  planContent: string;
-  planProgress: number;
-  actualProgress?: number;
-  status: 'planned' | 'in_progress' | 'completed' | 'delayed';
-  notes?: string;
+  plan_content: string;
+  plan_progress: number;
+  actual_progress: number;
+  status: string;
+  notes: string;
+  created_by: string;
+  created_at_ts: string;
+  updated_by: string;
+  updated_at_ts: string;
 }
 
-// ---- 文件读写工具 ----
+export interface E2EProcessWithPlans extends E2EProcess {
+  plans: E2EPlan[];
+}
 
-function getDataDir(): string {
-  const isProd = process.env.COZE_PROJECT_ENV === 'PROD';
-  if (isProd) {
-    const dir = '/tmp/e2e-data';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-      // 从 public 初始数据复制
-      const publicDir = path.join(process.cwd(), 'public');
-      ['e2e-processes.json', 'e2e-plans.json'].forEach((file) => {
-        const src = path.join(publicDir, file);
-        if (fs.existsSync(src)) {
-          fs.copyFileSync(src, path.join(dir, file));
-        }
-      });
+// ---- Process CRUD ----
+
+export async function getAllProcesses(): Promise<E2EProcess[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('e2e_processes')
+    .select('*')
+    .order('id', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getProcessById(id: string): Promise<E2EProcess | null> {
+  const { data, error } = await getSupabaseClient()
+    .from('e2e_processes')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) {
+    if (error.code === 'PGRST116') return null; // not found
+    throw error;
+  }
+  return data;
+}
+
+export async function createProcess(process: Omit<E2EProcess, 'id' | 'created_at_ts' | 'updated_at_ts'>, username: string): Promise<E2EProcess> {
+  const now = beijingNow();
+  const { data, error } = await getSupabaseClient()
+    .from('e2e_processes')
+    .insert({
+      ...process,
+      created_by: username,
+      created_at_ts: now,
+      updated_by: username,
+      updated_at_ts: now,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProcess(id: string, updates: Partial<Omit<E2EProcess, 'id' | 'created_by' | 'created_at_ts'>>, username: string): Promise<E2EProcess> {
+  const now = beijingNow();
+  const { data, error } = await getSupabaseClient()
+    .from('e2e_processes')
+    .update({
+      ...updates,
+      updated_by: username,
+      updated_at_ts: now,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProcess(id: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from('e2e_processes')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// ---- Plan CRUD ----
+
+export async function getPlansByProcessId(processId: string): Promise<E2EPlan[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('e2e_plans')
+    .select('*')
+    .eq('process_id', processId)
+    .order('year', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getAllPlans(): Promise<E2EPlan[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('e2e_plans')
+    .select('*')
+    .order('year', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createPlan(plan: Omit<E2EPlan, 'id' | 'created_at_ts' | 'updated_at_ts'>, username: string): Promise<E2EPlan> {
+  const now = beijingNow();
+  const { data, error } = await getSupabaseClient()
+    .from('e2e_plans')
+    .insert({
+      ...plan,
+      created_by: username,
+      created_at_ts: now,
+      updated_by: username,
+      updated_at_ts: now,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePlan(id: string, updates: Partial<Omit<E2EPlan, 'id' | 'created_by' | 'created_at_ts'>>, username: string): Promise<E2EPlan> {
+  const now = beijingNow();
+  const { data, error } = await getSupabaseClient()
+    .from('e2e_plans')
+    .update({
+      ...updates,
+      updated_by: username,
+      updated_at_ts: now,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deletePlan(id: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from('e2e_plans')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// ---- Composite: Process with Plans ----
+
+export async function getAllProcessesWithPlans(): Promise<E2EProcessWithPlans[]> {
+  const processes = await getAllProcesses();
+  const allPlans = await getAllPlans();
+
+  return processes.map(p => ({
+    ...p,
+    plans: allPlans.filter(plan => plan.process_id === p.id),
+  }));
+}
+
+// ---- Statistics helpers ----
+
+export interface E2EStats {
+  totalProcesses: number;
+  avgProgress: number;
+  completedCount: number;
+  maxYoYGrowth: { name: string; growth: number } | null;
+}
+
+export async function getE2EStats(): Promise<E2EStats> {
+  const processes = await getAllProcesses();
+  const total = processes.length;
+  const avgProgress = total > 0
+    ? Math.round(processes.reduce((sum, p) => sum + p.current_progress, 0) / total)
+    : 0;
+  const completedCount = processes.filter(p => p.status === 'completed').length;
+
+  // Calculate year-over-year growth from plans
+  const allPlans = await getAllPlans();
+  const currentYear = new Date().getFullYear();
+  const processYoY: Record<string, number> = {};
+
+  for (const plan of allPlans) {
+    if (plan.year === currentYear || plan.year === currentYear - 1) {
+      if (!processYoY[plan.process_id]) processYoY[plan.process_id] = 0;
+      if (plan.year === currentYear) {
+        processYoY[plan.process_id] += plan.actual_progress;
+      }
     }
-    return dir;
   }
-  return path.join(process.cwd(), 'public');
-}
 
-function readJsonFile<T>(filename: string): T[] {
-  const filePath = path.join(getDataDir(), filename);
-  if (!fs.existsSync(filePath)) {
-    return [];
+  let maxYoYGrowth: { name: string; growth: number } | null = null;
+  for (const [processId, growth] of Object.entries(processYoY)) {
+    if (!maxYoYGrowth || growth > maxYoYGrowth.growth) {
+      const process = processes.find(p => p.id === processId);
+      maxYoYGrowth = { name: process?.name || processId, growth };
+    }
   }
-  try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(content) as T[];
-  } catch {
-    return [];
-  }
-}
 
-function writeJsonFile<T>(filename: string, data: T[]): void {
-  const dir = getDataDir();
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  const filePath = path.join(dir, filename);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-// ---- E2E Process CRUD ----
-
-export function getProcesses(): E2EProcess[] {
-  return readJsonFile<E2EProcess>('e2e-processes.json');
-}
-
-export function getProcessById(id: string): E2EProcess | undefined {
-  return getProcesses().find((p) => p.id === id);
-}
-
-export function createProcess(process: Omit<E2EProcess, 'id'>): E2EProcess {
-  const processes = getProcesses();
-  const maxNum = processes.reduce((max, p) => {
-    const num = parseInt(p.id.replace('e2e-', ''), 10);
-    return num > max ? num : max;
-  }, 0);
-  const id = `e2e-${String(maxNum + 1).padStart(3, '0')}`;
-  const newProcess: E2EProcess = { ...process, id };
-  processes.push(newProcess);
-  writeJsonFile('e2e-processes.json', processes);
-  return newProcess;
-}
-
-export function updateProcess(id: string, updates: Partial<E2EProcess>): E2EProcess | null {
-  const processes = getProcesses();
-  const index = processes.findIndex((p) => p.id === id);
-  if (index === -1) return null;
-  processes[index] = { ...processes[index], ...updates, id };
-  writeJsonFile('e2e-processes.json', processes);
-  return processes[index];
-}
-
-export function deleteProcess(id: string): boolean {
-  const processes = getProcesses();
-  const filtered = processes.filter((p) => p.id !== id);
-  if (filtered.length === processes.length) return false;
-  writeJsonFile('e2e-processes.json', filtered);
-  return true;
-}
-
-// ---- E2E Plan CRUD ----
-
-export function getPlans(): E2EPlan[] {
-  return readJsonFile<E2EPlan>('e2e-plans.json');
-}
-
-export function getPlansByProcessId(processId: string): E2EPlan[] {
-  return getPlans().filter((p) => p.processId === processId);
-}
-
-export function createPlan(plan: Omit<E2EPlan, 'id'>): E2EPlan {
-  const plans = getPlans();
-  const id = `plan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-  const newPlan: E2EPlan = { ...plan, id };
-  plans.push(newPlan);
-  writeJsonFile('e2e-plans.json', plans);
-  return newPlan;
-}
-
-export function updatePlan(id: string, updates: Partial<E2EPlan>): E2EPlan | null {
-  const plans = getPlans();
-  const index = plans.findIndex((p) => p.id === id);
-  if (index === -1) return null;
-  plans[index] = { ...plans[index], ...updates, id };
-  writeJsonFile('e2e-plans.json', plans);
-  return plans[index];
-}
-
-export function deletePlan(id: string): boolean {
-  const plans = getPlans();
-  const filtered = plans.filter((p) => p.id !== id);
-  if (filtered.length === plans.length) return false;
-  writeJsonFile('e2e-plans.json', filtered);
-  return true;
+  return { totalProcesses: total, avgProgress, completedCount, maxYoYGrowth };
 }

@@ -43,6 +43,11 @@ export async function DELETE(
     const { id } = await params;
     const userId = parseInt(id, 10);
 
+    // B008 Fix: Prevent super admin from deleting their own account
+    if (session.userId === userId) {
+      return NextResponse.json({ error: '不能删除自己的账号' }, { status: 400 });
+    }
+
     await deleteUser(userId);
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,43 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPlans, createPlan } from '@/lib/e2e-store';
+import { requireAuth, isSession } from '@/lib/api-auth';
+import {
+  getPlansByProcessId,
+  getAllPlans,
+  createPlan,
+} from '@/lib/e2e-store';
 
+// GET /api/e2e/plans - List e2e plans (optionally filtered by process_id)
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+
+  const { searchParams } = new URL(request.url);
+  const processId = searchParams.get('process_id');
+
   try {
-    const { searchParams } = new URL(request.url);
-    const processId = searchParams.get('processId');
-    const plans = getPlans();
-    const filtered = processId ? plans.filter((p) => p.processId === processId) : plans;
-    return NextResponse.json(filtered);
+    const plans = processId
+      ? await getPlansByProcessId(processId)
+      : await getAllPlans();
+    return NextResponse.json(plans);
   } catch (error) {
-    console.error('Failed to get plans:', error);
-    return NextResponse.json({ error: '获取计划列表失败' }, { status: 500 });
+    console.error('Failed to get e2e plans:', error);
+    return NextResponse.json({ error: '获取端到端计划失败' }, { status: 500 });
   }
 }
 
+// POST /api/e2e/plans - Create a new e2e plan
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+  const session = authResult;
+
   try {
     const body = await request.json();
-    const { processId, planType, year, period, planContent, planProgress, actualProgress, status, notes } = body;
-
-    if (!processId || !planType || !year || !period || !planContent) {
-      return NextResponse.json({ error: '缺少必填字段' }, { status: 400 });
-    }
-
-    const newPlan = createPlan({
-      processId,
-      planType,
-      year,
-      period,
-      planContent,
-      planProgress: planProgress ?? 100,
-      actualProgress: actualProgress ?? 0,
-      status: status ?? 'planned',
-      notes: notes ?? '',
-    });
-
-    return NextResponse.json(newPlan, { status: 201 });
+    const plan = await createPlan({
+      process_id: body.process_id || '',
+      plan_type: body.plan_type || 'monthly',
+      year: body.year || 0,
+      period: body.period || 0,
+      plan_content: body.plan_content || '',
+      plan_progress: body.plan_progress ?? 100,
+      actual_progress: body.actual_progress ?? 0,
+      status: body.status || 'planned',
+      notes: body.notes || '',
+      created_by: session.username,
+      updated_by: session.username,
+    }, session.username);
+    return NextResponse.json(plan);
   } catch (error) {
-    console.error('Failed to create plan:', error);
-    return NextResponse.json({ error: '创建计划失败' }, { status: 500 });
+    console.error('Failed to create e2e plan:', error);
+    return NextResponse.json({ error: '创建端到端计划失败' }, { status: 500 });
   }
 }

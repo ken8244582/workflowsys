@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import type { FlowItem } from '@/lib/flow-data';
+import { requireAuth, isSession } from '@/lib/api-auth';
+import { escapeIlike, beijingNow } from '@/lib/utils';
 
 function mapFlowRow(row: Record<string, unknown>): FlowItem {
   return {
@@ -27,6 +29,9 @@ function mapFlowRow(row: Record<string, unknown>): FlowItem {
 
 // GET /api/flows - List flows with filtering and pagination
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+
   const supabase = getSupabaseClient();
   const { searchParams } = new URL(request.url);
 
@@ -54,9 +59,11 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   if (status) query = query.eq('status', status);
 
+  // B003 fix: escape search terms for ilike
   const search = searchParams.get('search');
   if (search) {
-    query = query.or(`l4_process.ilike.%${search}%,process_code.ilike.%${search}%`);
+    const escaped = escapeIlike(search);
+    query = query.or(`l4_process.ilike.%${escaped}%,process_code.ilike.%${escaped}%`);
   }
 
   // Pagination
@@ -88,8 +95,13 @@ export async function GET(request: NextRequest) {
 
 // POST /api/flows - Create a new flow
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+  const session = authResult;
+
   const supabase = getSupabaseClient();
   const body = await request.json();
+  const now = beijingNow();
 
   const { data, error } = await supabase
     .from('flows')
@@ -111,6 +123,10 @@ export async function POST(request: NextRequest) {
       it_sub_category: body.itSubCategory || '',
       it_score: body.itScore || 0,
       status: body.status || '',
+      created_by: session.username,
+      created_at_ts: now,
+      updated_by: session.username,
+      updated_at_ts: now,
     })
     .select()
     .single();
@@ -120,5 +136,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(mapFlowRow(data), { status: 201 });
+  return NextResponse.json(mapFlowRow(data));
 }

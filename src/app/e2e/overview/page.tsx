@@ -186,9 +186,9 @@ function YearlyPlanTimeline({
       <CardContent>
         <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-12">
           {months.map((m) => {
-            const monthPlans = yearPlans.filter((p) => p.planType === 'monthly' && p.period === m);
+            const monthPlans = yearPlans.filter((p) => p.plan_type === 'monthly' && p.period === m);
             const quarter = Math.ceil(m / 3);
-            const quarterPlans = yearPlans.filter((p) => p.planType === 'quarterly' && p.period === quarter);
+            const quarterPlans = yearPlans.filter((p) => p.plan_type === 'quarterly' && p.period === quarter);
             const allPlans = [...monthPlans, ...quarterPlans];
             return (
               <div key={m} className="rounded-lg border bg-muted/20 p-2">
@@ -198,15 +198,15 @@ function YearlyPlanTimeline({
                 ) : (
                   <div className="space-y-1">
                     {allPlans.map((plan) => {
-                      const proc = processMap.get(plan.processId);
-                      const actualProg = proc?.currentProgress ?? 0;
-                      const isOverPlan = actualProg >= plan.planProgress;
+                      const proc = processMap.get(plan.process_id);
+                      const actualProg = proc?.current_progress ?? 0;
+                      const isOverPlan = actualProg >= plan.plan_progress;
                       const dot = STATUS_DOT[plan.status] || STATUS_DOT.planned;
                       return (
                         <div key={plan.id} className="group relative rounded bg-background px-1.5 py-1 text-[10px]">
                           <p className="truncate font-medium">{proc?.name || '未知'}</p>
                           <div className="mt-0.5 flex items-center gap-1">
-                            <span className="text-[9px] text-[#f59e0b]">{plan.planProgress}%</span>
+                            <span className="text-[9px] text-[#f59e0b]">{plan.plan_progress}%</span>
                             <span className={`text-[9px] ${dot.color}`}>{dot.symbol}</span>
                             <span className={`text-[9px] ${isOverPlan ? 'text-[#10b981]' : 'text-[#1e3a5f]'}`}>{actualProg}%</span>
                           </div>
@@ -251,9 +251,9 @@ export default function E2EOverviewPage() {
   const [showProcDialog, setShowProcDialog] = useState(false);
   const [editingProcId, setEditingProcId] = useState<string | null>(null);
   const [procForm, setProcForm] = useState({
-    name: '', owner: '', department: '', responsiblePerson: '',
-    currentProgress: 0, status: 'in_progress' as E2EProcess['status'],
-    startDate: '', completedDate: '', description: '',
+    name: '', owner: '', department: '', responsible_person: '',
+    current_progress: 0, status: 'in_progress' as E2EProcess['status'],
+    start_date: '', completed_date: '', description: '',
   });
   const [savingProc, setSavingProc] = useState(false);
 
@@ -265,9 +265,9 @@ export default function E2EOverviewPage() {
   const [showPlanDialog, setShowPlanDialog] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [planForm, setPlanForm] = useState({
-    processId: '', planType: 'monthly' as 'monthly' | 'quarterly',
+    process_id: '', plan_type: 'monthly' as 'monthly' | 'quarterly',
     year: new Date().getFullYear(), period: 1,
-    planContent: '', planProgress: 100, status: 'planned' as E2EPlan['status'], notes: '',
+    plan_content: '', plan_progress: 100, status: 'planned' as E2EPlan['status'], notes: '',
   });
   const [savingPlan, setSavingPlan] = useState(false);
 
@@ -305,8 +305,8 @@ export default function E2EOverviewPage() {
     setEditingProcId(proc.id);
     setProcForm({
       name: proc.name, owner: proc.owner, department: proc.department,
-      responsiblePerson: proc.responsiblePerson, currentProgress: proc.currentProgress,
-      status: proc.status, startDate: proc.startDate || '', completedDate: proc.completedDate || '',
+      responsible_person: proc.responsible_person, current_progress: proc.current_progress,
+      status: proc.status, start_date: proc.start_date || '', completed_date: proc.completed_date || '',
       description: proc.description || '',
     });
     setShowProcDialog(true);
@@ -317,7 +317,7 @@ export default function E2EOverviewPage() {
     setSavingProc(true);
     try {
       // 根据 currentProgress 自动计算 status，防止进度与状态不一致
-      const autoStatus = procForm.currentProgress >= 100 ? 'completed' as const : procForm.currentProgress > 0 ? 'in_progress' as const : 'not_started' as const;
+      const autoStatus = procForm.current_progress >= 100 ? 'completed' as const : procForm.current_progress > 0 ? 'in_progress' as const : 'not_started' as const;
       const payload = { ...procForm, status: autoStatus };
       if (editingProcId) {
         await fetch(`/api/e2e/processes/${editingProcId}`, {
@@ -354,7 +354,7 @@ export default function E2EOverviewPage() {
       const newStatus = quickProgress >= 100 ? 'completed' as const : quickProgress > 0 ? 'in_progress' as const : 'not_started' as const;
       await fetch(`/api/e2e/processes/${quickEditId}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentProgress: quickProgress, status: newStatus }),
+        body: JSON.stringify({ current_progress: quickProgress, status: newStatus }),
       });
       setQuickEditId(null);
       await fetchData();
@@ -367,16 +367,16 @@ export default function E2EOverviewPage() {
   const handleEditPlan = (plan: E2EPlan) => {
     setEditingPlanId(plan.id);
     setPlanForm({
-      processId: plan.processId, planType: plan.planType,
+      process_id: plan.process_id, plan_type: plan.plan_type as 'monthly' | 'quarterly',
       year: plan.year, period: plan.period,
-      planContent: plan.planContent, planProgress: plan.planProgress,
+      plan_content: plan.plan_content, plan_progress: plan.plan_progress,
       status: plan.status, notes: plan.notes ?? '',
     });
     setShowPlanDialog(true);
   };
 
   const handleSavePlan = async () => {
-    if (!planForm.processId || !planForm.planContent.trim()) return;
+    if (!planForm.process_id || !planForm.plan_content.trim()) return;
     setSavingPlan(true);
     try {
       if (editingPlanId) {
@@ -420,10 +420,10 @@ export default function E2EOverviewPage() {
   }
 
   const total = processes.length;
-  const avgProgress = total > 0 ? Math.round(processes.reduce((s, d) => s + d.currentProgress, 0) / total) : 0;
+  const avgProgress = total > 0 ? Math.round(processes.reduce((s, d) => s + d.current_progress, 0) / total) : 0;
   const completed = processes.filter((d) => d.status === 'completed').length;
   const inProgress = processes.filter((d) => d.status === 'in_progress').length;
-  const sortedProcesses = [...processes].sort((a, b) => b.currentProgress - a.currentProgress);
+  const sortedProcesses = [...processes].sort((a, b) => b.current_progress - a.current_progress);
 
   return (
     <div className="space-y-4">
@@ -475,7 +475,7 @@ export default function E2EOverviewPage() {
         <CardContent>
           <div className="divide-y">
             {sortedProcesses.map((p) => {
-              const pct = p.currentProgress;
+              const pct = p.current_progress;
               const barColor = pct >= 100 ? '#10b981' : pct >= 70 ? '#1e3a5f' : '#3b82f6';
               const badge = STATUS_BADGE[p.status] || STATUS_BADGE.not_started;
               return (
@@ -504,7 +504,7 @@ export default function E2EOverviewPage() {
                     <button
                       className="text-muted-foreground hover:text-[#1e3a5f] transition-colors"
                       title="更新进度"
-                      onClick={() => { setQuickEditId(p.id); setQuickProgress(p.currentProgress); }}
+                      onClick={() => { setQuickEditId(p.id); setQuickProgress(p.current_progress); }}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                     </button>
@@ -572,12 +572,12 @@ export default function E2EOverviewPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>责任人 *</Label>
-                <Input value={procForm.responsiblePerson} onChange={(e) => setProcForm({ ...procForm, responsiblePerson: e.target.value })} />
+                <Input value={procForm.responsible_person} onChange={(e) => setProcForm({ ...procForm, responsible_person: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>当前进度: {procForm.currentProgress}%</Label>
-              <Slider value={[procForm.currentProgress]} onValueChange={([v]) => setProcForm({ ...procForm, currentProgress: v })} max={100} step={5} />
+              <Label>当前进度: {procForm.current_progress}%</Label>
+              <Slider value={[procForm.current_progress]} onValueChange={([v]) => setProcForm({ ...procForm, current_progress: v })} max={100} step={5} />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
@@ -591,11 +591,11 @@ export default function E2EOverviewPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>开始日期</Label>
-                <Input type="date" value={procForm.startDate} onChange={(e) => setProcForm({ ...procForm, startDate: e.target.value })} />
+                <Input type="date" value={procForm.start_date} onChange={(e) => setProcForm({ ...procForm, start_date: e.target.value })} />
               </div>
               <div className="space-y-1.5">
                 <Label>完成日期</Label>
-                <Input type="date" value={procForm.completedDate} onChange={(e) => setProcForm({ ...procForm, completedDate: e.target.value })} />
+                <Input type="date" value={procForm.completed_date} onChange={(e) => setProcForm({ ...procForm, completed_date: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
@@ -663,12 +663,12 @@ export default function E2EOverviewPage() {
               <div className="space-y-1.5">
                 <Label>端到端流程</Label>
                 <div className="flex h-9 items-center rounded-md border bg-muted/50 px-3 text-sm">
-                  {processMap.get(planForm.processId)?.name || '未知流程'}
+                  {processMap.get(planForm.process_id)?.name || '未知流程'}
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label>计划类型</Label>
-                <Select value={planForm.planType} onValueChange={(v: 'monthly' | 'quarterly') => setPlanForm({ ...planForm, planType: v })}>
+                <Select value={planForm.plan_type} onValueChange={(v: 'monthly' | 'quarterly') => setPlanForm({ ...planForm, plan_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="monthly">月度</SelectItem>
@@ -683,11 +683,11 @@ export default function E2EOverviewPage() {
                 <Input type="number" value={planForm.year} onChange={(e) => setPlanForm({ ...planForm, year: parseInt(e.target.value) || new Date().getFullYear() })} />
               </div>
               <div className="space-y-1.5">
-                <Label>{planForm.planType === 'monthly' ? '月份' : '季度'}</Label>
+                <Label>{planForm.plan_type === 'monthly' ? '月份' : '季度'}</Label>
                 <Select value={String(planForm.period)} onValueChange={(v) => setPlanForm({ ...planForm, period: parseInt(v) })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {planForm.planType === 'monthly'
+                    {planForm.plan_type === 'monthly'
                       ? Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                           <SelectItem key={m} value={String(m)}>{m}月</SelectItem>
                         ))
@@ -701,17 +701,17 @@ export default function E2EOverviewPage() {
             </div>
             <div className="space-y-1.5">
               <Label>计划内容 *</Label>
-              <Textarea value={planForm.planContent} onChange={(e) => setPlanForm({ ...planForm, planContent: e.target.value })} rows={2} />
+              <Textarea value={planForm.plan_content} onChange={(e) => setPlanForm({ ...planForm, plan_content: e.target.value })} rows={2} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>计划进度: {planForm.planProgress}%</Label>
-                <Input type="number" min={0} max={100} value={planForm.planProgress} onChange={(e) => setPlanForm({ ...planForm, planProgress: parseInt(e.target.value) || 0 })} />
+                <Label>计划进度: {planForm.plan_progress}%</Label>
+                <Input type="number" min={0} max={100} value={planForm.plan_progress} onChange={(e) => setPlanForm({ ...planForm, plan_progress: parseInt(e.target.value) || 0 })} />
               </div>
               <div className="space-y-1.5">
                 <Label>实际进度（来自流程管理）</Label>
                 <div className="flex h-9 items-center rounded-md border bg-muted/50 px-3 text-sm tabular-nums text-muted-foreground">
-                  {planForm.processId ? `${processMap.get(planForm.processId)?.currentProgress ?? 0}%` : '请先选择流程'}
+                  {planForm.process_id ? `${processMap.get(planForm.process_id)?.current_progress ?? 0}%` : '请先选择流程'}
                 </div>
               </div>
             </div>
@@ -731,7 +731,7 @@ export default function E2EOverviewPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPlanDialog(false)}>取消</Button>
-            <Button onClick={handleSavePlan} disabled={savingPlan || !planForm.processId || !planForm.planContent.trim()} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+            <Button onClick={handleSavePlan} disabled={savingPlan || !planForm.process_id || !planForm.plan_content.trim()} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
               {savingPlan ? '保存中...' : '保存'}
             </Button>
           </DialogFooter>

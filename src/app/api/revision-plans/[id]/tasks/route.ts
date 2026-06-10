@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { beijingNow } from '@/lib/utils';
+import { beijingNow, escapeIlike } from '@/lib/utils';
+import { requireAuth, isSession } from '@/lib/api-auth';
 
 // Helper to format task row
 function mapTaskRow(row: Record<string, unknown>) {
@@ -21,6 +22,9 @@ function mapTaskRow(row: Record<string, unknown>) {
     sortOrder: row.sort_order,
     remarks: row.remarks,
     createdAt: row.created_at,
+    createdBy: row.created_by || '',
+    updatedBy: row.updated_by || '',
+    updatedAtTs: row.updated_at_ts || '',
     version: row.version || '',
     format: row.format || '',
     category: row.category || '',
@@ -28,7 +32,7 @@ function mapTaskRow(row: Record<string, unknown>) {
 }
 
 // Helper to update plan counts
-async function updatePlanCounts(planId: number) {
+async function updatePlanCounts(planId: number, username?: string) {
   const supabase = getSupabaseClient();
   const { data: tasks } = await supabase
     .from('plan_tasks')
@@ -41,7 +45,7 @@ async function updatePlanCounts(planId: number) {
   const now = beijingNow();
   await supabase
     .from('revision_plans')
-    .update({ task_count: taskCount, completed_count: completedCount, updated_at: now })
+    .update({ task_count: taskCount, completed_count: completedCount, updated_at: now, updated_by: username || '' })
     .eq('id', planId);
 }
 
@@ -50,6 +54,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+
   const { id } = await params;
   const supabase = getSupabaseClient();
   const { searchParams } = new URL(request.url);
@@ -69,7 +76,8 @@ export async function GET(
   if (taskType) query = query.eq('task_type', taskType);
   if (status) query = query.eq('status', status);
   if (search) {
-    query = query.or(`process_code.ilike.%${search}%,process_name.ilike.%${search}%,description.ilike.%${search}%`);
+    const escaped = escapeIlike(search);
+    query = query.or(`process_code.ilike.%${escaped}%,process_name.ilike.%${escaped}%,description.ilike.%${escaped}%`);
   }
 
   const from = (page - 1) * pageSize;
@@ -100,6 +108,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+  const session = authResult;
+
   const { id } = await params;
   const supabase = getSupabaseClient();
   const planId = parseInt(id);
@@ -149,6 +161,9 @@ export async function POST(
     sort_order: nextSort++,
     remarks: '',
     created_at: now,
+    created_by: session.username,
+    updated_by: session.username,
+    updated_at_ts: now,
     version: task.version || '',
     format: task.format || '',
     category: task.category || '',
@@ -164,7 +179,7 @@ export async function POST(
   }
 
   // Update plan counts
-  await updatePlanCounts(planId);
+  await updatePlanCounts(planId, session.username);
 
   const items = (data || []).map(mapTaskRow);
   return NextResponse.json({ items }, { status: 201 });

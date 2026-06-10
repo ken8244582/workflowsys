@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { beijingNow } from '@/lib/utils';
+import { requireAuth, isSession } from '@/lib/api-auth';
 
 // Helper: compute department progress from plan tasks
 async function computeDepartmentProgress(planId: number) {
@@ -31,7 +32,7 @@ async function computeDepartmentProgress(planId: number) {
 }
 
 // Helper: update plan counts
-async function updatePlanCounts(planId: number) {
+async function updatePlanCounts(planId: number, username?: string) {
   const supabase = getSupabaseClient();
   const { count: taskCount } = await supabase
     .from('plan_tasks')
@@ -51,6 +52,7 @@ async function updatePlanCounts(planId: number) {
       task_count: taskCount || 0,
       completed_count: completedCount || 0,
       updated_at: now,
+      updated_by: username || '',
     })
     .eq('id', planId);
 }
@@ -60,6 +62,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+
   const { id } = await params;
   const supabase = getSupabaseClient();
 
@@ -84,6 +89,8 @@ export async function GET(
     completedCount: plan.completed_count,
     createdAt: plan.created_at,
     updatedAt: plan.updated_at,
+    createdBy: plan.created_by,
+    updatedBy: plan.updated_by,
     departmentProgress,
   });
 }
@@ -93,6 +100,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+  const session = authResult;
+
   const { id } = await params;
   const body = await request.json();
   const action = body._action;
@@ -116,7 +127,7 @@ export async function PUT(
     }
     const { data, error } = await supabase
       .from('revision_plans')
-      .update({ status: '已下发', updated_at: now })
+      .update({ status: '已下发', updated_at: now, updated_by: session.username })
       .eq('id', id)
       .select()
       .single();
@@ -134,7 +145,7 @@ export async function PUT(
     }
     const { data, error } = await supabase
       .from('revision_plans')
-      .update({ status: '草稿', updated_at: now })
+      .update({ status: '草稿', updated_at: now, updated_by: session.username })
       .eq('id', id)
       .select()
       .single();
@@ -152,7 +163,7 @@ export async function PUT(
     }
     const { data, error } = await supabase
       .from('revision_plans')
-      .update({ status: '已归档', updated_at: now })
+      .update({ status: '已归档', updated_at: now, updated_by: session.username })
       .eq('id', id)
       .select()
       .single();
@@ -172,6 +183,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+
   const { id } = await params;
   const supabase = getSupabaseClient();
 

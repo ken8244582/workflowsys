@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import * as XLSX from 'xlsx';
+import { requireAuth, isSession } from '@/lib/api-auth';
+import { beijingNow } from '@/lib/utils';
 
-function mapRowToDb(row: Record<string, string>) {
+function mapRowToDb(row: Record<string, string>, username: string) {
+  const now = beijingNow();
   return {
     l1_domain: row['L1-业务域'] || row['L1业务域'] || row['l1_domain'] || row['l1Domain'] || '',
     l1_owner: row['L1流程所有者'] || row['L1所有者'] || row['l1_owner'] || row['l1Owner'] || '',
@@ -21,24 +24,29 @@ function mapRowToDb(row: Record<string, string>) {
     it_sub_category: row['IT支撑分类'] || row['it_sub_category'] || row['itSubCategory'] || '',
     it_score: parseInt(row['IT支撑分'] || row['it_score'] || row['itScore'] || '0') || 0,
     status: row['状态'] || row['status'] || '',
+    created_by: username,
+    created_at_ts: now,
+    updated_by: username,
+    updated_at_ts: now,
   };
 }
 
 /**
  * Detect if the first row is a merged title row (not a data header).
- * A title row has a non-empty first cell and many __EMPTY* keys.
  */
 function detectTitleRow(rows: Record<string, string>[]): boolean {
   if (rows.length === 0) return false;
   const firstKey = Object.keys(rows[0])[0] || '';
   const hasEmptyKeys = Object.keys(rows[0]).some(k => k.startsWith('__EMPTY'));
-  // If first key is something like "L1-L4流程文件清单" (not a column header),
-  // and there are __EMPTY keys, then row 0 is a title row
   return hasEmptyKeys && !firstKey.includes('业务域') && !firstKey.includes('流程编码') && !firstKey.includes('序号');
 }
 
 // POST /api/flows/reinitialize - Reinitialize all flow data
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+  const session = authResult;
+
   const supabase = getSupabaseClient();
   const formData = await request.formData();
   const file = formData.get('file') as File | null;
@@ -63,22 +71,18 @@ export async function POST(request: NextRequest) {
     }
   } else {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
-    // Prefer the sheet named "L1-L4流程文件清单", otherwise fall back to first sheet
     const targetSheetName = workbook.SheetNames.find(n => n.includes('L1-L4') || n.includes('流程文件清单')) || workbook.SheetNames[0];
     const sheet = workbook.Sheets[targetSheetName];
 
-    // First read to detect if there's a title row
     const testRows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: '' });
     const hasTitleRow = detectTitleRow(testRows);
 
-    // Re-read with correct range (skip title row if present)
     const dataStartRow = hasTitleRow ? 1 : 0;
     rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, {
       defval: '',
       range: dataStartRow,
     });
 
-    // Convert all values to strings for consistent mapping
     rows = rows.map(row => {
       const mapped: Record<string, string> = {};
       Object.entries(row).forEach(([k, v]) => {
@@ -93,7 +97,7 @@ export async function POST(request: NextRequest) {
   }
 
   const insertRows = rows
-    .map(mapRowToDb)
+    .map(row => mapRowToDb(row, session.username))
     .filter(row => row.process_code || row.l4_process || row.l1_domain);
 
   if (insertRows.length === 0) {

@@ -22,6 +22,10 @@ export const flows = pgTable("flows", {
 	itSubCategory: text("it_sub_category").default('').notNull(),
 	itScore: integer("it_score").default(0).notNull(),
 	status: text().default('').notNull(),
+	createdBy: text("created_by").default('').notNull(),
+	createdAtTs: text("created_at_ts").default('').notNull(),
+	updatedBy: text("updated_by").default('').notNull(),
+	updatedAtTs: text("updated_at_ts").default('').notNull(),
 }, (table) => [
 	index("idx_flows_category").using("btree", table.category.asc().nullsLast().op("text_ops")),
 	index("idx_flows_format").using("btree", table.format.asc().nullsLast().op("text_ops")),
@@ -53,6 +57,10 @@ export const revisionRecords = pgTable("revision_records", {
 	revisionType: text("revision_type").default('').notNull(),
 	description: text().default('').notNull(),
 	operator: text().default('').notNull(),
+	createdBy: text("created_by").default('').notNull(),
+	createdAtTs: text("created_at_ts").default('').notNull(),
+	updatedBy: text("updated_by").default('').notNull(),
+	updatedAtTs: text("updated_at_ts").default('').notNull(),
 }, (table) => [
 	index("idx_revision_l1_domain").using("btree", table.l1Domain.asc().nullsLast().op("text_ops")),
 	index("idx_revision_type").using("btree", table.revisionType.asc().nullsLast().op("text_ops")),
@@ -71,6 +79,8 @@ export const revisionPlans = pgTable("revision_plans", {
 	completedCount: integer("completed_count").default(0).notNull(),
 	createdAt: text("created_at").default('').notNull(),
 	updatedAt: text("updated_at").default('').notNull(),
+	createdBy: text("created_by").default('').notNull(),
+	updatedBy: text("updated_by").default('').notNull(),
 }, (table) => [
 	uniqueIndex("idx_revision_plans_month").using("btree", table.planMonth.asc().nullsLast().op("text_ops")),
 	pgPolicy("Allow public delete access on revision_plans", { as: "permissive", for: "delete", to: ["public"], using: sql`true` }),
@@ -99,6 +109,9 @@ export const planTasks = pgTable("plan_tasks", {
 	format: text("format").default('').notNull(),
 	category: text("category").default('').notNull(),
 	createdAt: text("created_at").default('').notNull(),
+	createdBy: text("created_by").default('').notNull(),
+	updatedBy: text("updated_by").default('').notNull(),
+	updatedAtTs: text("updated_at_ts").default('').notNull(),
 }, (table) => [
 	index("idx_plan_tasks_department").using("btree", table.department.asc().nullsLast().op("text_ops")),
 	index("idx_plan_tasks_flow_item_id").using("btree", table.flowItemId.asc().nullsLast().op("int4_ops")),
@@ -108,6 +121,55 @@ export const planTasks = pgTable("plan_tasks", {
 	pgPolicy("Allow public update access on plan_tasks", { as: "permissive", for: "update", to: ["public"] }),
 	pgPolicy("Allow public insert access on plan_tasks", { as: "permissive", for: "insert", to: ["public"] }),
 	pgPolicy("Allow public read access on plan_tasks", { as: "permissive", for: "select", to: ["public"] }),
+]);
+
+export const e2eProcesses = pgTable("e2e_processes", {
+	id: text("id").primaryKey().notNull(),
+	name: text("name").default('').notNull(),
+	owner: text("owner").default('').notNull(),
+	department: text("department").default('').notNull(),
+	responsiblePerson: text("responsible_person").default('').notNull(),
+	currentProgress: integer("current_progress").default(0).notNull(),
+	targetProgress: integer("target_progress").default(100).notNull(),
+	status: text("status").default('not_started').notNull(),
+	startDate: text("start_date").default(''),
+	completedDate: text("completed_date").default(''),
+	description: text("description").default(''),
+	createdBy: text("created_by").default('').notNull(),
+	createdAtTs: text("created_at_ts").default('').notNull(),
+	updatedBy: text("updated_by").default('').notNull(),
+	updatedAtTs: text("updated_at_ts").default('').notNull(),
+}, (table) => [
+	index("idx_e2e_processes_department").using("btree", table.department.asc().nullsLast().op("text_ops")),
+	index("idx_e2e_processes_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+	pgPolicy("Allow public read access on e2e_processes", { as: "permissive", for: "select", to: ["public"], using: sql`true` }),
+	pgPolicy("Allow public insert access on e2e_processes", { as: "permissive", for: "insert", to: ["public"] }),
+	pgPolicy("Allow public update access on e2e_processes", { as: "permissive", for: "update", to: ["public"] }),
+	pgPolicy("Allow public delete access on e2e_processes", { as: "permissive", for: "delete", to: ["public"], using: sql`true` }),
+]);
+
+export const e2ePlans = pgTable("e2e_plans", {
+	id: text("id").primaryKey().notNull(),
+	processId: text("process_id").notNull(),
+	planType: text("plan_type").default('monthly').notNull(),
+	year: integer("year").default(0).notNull(),
+	period: integer("period").default(0).notNull(),
+	planContent: text("plan_content").default('').notNull(),
+	planProgress: integer("plan_progress").default(100).notNull(),
+	actualProgress: integer("actual_progress").default(0),
+	status: text("status").default('planned').notNull(),
+	notes: text("notes").default(''),
+	createdBy: text("created_by").default('').notNull(),
+	createdAtTs: text("created_at_ts").default('').notNull(),
+	updatedBy: text("updated_by").default('').notNull(),
+	updatedAtTs: text("updated_at_ts").default('').notNull(),
+}, (table) => [
+	index("idx_e2e_plans_process_id").using("btree", table.processId.asc().nullsLast().op("text_ops")),
+	index("idx_e2e_plans_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+	pgPolicy("Allow public read access on e2e_plans", { as: "permissive", for: "select", to: ["public"], using: sql`true` }),
+	pgPolicy("Allow public insert access on e2e_plans", { as: "permissive", for: "insert", to: ["public"] }),
+	pgPolicy("Allow public update access on e2e_plans", { as: "permissive", for: "update", to: ["public"] }),
+	pgPolicy("Allow public delete access on e2e_plans", { as: "permissive", for: "delete", to: ["public"], using: sql`true` }),
 ]);
 
 // System tables - no public RLS policies (backend uses service_role_key)

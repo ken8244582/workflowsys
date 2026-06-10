@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import type { FlowItem } from '@/lib/flow-data';
 import { beijingNow } from '@/lib/utils';
+import { requireAuth, isSession } from '@/lib/api-auth';
 
 function mapFlowRow(row: Record<string, unknown>): FlowItem {
   return {
@@ -31,6 +32,9 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+
   const { id } = await params;
   const numId = parseInt(id);
 
@@ -53,6 +57,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+  const session = authResult;
+
   const { id } = await params;
   const numId = parseInt(id);
   const body = await request.json();
@@ -76,7 +84,7 @@ export async function PUT(
     // 废止流程
     const { data, error } = await supabase
       .from('flows')
-      .update({ status: '已废止' })
+      .update({ status: '已废止', updated_by: session.username, updated_at_ts: now })
       .eq('id', numId)
       .select()
       .single();
@@ -95,6 +103,10 @@ export async function PUT(
       revision_type: '废止',
       description: body.reason || '流程废止',
       operator: body.operator || '',
+      created_by: session.username,
+      created_at_ts: now,
+      updated_by: session.username,
+      updated_at_ts: now,
     });
 
     return NextResponse.json(mapFlowRow(data));
@@ -111,7 +123,7 @@ export async function PUT(
 
     const { data, error } = await supabase
       .from('flows')
-      .update({ version: newVersion })
+      .update({ version: newVersion, updated_by: session.username, updated_at_ts: now })
       .eq('id', numId)
       .select()
       .single();
@@ -130,6 +142,10 @@ export async function PUT(
       revision_type: '修订',
       description: body.reason || body.description || '流程修订',
       operator: body.operator || '',
+      created_by: session.username,
+      created_at_ts: now,
+      updated_by: session.username,
+      updated_at_ts: now,
     });
 
     return NextResponse.json(mapFlowRow(data));
@@ -139,7 +155,7 @@ export async function PUT(
     // 恢复运行
     const { data, error } = await supabase
       .from('flows')
-      .update({ status: '正式运行' })
+      .update({ status: '正式运行', updated_by: session.username, updated_at_ts: now })
       .eq('id', numId)
       .select()
       .single();
@@ -158,13 +174,20 @@ export async function PUT(
       revision_type: '恢复',
       description: body.reason || '恢复运行',
       operator: body.operator || '',
+      created_by: session.username,
+      created_at_ts: now,
+      updated_by: session.username,
+      updated_at_ts: now,
     });
 
     return NextResponse.json(mapFlowRow(data));
   }
 
   // General update
-  const updateData: Record<string, unknown> = {};
+  const updateData: Record<string, unknown> = {
+    updated_by: session.username,
+    updated_at_ts: now,
+  };
   if (body.l1Domain !== undefined) updateData.l1_domain = body.l1Domain;
   if (body.l1Owner !== undefined) updateData.l1_owner = body.l1Owner;
   if (body.l2Group !== undefined) updateData.l2_group = body.l2Group;
@@ -183,7 +206,7 @@ export async function PUT(
   if (body.itScore !== undefined) updateData.it_score = body.itScore;
   if (body.status !== undefined) updateData.status = body.status;
 
-  if (Object.keys(updateData).length > 0) {
+  if (Object.keys(updateData).length > 2) { // >2 because we always have updated_by and updated_at_ts
     const { data, error } = await supabase
       .from('flows')
       .update(updateData)
@@ -206,6 +229,10 @@ export async function PUT(
         revision_type: '修订',
         description: body.description || body.reason || '',
         operator: body.operator || '',
+        created_by: session.username,
+        created_at_ts: now,
+        updated_by: session.username,
+        updated_at_ts: now,
       });
     }
 
@@ -220,6 +247,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+
   const { id } = await params;
   const numId = parseInt(id);
 

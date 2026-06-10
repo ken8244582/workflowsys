@@ -1,8 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { requireAuth, isSession } from '@/lib/api-auth';
 
 // GET /api/revisions/export - Export revision records as Excel
-export async function GET() {
+export async function GET(_request: NextRequest) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
   try {
     const supabase = getSupabaseClient();
     const { data: rows, error } = await supabase

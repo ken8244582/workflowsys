@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import * as XLSX from 'xlsx';
+import { requireAuth, isSession } from '@/lib/api-auth';
+import { beijingNow } from '@/lib/utils';
 
-function mapRowToDb(row: Record<string, string>) {
+function mapRowToDb(row: Record<string, string>, username: string) {
+  const now = beijingNow();
   return {
     l1_domain: row['L1-业务域'] || row['L1业务域'] || row['l1_domain'] || row['l1Domain'] || '',
     l1_owner: row['L1流程所有者'] || row['L1所有者'] || row['l1_owner'] || row['l1Owner'] || '',
@@ -21,6 +24,10 @@ function mapRowToDb(row: Record<string, string>) {
     it_sub_category: row['IT支撑分类'] || row['it_sub_category'] || row['itSubCategory'] || '',
     it_score: parseInt(row['IT支撑分'] || row['it_score'] || row['itScore'] || '0') || 0,
     status: row['状态'] || row['status'] || '',
+    created_by: username,
+    created_at_ts: now,
+    updated_by: username,
+    updated_at_ts: now,
   };
 }
 
@@ -36,6 +43,10 @@ function detectTitleRow(rows: Record<string, string>[]): boolean {
 
 // POST /api/flows/import - Import flows from Excel or JSON
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+  const session = authResult;
+
   const supabase = getSupabaseClient();
   const formData = await request.formData();
   const file = formData.get('file') as File | null;
@@ -91,7 +102,7 @@ export async function POST(request: NextRequest) {
 
   // Filter out completely empty rows (all key fields are empty)
   const insertRows = rows
-    .map(mapRowToDb)
+    .map(row => mapRowToDb(row, session.username))
     .filter(row => row.process_code || row.l4_process || row.l1_domain);
 
   if (insertRows.length === 0) {

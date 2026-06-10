@@ -130,6 +130,11 @@ export default function UsersPage() {
 
   // Delete user
   const handleDeleteUser = async (userId: number) => {
+    // B008: Prevent super admin from deleting themselves
+    if (currentUser?.userId === userId) {
+      alert('不能删除当前登录用户');
+      return;
+    }
     if (!confirm('确定要删除该用户吗？')) return;
     try {
       const res = await fetch(`/api/sys/users/${userId}`, { method: 'DELETE' });
@@ -310,7 +315,9 @@ export default function UsersPage() {
                           </button>
                           <button
                             onClick={() => handleDeleteUser(u.id)}
-                            className="text-red-500 hover:underline text-xs"
+                            className={`text-xs ${currentUser?.userId === u.id ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:underline'}`}
+                            disabled={currentUser?.userId === u.id}
+                            title={currentUser?.userId === u.id ? '不能删除当前登录用户' : ''}
                           >
                             删除
                           </button>

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import * as XLSX from 'xlsx';
+import { requireAuth, isSession } from '@/lib/api-auth';
 
 // GET /api/revision-plans/[id]/export - Export plan tasks as Excel
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
   const { id } = await params;
   const planId = parseInt(id, 10);
   if (isNaN(planId)) {

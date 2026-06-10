@@ -1,6 +1,6 @@
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import bcrypt from 'bcryptjs';
-import { createSession, type SessionPayload } from './auth';
+import { type SessionPayload } from './auth';
 
 export interface SysUser {
   id: number;
@@ -119,7 +119,7 @@ export async function seedInitialData(): Promise<void> {
 }
 
 // Login
-export async function loginUser(username: string, password: string): Promise<{ token: string; payload: SessionPayload } | null> {
+export async function loginUser(username: string, password: string): Promise<{ payload: SessionPayload } | null> {
   const client = getSupabaseClient();
 
   const { data: user, error } = await client
@@ -138,15 +138,25 @@ export async function loginUser(username: string, password: string): Promise<{ t
   const payload: SessionPayload = {
     userId: user.id,
     username: user.username,
+    displayName: user.display_name || user.username,
     isSuperAdmin: user.is_super_admin,
-    mustChangePassword: user.must_change_password,
   };
 
-  const token = await createSession(payload);
-  return { token, payload };
+  return { payload };
 }
 
 // Change password
+export async function verifyUserPassword(userId: number, password: string): Promise<boolean> {
+  const client = getSupabaseClient();
+  const { data, error } = await client
+    .from('sys_users')
+    .select('password_hash')
+    .eq('id', userId)
+    .single();
+  if (error || !data) return false;
+  return bcrypt.compare(password, data.password_hash);
+}
+
 export async function changePassword(userId: number, newPassword: string): Promise<void> {
   const client = getSupabaseClient();
   const passwordHash = await bcrypt.hash(newPassword, 10);

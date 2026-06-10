@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import * as XLSX from 'xlsx';
+import { requireAuth, isSession } from '@/lib/api-auth';
 
 // GET /api/flows/export - Export all flows as Excel
-export async function GET() {
+export async function GET(_request: NextRequest) {
+  const authResult = await requireAuth();
+  if (!isSession(authResult)) return authResult;
+
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('flows')

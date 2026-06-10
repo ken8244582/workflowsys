@@ -54,12 +54,12 @@ const STORAGE_KEY_COMPARE_MONTH = 'e2e-plan-compare-month';
 const STORAGE_KEY_COMPARE_QUARTER = 'e2e-plan-compare-quarter';
 
 interface PlanFormData {
-  processId: string;
-  planType: 'monthly' | 'quarterly';
+  process_id: string;
+  plan_type: 'monthly' | 'quarterly';
   year: number;
   period: number;
-  planContent: string;
-  planProgress: number;
+  plan_content: string;
+  plan_progress: number;
   status: E2EPlan['status'];
   notes: string;
 }
@@ -87,8 +87,8 @@ export default function E2EPlanPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [form, setForm] = useState<PlanFormData>({
-    processId: '', planType: 'monthly', year: currentYear, period: 1,
-    planContent: '', planProgress: 100, status: 'planned', notes: '',
+    process_id: '', plan_type: 'monthly', year: currentYear, period: 1,
+    plan_content: '', plan_progress: 100, status: 'planned', notes: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -118,9 +118,9 @@ export default function E2EPlanPage() {
   const processMap = new Map(processes.map((p) => [p.id, p]));
 
   // 获取流程的实际进度（从流程管理数据读取）
-  const getActualProgress = (processId: string): number => {
-    const proc = processMap.get(processId);
-    return proc?.currentProgress ?? 0;
+  const getActualProgress = (process_id: string): number => {
+    const proc = processMap.get(process_id);
+    return proc?.current_progress ?? 0;
   };
 
   // 保存对比月份到 localStorage
@@ -144,14 +144,14 @@ export default function E2EPlanPage() {
   // 对比数据：选中月份/季度的计划与实际对比
   const comparePeriod = viewType === 'monthly' ? compareMonth : compareQuarter;
   const comparePlans = yearPlans.filter(
-    (p) => p.planType === viewType && p.period === comparePeriod
+    (p) => p.plan_type === viewType && p.period === comparePeriod
   );
   const compareChartData = comparePlans.map((plan) => {
-    const proc = processMap.get(plan.processId);
+    const proc = processMap.get(plan.process_id);
     return {
       name: proc?.name || '未知',
-      '计划进度': plan.planProgress,
-      '实际进度': getActualProgress(plan.processId),
+      '计划进度': plan.plan_progress,
+      '实际进度': getActualProgress(plan.process_id),
     };
   });
 
@@ -159,12 +159,12 @@ export default function E2EPlanPage() {
   const handleAddPlan = (period: number) => {
     setEditingPlanId(null);
     setForm({
-      processId: processes[0]?.id || '',
-      planType: viewType,
+      process_id: processes[0]?.id || '',
+      plan_type: viewType,
       year: currentYear,
       period,
-      planContent: '',
-      planProgress: 100,
+      plan_content: '',
+      plan_progress: 100,
       status: 'planned',
       notes: '',
     });
@@ -175,12 +175,12 @@ export default function E2EPlanPage() {
   const handleEditPlan = (plan: E2EPlan) => {
     setEditingPlanId(plan.id);
     setForm({
-      processId: plan.processId,
-      planType: plan.planType,
+      process_id: plan.process_id,
+      plan_type: plan.plan_type as 'monthly' | 'quarterly',
       year: plan.year,
       period: plan.period,
-      planContent: plan.planContent,
-      planProgress: plan.planProgress,
+      plan_content: plan.plan_content,
+      plan_progress: plan.plan_progress,
       status: plan.status,
       notes: plan.notes ?? '',
     });
@@ -189,7 +189,7 @@ export default function E2EPlanPage() {
 
   // 保存
   const handleSave = async () => {
-    if (!form.processId || !form.planContent.trim()) return;
+    if (!form.process_id || !form.plan_content.trim()) return;
     setSaving(true);
     try {
       if (editingPlanId) {
@@ -363,7 +363,7 @@ export default function E2EPlanPage() {
           <div className={`grid gap-3 ${viewType === 'monthly' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-4'}`}>
             {periods.map((period) => {
               const periodPlans = yearPlans.filter(
-                (p) => p.planType === viewType && p.period === period
+                (p) => p.plan_type === viewType && p.period === period
               );
               const isSelectedForCompare = period === comparePeriod;
               return (
@@ -387,9 +387,9 @@ export default function E2EPlanPage() {
                     ) : (
                       periodPlans.map((plan) => {
                         const dot = STATUS_DOT[plan.status] || STATUS_DOT.planned;
-                        const actualProg = getActualProgress(plan.processId);
-                        const proc = processMap.get(plan.processId);
-                        const isOverPlan = actualProg >= plan.planProgress;
+                        const actualProg = getActualProgress(plan.process_id);
+                        const proc = processMap.get(plan.process_id);
+                        const isOverPlan = actualProg >= plan.plan_progress;
                         return (
                           <div
                             key={plan.id}
@@ -409,7 +409,7 @@ export default function E2EPlanPage() {
                                 </button>
                               </div>
                             </div>
-                            <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{plan.planContent}</p>
+                            <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{plan.plan_content}</p>
                             <div className="mt-1.5 space-y-1">
                               {/* 计划进度条（橙色） */}
                               <div className="flex items-center gap-1.5">
@@ -417,10 +417,10 @@ export default function E2EPlanPage() {
                                 <div className="relative h-2 flex-1 rounded-full bg-[#f59e0b]/20">
                                   <div
                                     className="absolute inset-y-0 left-0 rounded-full bg-[#f59e0b] transition-all"
-                                    style={{ width: `${Math.min(plan.planProgress, 100)}%` }}
+                                    style={{ width: `${Math.min(plan.plan_progress, 100)}%` }}
                                   />
                                 </div>
-                                <span className="w-7 shrink-0 text-right text-[10px] tabular-nums text-[#f59e0b]">{plan.planProgress}%</span>
+                                <span className="w-7 shrink-0 text-right text-[10px] tabular-nums text-[#f59e0b]">{plan.plan_progress}%</span>
                               </div>
                               {/* 实际进度条（靛蓝/绿色） */}
                               <div className="flex items-center gap-1.5">
@@ -476,24 +476,24 @@ export default function E2EPlanPage() {
                     .sort((a, b) => a.period - b.period)
                     .map((plan) => {
                       const dot = STATUS_DOT[plan.status] || STATUS_DOT.planned;
-                      const actualProg = getActualProgress(plan.processId);
-                      const isOverPlan = actualProg >= plan.planProgress;
+                      const actualProg = getActualProgress(plan.process_id);
+                      const isOverPlan = actualProg >= plan.plan_progress;
                       return (
                         <tr key={plan.id} className="border-b last:border-0 hover:bg-muted/30">
                           <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">
-                            {plan.planType === 'monthly' ? `${plan.period}月` : `Q${plan.period}`}
+                            {plan.plan_type === 'monthly' ? `${plan.period}月` : `Q${plan.period}`}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-xs font-medium">{processMap.get(plan.processId)?.name || '未知'}</td>
-                          <td className="max-w-[200px] truncate px-3 py-2 text-xs text-muted-foreground">{plan.planContent}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-xs font-medium">{processMap.get(plan.process_id)?.name || '未知'}</td>
+                          <td className="max-w-[200px] truncate px-3 py-2 text-xs text-muted-foreground">{plan.plan_content}</td>
                           <td className="px-3 py-2 text-xs">
                             <div className="flex items-center gap-2">
                               <div className="relative h-2.5 w-full rounded-full bg-[#f59e0b]/20">
                                 <div
                                   className="absolute inset-y-0 left-0 rounded-full bg-[#f59e0b]"
-                                  style={{ width: `${Math.min(plan.planProgress, 100)}%` }}
+                                  style={{ width: `${Math.min(plan.plan_progress, 100)}%` }}
                                 />
                               </div>
-                              <span className="shrink-0 tabular-nums text-[#f59e0b]">{plan.planProgress}%</span>
+                              <span className="shrink-0 tabular-nums text-[#f59e0b]">{plan.plan_progress}%</span>
                             </div>
                           </td>
                           <td className="px-3 py-2 text-xs">
@@ -546,7 +546,7 @@ export default function E2EPlanPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>端到端流程 *</Label>
-                <Select value={form.processId} onValueChange={(v) => setForm({ ...form, processId: v })} disabled={!!editingPlanId}>
+                <Select value={form.process_id} onValueChange={(v) => setForm({ ...form, process_id: v })} disabled={!!editingPlanId}>
                   <SelectTrigger><SelectValue placeholder="选择流程" /></SelectTrigger>
                   <SelectContent>
                     {processes.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -555,7 +555,7 @@ export default function E2EPlanPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>计划类型</Label>
-                <Select value={form.planType} onValueChange={(v: 'monthly' | 'quarterly') => setForm({ ...form, planType: v })}>
+                <Select value={form.plan_type} onValueChange={(v: 'monthly' | 'quarterly') => setForm({ ...form, plan_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="monthly">月度</SelectItem>
@@ -570,11 +570,11 @@ export default function E2EPlanPage() {
                 <Input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || currentYear })} />
               </div>
               <div className="space-y-1.5">
-                <Label>{form.planType === 'monthly' ? '月份' : '季度'}</Label>
+                <Label>{form.plan_type === 'monthly' ? '月份' : '季度'}</Label>
                 <Select value={String(form.period)} onValueChange={(v) => setForm({ ...form, period: parseInt(v) })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {form.planType === 'monthly'
+                    {form.plan_type === 'monthly'
                       ? Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                           <SelectItem key={m} value={String(m)}>{m}月</SelectItem>
                         ))
@@ -588,17 +588,17 @@ export default function E2EPlanPage() {
             </div>
             <div className="space-y-1.5">
               <Label>计划内容 *</Label>
-              <Textarea value={form.planContent} onChange={(e) => setForm({ ...form, planContent: e.target.value })} placeholder="如：完成流程梳理和发布" rows={2} />
+              <Textarea value={form.plan_content} onChange={(e) => setForm({ ...form, plan_content: e.target.value })} placeholder="如：完成流程梳理和发布" rows={2} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>计划进度: {form.planProgress}%</Label>
-                <Input type="number" min={0} max={100} value={form.planProgress} onChange={(e) => setForm({ ...form, planProgress: parseInt(e.target.value) || 0 })} />
+                <Label>计划进度: {form.plan_progress}%</Label>
+                <Input type="number" min={0} max={100} value={form.plan_progress} onChange={(e) => setForm({ ...form, plan_progress: parseInt(e.target.value) || 0 })} />
               </div>
               <div className="space-y-1.5">
                 <Label>实际进度（来自流程管理）</Label>
                 <div className="flex h-9 items-center rounded-md border bg-muted/50 px-3 text-sm tabular-nums text-muted-foreground">
-                  {form.processId ? `${getActualProgress(form.processId)}%` : '请先选择流程'}
+                  {form.process_id ? `${getActualProgress(form.process_id)}%` : '请先选择流程'}
                 </div>
               </div>
             </div>
@@ -618,7 +618,7 @@ export default function E2EPlanPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>取消</Button>
-            <Button onClick={handleSave} disabled={saving || !form.processId || !form.planContent.trim()} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+            <Button onClick={handleSave} disabled={saving || !form.process_id || !form.plan_content.trim()} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
               {saving ? '保存中...' : '保存'}
             </Button>
           </DialogFooter>
