@@ -136,5 +136,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Create revision record for new L4 process (not for L1/L2/L3 placeholder records)
+  if (body.l4Process) {
+    await supabase.from('revision_records').insert({
+      revision_date: now,
+      process_code: body.processCode || '',
+      l4_process: body.l4Process,
+      version: body.version || '',
+      l1_domain: body.l1Domain || '',
+      l2_group: body.l2Group || '',
+      l3_segment: body.l3Segment || '',
+      revision_type: '新增',
+      description: `新增流程: ${body.l4Process}`,
+      operator: '',
+      created_by: session.username,
+      created_at_ts: now,
+      updated_by: session.username,
+      updated_at_ts: now,
+    });
+  }
+
   return NextResponse.json(mapFlowRow(data));
 }
