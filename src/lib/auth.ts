@@ -1,18 +1,22 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-// B002 Fix: Remove default value, require JWT_SECRET env var
-// Lazy-load SECRET_KEY so .env.local changes take effect without restart
-function getSecretKey() {
-  const secret = process.env.JWT_SECRET;
+// JWT_SECRET is required for signing tokens.
+// Fallback: use COZE_SUPABASE_SERVICE_ROLE_KEY if JWT_SECRET is not configured (production).
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET || process.env.COZE_SUPABASE_SERVICE_ROLE_KEY;
   if (!secret) {
-    console.error('[AUTH] JWT_SECRET environment variable is not set! Please configure it before starting the app.');
+    console.error('[AUTH] Neither JWT_SECRET nor COZE_SUPABASE_SERVICE_ROLE_KEY is set!');
   }
-  return new TextEncoder().encode(secret || '');
+  return secret || '';
+}
+
+function getSecretKey() {
+  return new TextEncoder().encode(getJwtSecret());
 }
 
 export function isJwtConfigured(): boolean {
-  return !!process.env.JWT_SECRET;
+  return !!(process.env.JWT_SECRET || process.env.COZE_SUPABASE_SERVICE_ROLE_KEY);
 }
 
 export interface SessionPayload {
@@ -29,7 +33,7 @@ const SESSION_MAX_AGE = 3600;
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: false,
   sameSite: 'lax' as const,
   path: '/',
   // Session cookie: no maxAge/persistent storage — browser closes = cookie gone
@@ -52,7 +56,7 @@ export async function generateSessionToken(payload: SessionPayload): Promise<str
  * This is the preferred way to create sessions in API routes
  */
 export function setSessionCookie(response: Response, token: string) {
-  response.headers.append('Set-Cookie', `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+  response.headers.append('Set-Cookie', `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax`);
 }
 
 /**
