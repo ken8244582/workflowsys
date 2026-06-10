@@ -96,10 +96,9 @@ export default function FunctionalListPage() {
   // Dialogs
   const [editDialog, setEditDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
-  const [reviseDialog, setReviseDialog] = useState(false);
   const [currentItem, setCurrentItem] = useState<FlowItem | null>(null);
   const [editForm, setEditForm] = useState<Partial<FlowItem>>({});
-  const [reviseType, setReviseType] = useState<'upgrade' | 'abolish'>('upgrade');
+  const [editAction, setEditAction] = useState<'edit' | 'revise' | 'abolish'>('edit');
   const [reviseReason, setReviseReason] = useState('');
   const [reviseContent, setReviseContent] = useState('');
 
@@ -356,12 +355,35 @@ export default function FunctionalListPage() {
   const handleEdit = (item: FlowItem) => {
     setCurrentItem(item);
     setEditForm({ ...item });
+    setEditAction('edit');
+    setReviseReason('');
+    setReviseContent('');
     setEditDialog(true);
   };
 
   const handleSave = async () => {
     if (currentItem) {
-      await fetch(`/api/flows/${currentItem.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) });
+      if (editAction === 'abolish') {
+        if (!reviseReason.trim()) { alert('请输入废止原因'); return; }
+        await fetch(`/api/flows/${currentItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _action: 'abolish', reason: reviseReason }),
+        });
+      } else if (editAction === 'revise') {
+        if (!reviseContent.trim()) { alert('请输入修订内容描述'); return; }
+        await fetch(`/api/flows/${currentItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _action: 'upgrade', description: reviseContent }),
+        });
+      } else {
+        await fetch(`/api/flows/${currentItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(editForm),
+        });
+      }
     } else {
       await fetch('/api/flows', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) });
     }
@@ -382,14 +404,6 @@ export default function FunctionalListPage() {
     }
   };
 
-  const handleRevise = (item: FlowItem) => {
-    setCurrentItem(item);
-    setReviseType('upgrade');
-    setReviseReason('');
-    setReviseContent('');
-    setReviseDialog(true);
-  };
-
   const handleRestore = async (item: FlowItem) => {
     if (!confirm(`确定要恢复运行「${item.l4Process}」吗？此操作将记录到修订记录中。`)) return;
     await fetch(`/api/flows/${item.id}`, {
@@ -397,27 +411,6 @@ export default function FunctionalListPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _action: 'restore', reason: '恢复运行，原废止流程恢复为正式运行' }),
     });
-    fetchData();
-  };
-
-  const handleConfirmRevise = async () => {
-    if (!currentItem) return;
-    if (reviseType === 'abolish') {
-      if (!reviseReason.trim()) return;
-      await fetch(`/api/flows/${currentItem.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _action: 'abolish', reason: reviseReason }),
-      });
-    } else {
-      if (!reviseContent.trim()) return;
-      await fetch(`/api/flows/${currentItem.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _action: 'upgrade', description: reviseContent }),
-      });
-    }
-    setReviseDialog(false);
     fetchData();
   };
 
@@ -661,17 +654,9 @@ export default function FunctionalListPage() {
                                     <Undo2 className="h-3.5 w-3.5" />
                                   </Button>
                                 ) : (
-                                  <>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="修订" onClick={() => handleRevise(item)}>
-                                      <RotateCw className="h-3.5 w-3.5 text-blue-500" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
-                                      <Pencil className="h-3.5 w-3.5 text-gray-500" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="废止" onClick={() => { setCurrentItem(item); setReviseType('abolish'); setReviseReason(''); setReviseDialog(true); }}>
-                                      <XCircle className="h-3.5 w-3.5 text-red-400" />
-                                    </Button>
-                                  </>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
+                                    <Pencil className="h-3.5 w-3.5 text-gray-500" />
+                                  </Button>
                                 )}
                                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
                                   <Trash2 className="h-3.5 w-3.5 text-gray-400" />
@@ -726,6 +711,57 @@ export default function FunctionalListPage() {
           <DialogHeader>
             <DialogTitle>{currentItem ? '编辑流程' : '新增流程'}</DialogTitle>
           </DialogHeader>
+          {currentItem && (
+            <div className="space-y-3">
+              {/* Action type selector */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">操作类型</label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={editAction === 'edit' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditAction('edit')}
+                    className={editAction === 'edit' ? 'bg-[#1e3a5f] hover:bg-[#2d4f7a]' : ''}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> 编辑信息
+                  </Button>
+                  <Button
+                    variant={editAction === 'revise' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditAction('revise')}
+                    className={editAction === 'revise' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                  >
+                    <RotateCw className="h-3.5 w-3.5 mr-1" /> 流程修订
+                  </Button>
+                  <Button
+                    variant={editAction === 'abolish' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditAction('abolish')}
+                    className={editAction === 'abolish' ? 'bg-red-600 hover:bg-red-700' : ''}
+                  >
+                    <XCircle className="h-3.5 w-3.5 mr-1" /> 流程废止
+                  </Button>
+                </div>
+              </div>
+              {/* Action hint */}
+              {editAction === 'edit' && (
+                <div className="p-2 bg-blue-50 border border-blue-100 rounded-md text-xs text-blue-700">
+                  编辑信息：仅修改流程基本信息，不会产生修订记录
+                </div>
+              )}
+              {editAction === 'revise' && (
+                <div className="p-2 bg-amber-50 border border-amber-100 rounded-md text-xs text-amber-700">
+                  流程修订：修改流程并升级版本号，系统将自动生成修订记录
+                </div>
+              )}
+              {editAction === 'abolish' && (
+                <div className="p-2 bg-red-50 border border-red-100 rounded-md text-xs text-red-700">
+                  流程废止：将流程状态标记为已废止，系统将自动生成修订记录
+                </div>
+              )}
+            </div>
+          )}
+          {(!currentItem || editAction === 'edit') && (
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">L1业务域</label>
@@ -855,9 +891,50 @@ export default function FunctionalListPage() {
               </Select>
             </div>
           </div>
+          )}
+          {currentItem && editAction === 'revise' && (
+            <div className="py-4 space-y-4">
+              <div className="p-3 bg-gray-50 rounded-lg text-sm">
+                <div className="font-medium">{currentItem.l4Process}</div>
+                <div className="text-gray-500 mt-1">编码: {currentItem.processCode} | 当前版本: {currentItem.version}</div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">修订内容描述 <span className="text-red-500">*</span></label>
+                <Textarea
+                  placeholder="请描述本次修订的内容..."
+                  value={reviseContent}
+                  onChange={e => setReviseContent(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          {currentItem && editAction === 'abolish' && (
+            <div className="py-4 space-y-4">
+              <div className="p-3 bg-gray-50 rounded-lg text-sm">
+                <div className="font-medium">{currentItem.l4Process}</div>
+                <div className="text-gray-500 mt-1">编码: {currentItem.processCode} | 当前版本: {currentItem.version}</div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">废止原因 <span className="text-red-500">*</span></label>
+                <Textarea
+                  placeholder="请输入废止原因..."
+                  value={reviseReason}
+                  onChange={e => setReviseReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialog(false)}>取消</Button>
-            <Button onClick={handleSave} className="bg-[#1e3a5f] hover:bg-[#2d4f7a]">保存</Button>
+            <Button
+              onClick={handleSave}
+              className={editAction === 'abolish' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1e3a5f] hover:bg-[#2d4f7a]'}
+              disabled={editAction === 'revise' ? !reviseContent.trim() : editAction === 'abolish' ? !reviseReason.trim() : false}
+            >
+              {editAction === 'abolish' ? '确认废止' : editAction === 'revise' ? '确认修订' : '保存'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -874,75 +951,6 @@ export default function FunctionalListPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialog(false)}>取消</Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>删除</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Revise Dialog */}
-      <Dialog open={reviseDialog} onOpenChange={setReviseDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>流程修订操作</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="p-3 bg-gray-50 rounded-lg text-sm">
-              <div className="font-medium">{currentItem?.l4Process}</div>
-              <div className="text-gray-500 mt-1">编码: {currentItem?.processCode} | 当前版本: {currentItem?.version}</div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">修订类型</label>
-              <div className="flex gap-2">
-                <Button
-                  variant={reviseType === 'upgrade' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setReviseType('upgrade')}
-                  className={reviseType === 'upgrade' ? 'bg-[#1e3a5f] hover:bg-[#2d4f7a]' : ''}
-                >
-                  <RotateCw className="h-4 w-4 mr-1" /> 版本升级
-                </Button>
-                <Button
-                  variant={reviseType === 'abolish' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setReviseType('abolish')}
-                  className={reviseType === 'abolish' ? 'bg-red-600 hover:bg-red-700' : ''}
-                >
-                  <XCircle className="h-4 w-4 mr-1" /> 废止流程
-                </Button>
-              </div>
-            </div>
-            {reviseType === 'abolish' ? (
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">废止原因 <span className="text-red-500">*</span></label>
-                <Textarea
-                  placeholder="请输入废止原因..."
-                  value={reviseReason}
-                  onChange={e => setReviseReason(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">修订内容描述 <span className="text-red-500">*</span></label>
-                  <Textarea
-                    placeholder="请描述本次修订的内容..."
-                    value={reviseContent}
-                    onChange={e => setReviseContent(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReviseDialog(false)}>取消</Button>
-            <Button
-              onClick={handleConfirmRevise}
-              className={reviseType === 'abolish' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1e3a5f] hover:bg-[#2d4f7a]'}
-              disabled={reviseType === 'abolish' ? !reviseReason.trim() : !reviseContent.trim()}
-            >
-              确认{reviseType === 'abolish' ? '废止' : '升级'}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
