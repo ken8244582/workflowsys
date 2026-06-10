@@ -37,7 +37,7 @@
     }
   </style>
   <style>
-.l1-content { display: flex; flex-direction: row; align-items: flex-start; flex-wrap: nowrap; }
+.l1-content { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: stretch; width: max-content; }
 .l1-content.is-hidden { display: none; }
 .l2-col { flex-shrink: 0; display: flex; flex-direction: column; }
 .l2-scroll::-webkit-scrollbar { height: 6px; }
@@ -165,13 +165,13 @@
       </div>
 
       <!-- L2横向列区域 -->
-      <div class="overflow-auto l2-scroll bg-background" style="flex:1;min-width:0;" id="l1-content-area">
+      <div class="overflow-auto l2-scroll bg-background" style="flex:1;" id="l1-content-area">
 
         <!-- ===== L1内容-01产品和技术研发 ===== -->
-        <div class="l1-content" data-l1-id="1">
+        <div class="l1-content" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:stretch;overflow:visible;width:max-content;" data-l1-id="1">
 
           <!-- L2列-01需求管理 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -313,7 +313,7 @@
           </div>
 
           <!-- L2列-02新产品采购 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -404,7 +404,7 @@
           </div>
 
           <!-- L2列-03供应商寻源准入选择 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -527,10 +527,10 @@
         </div><!-- end l1-content data-l1-id=1 -->
 
         <!-- ===== L1内容-08采购管理 ===== -->
-        <div class="l1-content is-hidden" data-l1-id="2">
+        <div class="l1-content" style="display:none;flex-direction:row;flex-wrap:nowrap;align-items:stretch;overflow:visible;width:max-content;" data-l1-id="2">
 
           <!-- L2列-01需求管理 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -594,7 +594,7 @@
           <!-- L2列-02~08 简略展示 -->
 
           <!-- L2列-02新产品采购 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -679,7 +679,7 @@
           </div>
 
           <!-- L2列-03供应商寻源准入选择 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -859,7 +859,7 @@
           </div>
 
           <!-- L2列-04供应商管理 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -971,7 +971,7 @@
           </div>
 
           <!-- L2列-05采购需求管理 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -1057,7 +1057,7 @@
           </div>
 
           <!-- L2列-06采购计划与执行 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -1237,7 +1237,7 @@
           </div>
 
           <!-- L2列-07采购监督管理 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -1349,7 +1349,7 @@
           </div>
 
           <!-- L2列-08固定资产商务管理 -->
-          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex-shrink:0;display:flex;flex-direction:column;">
+          <div class="l2-col border-r border-outline-variant" style="width:280px;min-width:280px;flex:0 0 280px;display:flex;flex-direction:column;height:100%;">
             <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
               <div class="flex items-center gap-2">
                 <span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[9px] font-bold" style="background:rgba(255,255,255,0.25);">L2</span>
@@ -1718,8 +1718,8 @@
         $(this).find('.l1-stats-text').css('color','#475569');
         $(this).find('.l1-stats-strong').css('color','#1e293b');
         // 切换内容
-        $('.l1-content').addClass('is-hidden');
-        $('.l1-content[data-l1-id="'+id+'"]').removeClass('is-hidden');
+        $('.l1-content').css('display','none');
+        $('.l1-content[data-l1-id="'+id+'"]').css({'display':'flex','width':'max-content'});
         // 更新标题栏
         var d = l1Data[id];
         if (d) {
