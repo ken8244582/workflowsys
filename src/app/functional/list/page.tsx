@@ -137,6 +137,17 @@ export default function FunctionalListPage() {
   const formatOptions = useMemo(() => [...new Set(allData.map(d => d.format).filter(Boolean))].sort(), [allData]);
   const itOptions = useMemo(() => [...new Set(allData.map(d => d.itCoverage).filter(Boolean))].sort(), [allData]);
 
+  // Edit dialog cascade options (based on editForm selections, not filter selections)
+  const l1EditOptions = useMemo(() => [...new Set(allData.map(d => d.l1Domain).filter(Boolean))].sort(), [allData]);
+  const l2EditOptions = useMemo(() => {
+    const base = editForm.l1Domain ? allData.filter(d => d.l1Domain === editForm.l1Domain) : allData;
+    return [...new Set(base.map(d => d.l2Group).filter(Boolean))].sort();
+  }, [allData, editForm.l1Domain]);
+  const l3EditOptions = useMemo(() => {
+    const base = allData.filter(d => d.l1Domain === editForm.l1Domain && d.l2Group === editForm.l2Group);
+    return [...new Set(base.map(d => d.l3Segment).filter(Boolean))].sort();
+  }, [allData, editForm.l1Domain, editForm.l2Group]);
+
   // Filtered data
   const filteredData = useMemo(() => {
     let result = allData;
@@ -561,7 +572,15 @@ export default function FunctionalListPage() {
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">L1业务域</label>
-              <Input value={editForm.l1Domain || ''} onChange={e => setEditForm(f => ({ ...f, l1Domain: e.target.value }))} />
+              <Select value={editForm.l1Domain || ''} onValueChange={v => {
+                const owner = allData.find(d => d.l1Domain === v)?.l1Owner || '';
+                setEditForm(f => ({ ...f, l1Domain: v, l1Owner: owner || f.l1Owner, l2Group: '', l2Owner: '', l3Segment: '', l3Owner: '' }));
+              }}>
+                <SelectTrigger><SelectValue placeholder="选择L1业务域" /></SelectTrigger>
+                <SelectContent>
+                  {l1EditOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">L1流程所有者</label>
@@ -569,7 +588,16 @@ export default function FunctionalListPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">L2业务组</label>
-              <Input value={editForm.l2Group || ''} onChange={e => setEditForm(f => ({ ...f, l2Group: e.target.value }))} />
+              <Select value={editForm.l2Group || ''} onValueChange={v => {
+                const base = editForm.l1Domain ? allData.filter(d => d.l1Domain === editForm.l1Domain) : allData;
+                const owner = base.find(d => d.l2Group === v)?.l2Owner || '';
+                setEditForm(f => ({ ...f, l2Group: v, l2Owner: owner || f.l2Owner, l3Segment: '', l3Owner: '' }));
+              }}>
+                <SelectTrigger><SelectValue placeholder={editForm.l1Domain ? '选择L2业务组' : '请先选择L1业务域'} /></SelectTrigger>
+                <SelectContent>
+                  {l2EditOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">L2流程所有者</label>
@@ -577,7 +605,16 @@ export default function FunctionalListPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">L3业务段</label>
-              <Input value={editForm.l3Segment || ''} onChange={e => setEditForm(f => ({ ...f, l3Segment: e.target.value }))} />
+              <Select value={editForm.l3Segment || ''} onValueChange={v => {
+                const base = allData.filter(d => d.l1Domain === editForm.l1Domain && d.l2Group === editForm.l2Group);
+                const owner = base.find(d => d.l3Segment === v)?.l3Owner || '';
+                setEditForm(f => ({ ...f, l3Segment: v, l3Owner: owner || f.l3Owner }));
+              }}>
+                <SelectTrigger><SelectValue placeholder={editForm.l2Group ? '选择L3业务段' : '请先选择L2业务组'} /></SelectTrigger>
+                <SelectContent>
+                  {l3EditOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">L3流程所有者</label>
