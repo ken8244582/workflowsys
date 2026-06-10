@@ -48,6 +48,18 @@
     }
   </style>
 
+  <style>
+    /* 左侧L2列的自定义滚动条 */
+    .l2-columns::-webkit-scrollbar { height: 6px; }
+    .l2-columns::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+    .l2-columns::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .l2-columns::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    /* L2列内滚动 */
+    .l2-col-body::-webkit-scrollbar { width: 4px; }
+    .l2-col-body::-webkit-scrollbar-track { background: transparent; }
+    .l2-col-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
+  </style>
+
   <!-- 图片兜底 -->
   <script>
     document.addEventListener('error', function (e) {
@@ -67,10 +79,10 @@
   </script>
 </head>
 
-<body class="bg-background text-on-surface font-sans">
+<body class="bg-background text-on-surface font-sans h-screen flex flex-col overflow-hidden">
 
   <!-- @nav:start 导航组件 -->
-  <header class="bg-primary sticky top-0 z-40 h-14 flex items-center justify-between px-6 shadow-card">
+  <header class="bg-primary sticky top-0 z-40 h-12 flex items-center justify-between px-6 shrink-0">
     <div class="flex items-center gap-3">
       <i data-lucide="workflow" class="text-on-primary w-5 h-5"></i>
       <span class="font-bold text-lg text-on-primary">职能流程管理平台</span>
@@ -84,967 +96,650 @@
     </nav>
     <div class="flex items-center gap-3">
       <span class="text-sm text-on-primary/80">管理员</span>
-      <div class="w-8 h-8 rounded-full bg-on-primary/20 text-on-primary flex items-center justify-center text-sm font-medium">管</div>
+      <div class="w-7 h-7 rounded-full bg-on-primary/20 text-on-primary flex items-center justify-center text-xs font-medium">管</div>
     </div>
   </header>
   <!-- @nav:end 导航组件 -->
 
   <!-- @main-content:start -->
-  <main class="flex-1 min-w-0 overflow-y-auto bg-background p-6">
+  <div class="flex-1 flex overflow-hidden">
 
-    <!-- 页面标题区 -->
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-on-surface">流程架构</h1>
-      <button id="btn-add-l1" class="bg-primary text-on-primary px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all inline-flex items-center gap-2">
-        <i data-lucide="plus" class="w-4 h-4"></i>新增L1业务域
-      </button>
-    </div>
-
-    <!-- L1业务域横向选项卡 -->
-    <div class="flex items-end gap-3 mb-6 overflow-x-auto pb-1" id="l1-tabs">
-
-      <!-- L1卡片-01产品和技术研发（选中态） -->
-      <div class="l1-tab shrink-0 bg-primary text-on-primary rounded-t-lg px-5 py-3 cursor-pointer relative group min-w-[180px]" data-l1-id="1">
-        <div class="flex items-center justify-between">
-          <div>
-            <span class="text-xs font-medium opacity-80">01</span>
-            <span class="text-sm font-semibold ml-1">产品和技术研发</span>
+    <!-- ===== 左侧L1业务域导航面板 ===== -->
+    <aside class="w-56 shrink-0 bg-primary flex flex-col">
+      <div class="px-4 py-3 border-b border-on-primary/15">
+        <h2 class="text-sm font-bold text-on-primary tracking-wide">流程架构</h2>
+      </div>
+      <div class="flex-1 overflow-y-auto py-2" id="l1-nav-list">
+        <!-- L1-01 产品和技术研发（选中态） -->
+        <div class="l1-nav-item bg-on-primary text-primary px-4 py-2.5 cursor-pointer flex items-center justify-between group relative" data-l1-id="1">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-xs font-semibold shrink-0">01</span>
+            <span class="text-sm font-medium truncate">产品和技术研发</span>
           </div>
-          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button class="l1-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-on-primary/20" data-l1-id="1" title="编辑">
-              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-            </button>
-            <button class="l1-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-on-primary/20" data-l1-id="1" title="删除">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
+          <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button class="l1-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-primary/10" data-l1-id="1" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+            <button class="l1-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l1-id="1" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+          </div>
+          <!-- 左侧选中指示条 -->
+          <div class="absolute left-0 top-0 bottom-0 w-1 bg-on-primary rounded-r"></div>
+        </div>
+        <!-- L1-08 采购管理（未选中态） -->
+        <div class="l1-nav-item text-on-primary/80 px-4 py-2.5 cursor-pointer flex items-center justify-between group hover:bg-on-primary/10 transition-colors relative" data-l1-id="2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-xs font-semibold shrink-0">08</span>
+            <span class="text-sm font-medium truncate">采购管理</span>
+          </div>
+          <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button class="l1-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l1-id="2" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+            <button class="l1-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l1-id="2" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
           </div>
         </div>
-        <div class="text-xs opacity-70 mt-1">所有者：张波</div>
       </div>
-
-      <!-- L1卡片-02采购管理（未选中态） -->
-      <div class="l1-tab shrink-0 bg-surface text-primary border-2 border-primary/20 rounded-t-lg px-5 py-3 cursor-pointer relative group min-w-[180px] hover:border-primary/40 transition-colors" data-l1-id="2">
-        <div class="flex items-center justify-between">
-          <div>
-            <span class="text-xs font-medium text-on-surface-variant">02</span>
-            <span class="text-sm font-semibold ml-1">采购管理</span>
-          </div>
-          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button class="l1-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container" data-l1-id="2" title="编辑">
-              <i data-lucide="pencil" class="w-3.5 h-3.5 text-on-surface-variant"></i>
-            </button>
-            <button class="l1-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container" data-l1-id="2" title="删除">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5 text-on-surface-variant"></i>
-            </button>
-          </div>
-        </div>
-        <div class="text-xs text-on-surface-variant mt-1">所有者：李明</div>
-      </div>
-
       <!-- 新增L1按钮 -->
-      <button id="btn-add-l1-tab" class="shrink-0 w-10 h-10 flex items-center justify-center border-2 border-dashed border-outline-variant rounded-lg text-on-surface-variant hover:border-primary hover:text-primary transition-colors" title="新增L1业务域">
-        <i data-lucide="plus" class="w-5 h-5"></i>
-      </button>
-    </div>
-
-    <!-- L2-L4层级内容区域 -->
-    <div id="l1-content-area">
-      <!-- ========== L1内容-01产品和技术研发 ========== -->
-      <div class="l1-content" data-l1-id="1">
-
-        <!-- L2-01需求管理 -->
-        <div class="l2-card mb-4 border-l-4 border-primary bg-surface rounded-r-lg shadow-card" data-l2-id="1">
-          <div class="l2-header bg-primary-container rounded-tr-lg px-4 py-3 flex items-center justify-between cursor-pointer">
-            <div class="flex items-center gap-3">
-              <button class="l2-toggle-btn w-6 h-6 flex items-center justify-center rounded hover:bg-primary/10 transition-colors" data-l2-id="1">
-                <i data-lucide="chevron-down" class="w-4 h-4 text-primary l2-toggle-icon"></i>
-              </button>
-              <span class="text-xs font-medium text-primary">01</span>
-              <span class="text-sm font-semibold text-on-surface">需求管理</span>
-              <span class="text-xs text-on-surface-variant ml-2">所有者：张波</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <button class="l2-edit-btn w-7 h-7 flex items-center justify-center rounded hover:bg-primary/10 transition-colors" data-l2-id="1" title="编辑">
-                <i data-lucide="pencil" class="w-3.5 h-3.5 text-on-surface-variant"></i>
-              </button>
-              <button class="l2-delete-btn w-7 h-7 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l2-id="1" title="删除">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5 text-error"></i>
-              </button>
-            </div>
-          </div>
-          <div class="l2-body px-4 py-2">
-            <!-- L3-01客户需求识别 -->
-            <div class="l3-section mb-2" data-l3-id="1">
-              <div class="l3-header flex items-center justify-between py-2.5 px-3 rounded-md bg-surface-container">
-                <div class="flex items-center gap-3">
-                  <button class="l3-toggle-btn w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="1">
-                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-on-surface-variant l3-toggle-icon"></i>
-                  </button>
-                  <span class="text-xs font-medium text-on-surface-variant">01</span>
-                  <span class="text-sm font-medium text-on-surface">客户需求识别</span>
-                  <span class="text-xs text-on-surface-variant ml-2">所有者：张波</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button class="l3-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="1" title="编辑">
-                    <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                  </button>
-                  <button class="l3-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l3-id="1" title="删除">
-                    <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="l3-body pl-8 py-1 hidden">
-                <!-- L4-ZCFPA-01-01-01-01 客户需求收集流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="1">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-01-01-01</span>
-                    <span class="text-sm text-on-surface truncate">客户需求收集流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">张波</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
-                  </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="1" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="1" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- L4-ZCFPA-01-01-01-02 客户需求分析流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="2">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-01-01-02</span>
-                    <span class="text-sm text-on-surface truncate">客户需求分析流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">张波</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
-                  </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="2" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="2" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- 添加流程按钮 -->
-                <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l3-id="1">
-                  <i data-lucide="plus" class="w-3 h-3"></i>添加流程
-                </button>
-              </div>
-            </div>
-
-            <!-- L3-02内部需求识别 -->
-            <div class="l3-section mb-2" data-l3-id="2">
-              <div class="l3-header flex items-center justify-between py-2.5 px-3 rounded-md bg-surface-container">
-                <div class="flex items-center gap-3">
-                  <button class="l3-toggle-btn w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="2">
-                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-on-surface-variant l3-toggle-icon"></i>
-                  </button>
-                  <span class="text-xs font-medium text-on-surface-variant">02</span>
-                  <span class="text-sm font-medium text-on-surface">内部需求识别</span>
-                  <span class="text-xs text-on-surface-variant ml-2">所有者：郭学军</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button class="l3-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="2" title="编辑">
-                    <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                  </button>
-                  <button class="l3-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l3-id="2" title="删除">
-                    <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="l3-body pl-8 py-1 hidden">
-                <!-- L4-ZCFPA-01-01-02-01 内部需求收集流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="3">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-01-02-01</span>
-                    <span class="text-sm text-on-surface truncate">内部需求收集流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">郭学军</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#fef3c7;color:#f59e0b;">旧格式</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d1fae5;color:#059669;">办法</span>
-                  </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="3" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="3" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- 添加流程按钮 -->
-                <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l3-id="2">
-                  <i data-lucide="plus" class="w-3 h-3"></i>添加流程
-                </button>
-              </div>
-            </div>
-
-            <!-- 添加业务段按钮 -->
-            <button class="l3-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l2-id="1">
-              <i data-lucide="plus" class="w-3 h-3"></i>添加业务段
-            </button>
-          </div>
-        </div>
-
-        <!-- L2-02产品和技术规划 -->
-        <div class="l2-card mb-4 border-l-4 border-primary bg-surface rounded-r-lg shadow-card" data-l2-id="2">
-          <div class="l2-header bg-primary-container rounded-tr-lg px-4 py-3 flex items-center justify-between cursor-pointer">
-            <div class="flex items-center gap-3">
-              <button class="l2-toggle-btn w-6 h-6 flex items-center justify-center rounded hover:bg-primary/10 transition-colors" data-l2-id="2">
-                <i data-lucide="chevron-down" class="w-4 h-4 text-primary l2-toggle-icon"></i>
-              </button>
-              <span class="text-xs font-medium text-primary">02</span>
-              <span class="text-sm font-semibold text-on-surface">产品和技术规划</span>
-              <span class="text-xs text-on-surface-variant ml-2">所有者：谢宇欢</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <button class="l2-edit-btn w-7 h-7 flex items-center justify-center rounded hover:bg-primary/10 transition-colors" data-l2-id="2" title="编辑">
-                <i data-lucide="pencil" class="w-3.5 h-3.5 text-on-surface-variant"></i>
-              </button>
-              <button class="l2-delete-btn w-7 h-7 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l2-id="2" title="删除">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5 text-error"></i>
-              </button>
-            </div>
-          </div>
-          <div class="l2-body px-4 py-2">
-            <!-- L3-01产品规划 -->
-            <div class="l3-section mb-2" data-l3-id="3">
-              <div class="l3-header flex items-center justify-between py-2.5 px-3 rounded-md bg-surface-container">
-                <div class="flex items-center gap-3">
-                  <button class="l3-toggle-btn w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="3">
-                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-on-surface-variant l3-toggle-icon"></i>
-                  </button>
-                  <span class="text-xs font-medium text-on-surface-variant">01</span>
-                  <span class="text-sm font-medium text-on-surface">产品规划</span>
-                  <span class="text-xs text-on-surface-variant ml-2">所有者：谢宇欢</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button class="l3-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="3" title="编辑">
-                    <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                  </button>
-                  <button class="l3-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l3-id="3" title="删除">
-                    <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="l3-body pl-8 py-1 hidden">
-                <!-- L4-ZCFPA-01-02-01-01 产品技术规划管理流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="4">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-02-01-01</span>
-                    <span class="text-sm text-on-surface truncate">产品技术规划管理流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">谢宇欢</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
-                  </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="4" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="4" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- 添加流程按钮 -->
-                <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l3-id="3">
-                  <i data-lucide="plus" class="w-3 h-3"></i>添加流程
-                </button>
-              </div>
-            </div>
-
-            <!-- L3-02技术规划 -->
-            <div class="l3-section mb-2" data-l3-id="4">
-              <div class="l3-header flex items-center justify-between py-2.5 px-3 rounded-md bg-surface-container">
-                <div class="flex items-center gap-3">
-                  <button class="l3-toggle-btn w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="4">
-                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-on-surface-variant l3-toggle-icon"></i>
-                  </button>
-                  <span class="text-xs font-medium text-on-surface-variant">02</span>
-                  <span class="text-sm font-medium text-on-surface">技术规划</span>
-                  <span class="text-xs text-on-surface-variant ml-2">所有者：谢宇欢</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button class="l3-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="4" title="编辑">
-                    <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                  </button>
-                  <button class="l3-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l3-id="4" title="删除">
-                    <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="l3-body pl-8 py-1 hidden">
-                <!-- L4-ZCFPA-01-02-02-01 技术路线规划流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="5">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-02-02-01</span>
-                    <span class="text-sm text-on-surface truncate">技术路线规划流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">谢宇欢</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
-                  </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="5" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="5" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- 添加流程按钮 -->
-                <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l3-id="4">
-                  <i data-lucide="plus" class="w-3 h-3"></i>添加流程
-                </button>
-              </div>
-            </div>
-
-            <!-- 添加业务段按钮 -->
-            <button class="l3-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l2-id="2">
-              <i data-lucide="plus" class="w-3 h-3"></i>添加业务段
-            </button>
-          </div>
-        </div>
-
-        <!-- L2-03可行性分析 -->
-        <div class="l2-card mb-4 border-l-4 border-primary bg-surface rounded-r-lg shadow-card" data-l2-id="3">
-          <div class="l2-header bg-primary-container rounded-tr-lg px-4 py-3 flex items-center justify-between cursor-pointer">
-            <div class="flex items-center gap-3">
-              <button class="l2-toggle-btn w-6 h-6 flex items-center justify-center rounded hover:bg-primary/10 transition-colors" data-l2-id="3">
-                <i data-lucide="chevron-down" class="w-4 h-4 text-primary l2-toggle-icon"></i>
-              </button>
-              <span class="text-xs font-medium text-primary">03</span>
-              <span class="text-sm font-semibold text-on-surface">可行性分析</span>
-              <span class="text-xs text-on-surface-variant ml-2">所有者：周香涛</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <button class="l2-edit-btn w-7 h-7 flex items-center justify-center rounded hover:bg-primary/10 transition-colors" data-l2-id="3" title="编辑">
-                <i data-lucide="pencil" class="w-3.5 h-3.5 text-on-surface-variant"></i>
-              </button>
-              <button class="l2-delete-btn w-7 h-7 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l2-id="3" title="删除">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5 text-error"></i>
-              </button>
-            </div>
-          </div>
-          <div class="l2-body px-4 py-2">
-            <!-- L3-01可行性研究 -->
-            <div class="l3-section mb-2" data-l3-id="5">
-              <div class="l3-header flex items-center justify-between py-2.5 px-3 rounded-md bg-surface-container">
-                <div class="flex items-center gap-3">
-                  <button class="l3-toggle-btn w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="5">
-                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-on-surface-variant l3-toggle-icon"></i>
-                  </button>
-                  <span class="text-xs font-medium text-on-surface-variant">01</span>
-                  <span class="text-sm font-medium text-on-surface">可行性研究</span>
-                  <span class="text-xs text-on-surface-variant ml-2">所有者：周香涛</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button class="l3-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="5" title="编辑">
-                    <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                  </button>
-                  <button class="l3-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l3-id="5" title="删除">
-                    <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="l3-body pl-8 py-1 hidden">
-                <!-- L4-ZCFPA-01-03-01-04 可行性分析管理流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="6">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-03-01-04</span>
-                    <span class="text-sm text-on-surface truncate">可行性分析管理流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">周香涛</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
-                  </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="6" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="6" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- 添加流程按钮 -->
-                <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l3-id="5">
-                  <i data-lucide="plus" class="w-3 h-3"></i>添加流程
-                </button>
-              </div>
-            </div>
-
-            <!-- 添加业务段按钮 -->
-            <button class="l3-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l2-id="3">
-              <i data-lucide="plus" class="w-3 h-3"></i>添加业务段
-            </button>
-          </div>
-        </div>
-
-        <!-- 添加业务组按钮 -->
-        <button id="btn-add-l2-1" class="w-full text-left text-xs text-primary font-medium py-2 px-4 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1" data-l1-id="1">
-          <i data-lucide="plus" class="w-3 h-3"></i>添加业务组
+      <div class="px-3 py-2 border-t border-on-primary/15">
+        <button id="btn-add-l1" class="w-full text-left text-xs text-on-primary/70 font-medium py-2 px-3 rounded hover:bg-on-primary/10 transition-colors inline-flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>新增业务域
         </button>
+      </div>
+    </aside>
 
+    <!-- ===== 右侧主内容区 ===== -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+      <!-- L1标题栏 -->
+      <div class="bg-primary text-on-primary px-6 py-3 flex items-center justify-between shrink-0">
+        <h1 class="text-xl font-bold" id="l1-title">01 产品和技术研发</h1>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-on-primary/70">所有者：郭学军</span>
+          <button class="w-7 h-7 flex items-center justify-center rounded hover:bg-on-primary/15 transition-colors" id="btn-edit-l1-header" title="编辑L1"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+          <button class="w-7 h-7 flex items-center justify-center rounded hover:bg-on-primary/15 transition-colors text-error/80 hover:text-error" id="btn-delete-l1-header" title="删除L1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
       </div>
 
-      <!-- ========== L1内容-02采购管理 ========== -->
-      <div class="l1-content hidden" data-l1-id="2">
+      <!-- L2横向列区域 -->
+      <div class="flex-1 overflow-x-auto l2-columns bg-background" id="l1-content-area">
 
-        <!-- L2-01采购规划 -->
-        <div class="l2-card mb-4 border-l-4 border-primary bg-surface rounded-r-lg shadow-card" data-l2-id="4">
-          <div class="l2-header bg-primary-container rounded-tr-lg px-4 py-3 flex items-center justify-between cursor-pointer">
-            <div class="flex items-center gap-3">
-              <button class="l2-toggle-btn w-6 h-6 flex items-center justify-center rounded hover:bg-primary/10 transition-colors" data-l2-id="4">
-                <i data-lucide="chevron-down" class="w-4 h-4 text-primary l2-toggle-icon"></i>
-              </button>
-              <span class="text-xs font-medium text-primary">01</span>
-              <span class="text-sm font-semibold text-on-surface">采购规划</span>
-              <span class="text-xs text-on-surface-variant ml-2">所有者：李明</span>
+        <!-- ========== L1内容-01产品和技术研发 ========== -->
+        <div class="l1-content flex h-full" data-l1-id="1">
+
+          <!-- L2列-01需求管理 -->
+          <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+            <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+              <span class="text-sm font-bold">01 需求管理</span>
+              <div class="flex items-center gap-0.5">
+                <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="1" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="1" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+              </div>
             </div>
-            <div class="flex items-center gap-1">
-              <button class="l2-edit-btn w-7 h-7 flex items-center justify-center rounded hover:bg-primary/10 transition-colors" data-l2-id="4" title="编辑">
-                <i data-lucide="pencil" class="w-3.5 h-3.5 text-on-surface-variant"></i>
-              </button>
-              <button class="l2-delete-btn w-7 h-7 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l2-id="4" title="删除">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5 text-error"></i>
-              </button>
+            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+              <!-- L3-01客户需求识别 -->
+              <div class="l3-section mb-3" data-l3-id="1">
+                <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <button class="l3-toggle-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high shrink-0" data-l3-id="1"><i data-lucide="chevron-right" class="w-3 h-3 text-on-surface-variant l3-toggle-icon transition-transform"></i></button>
+                    <span class="text-xs font-semibold text-on-surface-variant shrink-0">01</span>
+                    <span class="text-sm font-medium text-on-surface truncate">客户需求识别</span>
+                  </div>
+                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button class="l3-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high" data-l3-id="1" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                    <button class="l3-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l3-id="1" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                  </div>
+                </div>
+                <div class="l3-body pl-4 py-1 hidden">
+                  <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70 flex items-center justify-between group" data-l4-id="1">
+                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span class="text-on-surface-variant text-xs">└</span>
+                      <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-01-01-01</span>
+                      <span class="text-sm text-on-surface truncate">客户需求收集流程</span>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
+                      <button class="l4-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container" data-l4-id="1" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                      <button class="l4-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l4-id="1" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                    </div>
+                  </div>
+                  <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70 flex items-center justify-between group" data-l4-id="2">
+                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span class="text-on-surface-variant text-xs">└</span>
+                      <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-01-01-02</span>
+                      <span class="text-sm text-on-surface truncate">客户需求分析流程</span>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
+                      <button class="l4-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container" data-l4-id="2" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                      <button class="l4-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l4-id="2" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                    </div>
+                  </div>
+                  <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1 mt-0.5" data-l3-id="1"><i data-lucide="plus" class="w-3 h-3"></i>添加流程</button>
+                </div>
+              </div>
+              <!-- L3-02内部需求识别 -->
+              <div class="l3-section mb-3" data-l3-id="2">
+                <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <button class="l3-toggle-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high shrink-0" data-l3-id="2"><i data-lucide="chevron-right" class="w-3 h-3 text-on-surface-variant l3-toggle-icon transition-transform"></i></button>
+                    <span class="text-xs font-semibold text-on-surface-variant shrink-0">02</span>
+                    <span class="text-sm font-medium text-on-surface truncate">内部需求识别</span>
+                  </div>
+                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button class="l3-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high" data-l3-id="2" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                    <button class="l3-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l3-id="2" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                  </div>
+                </div>
+                <div class="l3-body pl-4 py-1 hidden">
+                  <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70 flex items-center justify-between group" data-l4-id="3">
+                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span class="text-on-surface-variant text-xs">└</span>
+                      <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-01-02-01</span>
+                      <span class="text-sm text-on-surface truncate">内部需求收集流程</span>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#fef3c7;color:#92400e;">旧格式</span>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#d1fae5;color:#065f46;">办法</span>
+                      <button class="l4-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container" data-l4-id="3" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                      <button class="l4-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l4-id="3" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                    </div>
+                  </div>
+                  <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1 mt-0.5" data-l3-id="2"><i data-lucide="plus" class="w-3 h-3"></i>添加流程</button>
+                </div>
+              </div>
+              <!-- 添加业务段按钮 -->
+              <button class="l3-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1" data-l2-id="1"><i data-lucide="plus" class="w-3 h-3"></i>添加业务段</button>
             </div>
           </div>
-          <div class="l2-body px-4 py-2">
-            <!-- L3-01采购规划管理 -->
-            <div class="l3-section mb-2" data-l3-id="6">
-              <div class="l3-header flex items-center justify-between py-2.5 px-3 rounded-md bg-surface-container">
-                <div class="flex items-center gap-3">
-                  <button class="l3-toggle-btn w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="6">
-                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-on-surface-variant l3-toggle-icon"></i>
-                  </button>
-                  <span class="text-xs font-medium text-on-surface-variant">01</span>
-                  <span class="text-sm font-medium text-on-surface">采购规划管理</span>
-                  <span class="text-xs text-on-surface-variant ml-2">所有者：李明</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button class="l3-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="6" title="编辑">
-                    <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                  </button>
-                  <button class="l3-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l3-id="6" title="删除">
-                    <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="l3-body pl-8 py-1 hidden">
-                <!-- L4-CW-01-01 采购规划管理流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="7">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">CW-01-01</span>
-                    <span class="text-sm text-on-surface truncate">采购规划管理流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">李明</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
-                  </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="7" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="7" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- L4-CW-01-02 采购计划审批流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="8">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">CW-01-02</span>
-                    <span class="text-sm text-on-surface truncate">采购计划审批流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">王强</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#d1fae5;color:#059669;">办法</span>
-                  </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="8" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="8" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
-                  </div>
-                </div>
-                <!-- 添加流程按钮 -->
-                <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l3-id="6">
-                  <i data-lucide="plus" class="w-3 h-3"></i>添加流程
-                </button>
+
+          <!-- L2列-02产品和技术规划 -->
+          <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+            <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+              <span class="text-sm font-bold">02 产品和技术规划</span>
+              <div class="flex items-center gap-0.5">
+                <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="2" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="2" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
               </div>
             </div>
-
-            <!-- L3-02采购预算 -->
-            <div class="l3-section mb-2" data-l3-id="7">
-              <div class="l3-header flex items-center justify-between py-2.5 px-3 rounded-md bg-surface-container">
-                <div class="flex items-center gap-3">
-                  <button class="l3-toggle-btn w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="7">
-                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-on-surface-variant l3-toggle-icon"></i>
-                  </button>
-                  <span class="text-xs font-medium text-on-surface-variant">02</span>
-                  <span class="text-sm font-medium text-on-surface">采购预算</span>
-                  <span class="text-xs text-on-surface-variant ml-2">所有者：赵磊</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button class="l3-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors" data-l3-id="7" title="编辑">
-                    <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                  </button>
-                  <button class="l3-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l3-id="7" title="删除">
-                    <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="l3-body pl-8 py-1 hidden">
-                <!-- L4-CW-01-03 采购预算编制流程 -->
-                <div class="l4-item flex items-center justify-between py-2 px-3 rounded-md hover:bg-surface-container/50 transition-colors" data-l4-id="9">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="text-on-surface-variant text-sm">└</span>
-                    <span class="text-xs font-mono text-on-surface-variant shrink-0">CW-01-03</span>
-                    <span class="text-sm text-on-surface truncate">采购预算编制流程</span>
-                    <span class="text-xs text-on-surface-variant ml-1 shrink-0">赵磊</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#fef3c7;color:#f59e0b;">旧格式</span>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium" style="background:#f1f5f9;color:#64748b;">其它</span>
+            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+              <!-- L3-01产品规划 -->
+              <div class="l3-section mb-3" data-l3-id="3">
+                <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <button class="l3-toggle-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high shrink-0" data-l3-id="3"><i data-lucide="chevron-right" class="w-3 h-3 text-on-surface-variant l3-toggle-icon transition-transform"></i></button>
+                    <span class="text-xs font-semibold text-on-surface-variant shrink-0">01</span>
+                    <span class="text-sm font-medium text-on-surface truncate">产品规划</span>
                   </div>
-                  <div class="flex items-center gap-1 ml-2">
-                    <button class="l4-edit-btn w-6 h-6 flex items-center justify-center rounded hover:bg-surface-container transition-colors" data-l4-id="9" title="编辑">
-                      <i data-lucide="pencil" class="w-3 h-3 text-on-surface-variant"></i>
-                    </button>
-                    <button class="l4-delete-btn w-6 h-6 flex items-center justify-center rounded hover:bg-error/10 transition-colors" data-l4-id="9" title="删除">
-                      <i data-lucide="trash-2" class="w-3 h-3 text-error"></i>
-                    </button>
+                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button class="l3-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high" data-l3-id="3" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                    <button class="l3-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l3-id="3" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
                   </div>
                 </div>
-                <!-- 添加流程按钮 -->
-                <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l3-id="7">
-                  <i data-lucide="plus" class="w-3 h-3"></i>添加流程
-                </button>
+                <div class="l3-body pl-4 py-1 hidden">
+                  <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70 flex items-center justify-between group" data-l4-id="4">
+                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span class="text-on-surface-variant text-xs">└</span>
+                      <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-02-01-01</span>
+                      <span class="text-sm text-on-surface truncate">产品技术规划管理流程</span>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
+                      <button class="l4-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container" data-l4-id="4" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                      <button class="l4-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l4-id="4" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                    </div>
+                  </div>
+                  <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1 mt-0.5" data-l3-id="3"><i data-lucide="plus" class="w-3 h-3"></i>添加流程</button>
+                </div>
               </div>
+              <!-- L3-02技术规划 -->
+              <div class="l3-section mb-3" data-l3-id="4">
+                <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <button class="l3-toggle-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high shrink-0" data-l3-id="4"><i data-lucide="chevron-right" class="w-3 h-3 text-on-surface-variant l3-toggle-icon transition-transform"></i></button>
+                    <span class="text-xs font-semibold text-on-surface-variant shrink-0">02</span>
+                    <span class="text-sm font-medium text-on-surface truncate">技术规划</span>
+                  </div>
+                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button class="l3-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high" data-l3-id="4" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                    <button class="l3-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l3-id="4" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                  </div>
+                </div>
+                <div class="l3-body pl-4 py-1 hidden">
+                  <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70 flex items-center justify-between group" data-l4-id="5">
+                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span class="text-on-surface-variant text-xs">└</span>
+                      <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-02-02-01</span>
+                      <span class="text-sm text-on-surface truncate">技术路线规划流程</span>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
+                      <button class="l4-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container" data-l4-id="5" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                      <button class="l4-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l4-id="5" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                    </div>
+                  </div>
+                  <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1 mt-0.5" data-l3-id="4"><i data-lucide="plus" class="w-3 h-3"></i>添加流程</button>
+                </div>
+              </div>
+              <button class="l3-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1" data-l2-id="2"><i data-lucide="plus" class="w-3 h-3"></i>添加业务段</button>
             </div>
-
-            <!-- 添加业务段按钮 -->
-            <button class="l3-add-btn w-full text-left text-xs text-primary font-medium py-2 px-3 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1 mt-1" data-l2-id="4">
-              <i data-lucide="plus" class="w-3 h-3"></i>添加业务段
-            </button>
           </div>
+
+          <!-- L2列-03可行性分析 -->
+          <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+            <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+              <span class="text-sm font-bold">03 可行性分析</span>
+              <div class="flex items-center gap-0.5">
+                <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="3" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="3" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+              </div>
+            </div>
+            <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+              <div class="l3-section mb-3" data-l3-id="5">
+                <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <button class="l3-toggle-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high shrink-0" data-l3-id="5"><i data-lucide="chevron-right" class="w-3 h-3 text-on-surface-variant l3-toggle-icon transition-transform"></i></button>
+                    <span class="text-xs font-semibold text-on-surface-variant shrink-0">01</span>
+                    <span class="text-sm font-medium text-on-surface truncate">可行性研究</span>
+                  </div>
+                  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button class="l3-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container-high" data-l3-id="5" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                    <button class="l3-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l3-id="5" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                  </div>
+                </div>
+                <div class="l3-body pl-4 py-1 hidden">
+                  <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70 flex items-center justify-between group" data-l4-id="6">
+                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span class="text-on-surface-variant text-xs">└</span>
+                      <span class="text-xs font-mono text-on-surface-variant shrink-0">ZCFPA-01-03-01-04</span>
+                      <span class="text-sm text-on-surface truncate">可行性分析管理流程</span>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#d0e2f2;color:#1e3a5f;">集团模板</span>
+                      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background:#ede9fe;color:#7c3aed;">流程</span>
+                      <button class="l4-edit-btn w-4 h-4 flex items-center justify-center rounded hover:bg-surface-container" data-l4-id="6" title="编辑"><i data-lucide="pencil" class="w-2.5 h-2.5 text-on-surface-variant"></i></button>
+                      <button class="l4-delete-btn w-4 h-4 flex items-center justify-center rounded hover:bg-error/10" data-l4-id="6" title="删除"><i data-lucide="trash-2" class="w-2.5 h-2.5 text-error"></i></button>
+                    </div>
+                  </div>
+                  <button class="l4-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1 mt-0.5" data-l3-id="5"><i data-lucide="plus" class="w-3 h-3"></i>添加流程</button>
+                </div>
+              </div>
+              <button class="l3-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1" data-l2-id="3"><i data-lucide="plus" class="w-3 h-3"></i>添加业务段</button>
+            </div>
+          </div>
+
+          <!-- 添加业务组列按钮 -->
+          <div class="l2-col shrink-0 flex flex-col items-center justify-center border-r border-dashed border-outline-variant cursor-pointer hover:bg-surface-container/50 transition-colors" style="min-width:80px;width:80px;" id="btn-add-l2">
+            <i data-lucide="plus" class="w-6 h-6 text-on-surface-variant mb-1"></i>
+            <span class="text-xs text-on-surface-variant">添加列</span>
+          </div>
+
         </div>
 
-        <!-- 添加业务组按钮 -->
-        <button id="btn-add-l2-2" class="w-full text-left text-xs text-primary font-medium py-2 px-4 hover:bg-surface-container/50 rounded-md transition-colors inline-flex items-center gap-1" data-l1-id="2">
-          <i data-lucide="plus" class="w-3 h-3"></i>添加业务组
-        </button>
+        <!-- ========== L1内容-08采购管理（隐藏） ========== -->
+        <div class="l1-content hidden h-full" data-l1-id="2">
+          <!-- 采购管理 L2列 - 8列完整展示Excel数据 -->
+          <div class="flex h-full">
+
+            <!-- L2列-01采购规划 -->
+            <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+              <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+                <span class="text-sm font-bold">01 采购规划</span>
+                <div class="flex items-center gap-0.5">
+                  <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="10" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                  <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="10" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+              <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+                <div class="l3-section mb-3" data-l3-id="10">
+                  <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <i data-lucide="chevron-right" class="w-3 h-3 text-on-surface-variant shrink-0 l3-toggle-icon"></i>
+                      <span class="text-sm font-medium text-on-surface truncate">采购规划管理流程</span>
+                    </div>
+                  </div>
+                  <div class="l3-body pl-4 py-1">
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">采购规划编制流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">采购计划审批流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">采购预算编制流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">采购需求汇总流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">采购计划调整流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">采购目标分解流程</span></div>
+                  </div>
+                </div>
+                <button class="l3-add-btn w-full text-left text-xs text-primary font-medium py-1.5 px-2 hover:bg-surface-container/70 rounded transition-colors inline-flex items-center gap-1" data-l2-id="10"><i data-lucide="plus" class="w-3 h-3"></i>添加业务段</button>
+              </div>
+            </div>
+
+            <!-- L2列-02新产品采购 -->
+            <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+              <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+                <span class="text-sm font-bold">02 新产品采购</span>
+                <div class="flex items-center gap-0.5">
+                  <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="11" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                  <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="11" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+              <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+                <div class="l3-section mb-3">
+                  <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <i data-lucide="chevron-right" class="w-3 h-3 text-on-surface-variant shrink-0"></i>
+                      <span class="text-sm font-medium text-on-surface truncate">新产品供应商开发管理流程</span>
+                    </div>
+                  </div>
+                  <div class="l3-body pl-4 py-1">
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">供应商工装模具开发管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">新品研发应急采购流程</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- L2列-03供应商寻源、准入和选择 -->
+            <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+              <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+                <span class="text-sm font-bold">03 供应商寻源准入选择</span>
+                <div class="flex items-center gap-0.5">
+                  <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="12" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                  <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="12" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+              <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+                <div class="l3-section mb-3">
+                  <div class="l3-header flex items-center justify-between py-2 px-2 rounded bg-surface-container">
+                    <span class="text-sm font-medium text-on-surface truncate">生产件新供应商寻源与准入流程</span>
+                  </div>
+                  <div class="l3-body pl-4 py-1">
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">非生产件新供应商寻源与准入流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">询比价采购流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">定向采购流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">招标采购流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">竞价采购流程</span></div>
+                  </div>
+                </div>
+                <div class="l3-section mb-3">
+                  <div class="l3-header py-2 px-2 rounded bg-surface-container">
+                    <span class="text-sm font-medium text-on-surface truncate">采购份额管理流程</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- L2列-04供应商管理 -->
+            <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+              <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+                <span class="text-sm font-bold">04 供应商管理</span>
+                <div class="flex items-center gap-0.5">
+                  <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="13" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                  <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="13" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+              <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+                <div class="l3-section mb-3">
+                  <div class="l3-header py-2 px-2 rounded bg-surface-container">
+                    <span class="text-sm font-medium text-on-surface truncate">供应商审核管理流程</span>
+                  </div>
+                  <div class="l3-body pl-4 py-1">
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">供应商变更管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">外购件挑选返工返修管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">供应商分级分类管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">非生产性物资供应商管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">质量风险供应商管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">供应商业绩管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">供应商退出管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">供应商质量管理流程（SQE）</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- L2列-05采购需求管理 -->
+            <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+              <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+                <span class="text-sm font-bold">05 采购需求管理</span>
+                <div class="flex items-center gap-0.5">
+                  <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="14" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                  <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="14" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+              <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+                <div class="l3-section mb-3">
+                  <div class="l3-header py-2 px-2 rounded bg-surface-container">
+                    <span class="text-sm font-medium text-on-surface truncate">特殊采购申请流程</span>
+                  </div>
+                  <div class="l3-body pl-4 py-1">
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">生产采购需求管理</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">非生产采购需求管理</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- L2列-06采购计划与执行 -->
+            <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+              <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+                <span class="text-sm font-bold">06 采购计划与执行</span>
+                <div class="flex items-center gap-0.5">
+                  <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="15" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                  <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="15" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+              <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+                <div class="l3-section mb-3">
+                  <div class="l3-header py-2 px-2 rounded bg-surface-container">
+                    <span class="text-sm font-medium text-on-surface truncate">采购计划管理流程</span>
+                  </div>
+                  <div class="l3-body pl-4 py-1">
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">采购订单管理办法</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">特供维护管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">外购退货管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">紧急采购管理流程</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- L2列-07采购监督管理 -->
+            <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:220px;width:220px;">
+              <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+                <span class="text-sm font-bold">07 采购监督管理</span>
+                <div class="flex items-center gap-0.5">
+                  <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="16" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                  <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="16" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+              <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+                <div class="l3-section mb-3">
+                  <div class="l3-header py-2 px-2 rounded bg-surface-container">
+                    <span class="text-sm font-medium text-on-surface truncate">采购监督管理流程</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- L2列-08固定资产商务管理 -->
+            <div class="l2-col flex flex-col shrink-0 border-r border-outline-variant" style="min-width:240px;width:240px;">
+              <div class="bg-primary text-on-primary px-4 py-2.5 flex items-center justify-between shrink-0">
+                <span class="text-sm font-bold">08 固定资产商务管理</span>
+                <div class="flex items-center gap-0.5">
+                  <button class="l2-edit-btn w-5 h-5 flex items-center justify-center rounded hover:bg-on-primary/20" data-l2-id="17" title="编辑"><i data-lucide="pencil" class="w-3 h-3"></i></button>
+                  <button class="l2-delete-btn w-5 h-5 flex items-center justify-center rounded hover:bg-error/20" data-l2-id="17" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+              <div class="l2-col-body flex-1 overflow-y-auto px-3 py-2">
+                <div class="l3-section mb-3">
+                  <div class="l3-header py-2 px-2 rounded bg-surface-container">
+                    <span class="text-sm font-medium text-on-surface truncate">固定资产投资项目技术要求提报流程</span>
+                  </div>
+                  <div class="l3-body pl-4 py-1">
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">固定资产招标公告及招标文件审批流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">固定资产招标技术协议签订管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">固定资产投资项目开标及评标管理流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">固定资产投资项目委托招标流程</span></div>
+                    <div class="l4-item py-1.5 px-2 rounded hover:bg-surface-container/70"><span class="text-on-surface-variant text-xs mr-1.5">└</span><span class="text-sm text-on-surface">固定资产招标采购定审流程</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 添加业务组列按钮 -->
+            <div class="l2-col shrink-0 flex flex-col items-center justify-center border-r border-dashed border-outline-variant cursor-pointer hover:bg-surface-container/50 transition-colors" style="min-width:80px;width:80px;" id="btn-add-l2-purchase">
+              <i data-lucide="plus" class="w-6 h-6 text-on-surface-variant mb-1"></i>
+              <span class="text-xs text-on-surface-variant">添加列</span>
+            </div>
+          </div>
+        </div>
 
       </div>
     </div>
+  </div>
 
-  </main>
+  <!-- ===== 编辑弹窗 ===== -->
+  <!-- L1编辑弹窗 -->
+  <div id="dialog-l1" class="fixed inset-0 z-50 hidden items-center justify-center" style="background:rgba(0,0,0,0.4);">
+    <div class="bg-surface rounded-lg shadow-dialog w-96 p-6">
+      <h3 class="text-lg font-bold text-on-surface mb-4">编辑L1业务域</h3>
+      <div class="space-y-3">
+        <div><label class="text-xs font-medium text-on-surface-variant">L1编号</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="01" /></div>
+        <div><label class="text-xs font-medium text-on-surface-variant">L1名称</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="产品和技术研发" /></div>
+        <div><label class="text-xs font-medium text-on-surface-variant">L1所有者</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="郭学军" /></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="dialog-cancel-btn px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container rounded-md hover:bg-surface-container-high transition-colors">取消</button>
+        <button class="px-4 py-2 text-sm font-medium text-on-primary bg-primary rounded-md hover:opacity-90 transition-colors">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- L2编辑弹窗 -->
+  <div id="dialog-l2" class="fixed inset-0 z-50 hidden items-center justify-center" style="background:rgba(0,0,0,0.4);">
+    <div class="bg-surface rounded-lg shadow-dialog w-96 p-6">
+      <h3 class="text-lg font-bold text-on-surface mb-4">编辑L2业务组</h3>
+      <div class="space-y-3">
+        <div><label class="text-xs font-medium text-on-surface-variant">L2编号</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="01" /></div>
+        <div><label class="text-xs font-medium text-on-surface-variant">L2名称</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="需求管理" /></div>
+        <div><label class="text-xs font-medium text-on-surface-variant">L2所有者</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="张波" /></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="dialog-cancel-btn px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container rounded-md hover:bg-surface-container-high transition-colors">取消</button>
+        <button class="px-4 py-2 text-sm font-medium text-on-primary bg-primary rounded-md hover:opacity-90 transition-colors">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- L4编辑弹窗 -->
+  <div id="dialog-l4" class="fixed inset-0 z-50 hidden items-center justify-center" style="background:rgba(0,0,0,0.4);">
+    <div class="bg-surface rounded-lg shadow-dialog w-[480px] p-6">
+      <h3 class="text-lg font-bold text-on-surface mb-4">编辑L4职能流程</h3>
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs font-medium text-on-surface-variant">流程编码</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="ZCFPA-01-01-01-01" /></div>
+          <div><label class="text-xs font-medium text-on-surface-variant">L4流程名称</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="客户需求收集流程" /></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs font-medium text-on-surface-variant">L4所有者</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="张波" /></div>
+          <div><label class="text-xs font-medium text-on-surface-variant">所属部门</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="品牌与发展部" /></div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div><label class="text-xs font-medium text-on-surface-variant">版本</label><input class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30" value="C1.0" /></div>
+          <div>
+            <label class="text-xs font-medium text-on-surface-variant">格式</label>
+            <select class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option>集团模板</option><option>旧格式</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-on-surface-variant">分类</label>
+            <select class="w-full bg-surface-container border border-outline rounded-md px-3 py-2 text-sm text-on-surface mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option>流程</option><option>办法</option><option>其它</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="dialog-cancel-btn px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container rounded-md hover:bg-surface-container-high transition-colors">取消</button>
+        <button class="px-4 py-2 text-sm font-medium text-on-primary bg-primary rounded-md hover:opacity-90 transition-colors">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 删除确认弹窗 -->
+  <div id="dialog-delete" class="fixed inset-0 z-50 hidden items-center justify-center" style="background:rgba(0,0,0,0.4);">
+    <div class="bg-surface rounded-lg shadow-dialog w-80 p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center shrink-0"><i data-lucide="alert-triangle" class="w-5 h-5 text-error"></i></div>
+        <h3 class="text-base font-bold text-on-surface">确认删除</h3>
+      </div>
+      <p class="text-sm text-on-surface-variant mb-5" id="delete-msg">确定要删除"需求管理"吗？此操作不可撤销。</p>
+      <div class="flex justify-end gap-2">
+        <button class="dialog-cancel-btn px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container rounded-md hover:bg-surface-container-high transition-colors">取消</button>
+        <button class="px-4 py-2 text-sm font-medium text-on-primary bg-error rounded-md hover:opacity-90 transition-colors">删除</button>
+      </div>
+    </div>
+  </div>
+
   <!-- @main-content:end -->
 
-  <!-- ========== L1编辑弹窗 ========== -->
-  <div id="dialog-l1" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-surface rounded-xl shadow-dialog max-w-md w-full p-6">
-      <h2 class="text-lg font-semibold text-on-surface mb-5">编辑L1业务域</h2>
-      <div class="space-y-4">
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L1名称</label>
-          <input id="input-l1-name" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="产品和技术研发" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L1所有者</label>
-          <input id="input-l1-owner" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="张波" />
-        </div>
-      </div>
-      <div class="flex justify-end gap-3 mt-6">
-        <button id="dialog-l1-cancel" class="bg-surface-container text-on-surface px-4 py-2 rounded-md text-sm font-medium hover:bg-surface-container-high active:scale-[0.98] transition-all">取消</button>
-        <button id="dialog-l1-save" class="bg-primary text-on-primary px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all">保存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== L2编辑弹窗 ========== -->
-  <div id="dialog-l2" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-surface rounded-xl shadow-dialog max-w-md w-full p-6">
-      <h2 class="text-lg font-semibold text-on-surface mb-5">编辑L2业务组</h2>
-      <div class="space-y-4">
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L2编号</label>
-          <input id="input-l2-code" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="01" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L2名称</label>
-          <input id="input-l2-name" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="需求管理" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L2所有者</label>
-          <input id="input-l2-owner" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="张波" />
-        </div>
-      </div>
-      <div class="flex justify-end gap-3 mt-6">
-        <button id="dialog-l2-cancel" class="bg-surface-container text-on-surface px-4 py-2 rounded-md text-sm font-medium hover:bg-surface-container-high active:scale-[0.98] transition-all">取消</button>
-        <button id="dialog-l2-save" class="bg-primary text-on-primary px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all">保存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== L3编辑弹窗 ========== -->
-  <div id="dialog-l3" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-surface rounded-xl shadow-dialog max-w-md w-full p-6">
-      <h2 class="text-lg font-semibold text-on-surface mb-5">编辑L3业务段</h2>
-      <div class="space-y-4">
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L3编号</label>
-          <input id="input-l3-code" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="01" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L3名称</label>
-          <input id="input-l3-name" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="客户需求识别" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L3所有者</label>
-          <input id="input-l3-owner" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="张波" />
-        </div>
-      </div>
-      <div class="flex justify-end gap-3 mt-6">
-        <button id="dialog-l3-cancel" class="bg-surface-container text-on-surface px-4 py-2 rounded-md text-sm font-medium hover:bg-surface-container-high active:scale-[0.98] transition-all">取消</button>
-        <button id="dialog-l3-save" class="bg-primary text-on-primary px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all">保存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== L4编辑弹窗 ========== -->
-  <div id="dialog-l4" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-surface rounded-xl shadow-dialog max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
-      <h2 class="text-lg font-semibold text-on-surface mb-5">编辑L4职能流程</h2>
-      <div class="space-y-4">
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">流程编码</label>
-          <input id="input-l4-code" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="ZCFPA-01-01-01-01" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L4流程名称</label>
-          <input id="input-l4-name" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="客户需求收集流程" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">L4所有者</label>
-          <input id="input-l4-owner" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="张波" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">所属部门</label>
-          <input id="input-l4-dept" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="研发部" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">版本</label>
-          <input id="input-l4-version" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors" value="V1.0" />
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">格式</label>
-          <select id="input-l4-format" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors">
-            <option value="集团模板" selected>集团模板</option>
-            <option value="旧格式">旧格式</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm font-medium text-on-surface mb-1.5 block">分类</label>
-          <select id="input-l4-category" class="w-full bg-surface-container border-none rounded-md px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors">
-            <option value="流程" selected>流程</option>
-            <option value="办法">办法</option>
-            <option value="其它">其它</option>
-          </select>
-        </div>
-      </div>
-      <div class="flex justify-end gap-3 mt-6">
-        <button id="dialog-l4-cancel" class="bg-surface-container text-on-surface px-4 py-2 rounded-md text-sm font-medium hover:bg-surface-container-high active:scale-[0.98] transition-all">取消</button>
-        <button id="dialog-l4-save" class="bg-primary text-on-primary px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all">保存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== 删除确认弹窗 ========== -->
-  <div id="dialog-delete" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-surface rounded-xl shadow-dialog max-w-sm w-full p-6">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center shrink-0">
-          <i data-lucide="alert-triangle" class="w-5 h-5 text-error"></i>
-        </div>
-        <h2 class="text-lg font-semibold text-on-surface">确认删除</h2>
-      </div>
-      <p id="delete-message" class="text-sm text-on-surface-variant mb-6">确定要删除此项吗？此操作不可撤销。</p>
-      <div class="flex justify-end gap-3">
-        <button id="dialog-delete-cancel" class="bg-surface-container text-on-surface px-4 py-2 rounded-md text-sm font-medium hover:bg-surface-container-high active:scale-[0.98] transition-all">取消</button>
-        <button id="dialog-delete-confirm" class="bg-error text-on-primary px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all">删除</button>
-      </div>
-    </div>
-  </div>
-
   <script>
-    $(function () {
+    $(function() {
+      lucide.createIcons();
 
-      // === L1选项卡切换 ===
-      $('#l1-tabs').on('click', '.l1-tab', function (e) {
-        // 如果点击的是编辑/删除按钮，不触发切换
-        if ($(e.target).closest('.l1-edit-btn, .l1-delete-btn').length) return;
-        var l1Id = $(this).data('l1-id');
-
-        // 切换选项卡样式
-        $('#l1-tabs .l1-tab').each(function () {
-          var isSelected = $(this).data('l1-id') === l1Id;
-          if (isSelected) {
-            $(this).removeClass('bg-surface text-primary border-2 border-primary/20').addClass('bg-primary text-on-primary');
-            $(this).find('.l1-edit-btn i, .l1-delete-btn i').removeClass('text-on-surface-variant');
-          } else {
-            $(this).removeClass('bg-primary text-on-primary').addClass('bg-surface text-primary border-2 border-primary/20');
-            $(this).find('.l1-edit-btn i, .l1-delete-btn i').addClass('text-on-surface-variant');
-          }
-        });
-
-        // 切换内容区域
-        $('#l1-content-area .l1-content').addClass('hidden');
-        $('#l1-content-area .l1-content[data-l1-id="' + l1Id + '"]').removeClass('hidden');
+      // L1导航切换
+      $('.l1-nav-item').on('click', function(e) {
+        if ($(e.target).closest('button').length) return;
+        const id = $(this).data('l1-id');
+        // 更新导航高亮
+        $('.l1-nav-item').removeClass('bg-on-primary text-primary').addClass('text-on-primary/80 hover:bg-on-primary/10');
+        $(this).removeClass('text-on-primary/80 hover:bg-on-primary/10').addClass('bg-on-primary text-primary');
+        // 切换内容
+        $('.l1-content').addClass('hidden');
+        $(`.l1-content[data-l1-id="${id}"]`).removeClass('hidden');
+        // 更新标题
+        const title = $(this).find('.text-sm').text();
+        const code = $(this).find('.text-xs').text();
+        $('#l1-title').text(code + ' ' + title);
       });
 
-      // === L2折叠/展开 ===
-      $('#l1-content-area').on('click', '.l2-toggle-btn', function (e) {
-        e.stopPropagation();
-        var l2Card = $(this).closest('.l2-card');
-        var l2Body = l2Card.find('.l2-body');
-        var icon = $(this).find('.l2-toggle-icon');
-
-        l2Body.slideToggle(200);
-        // 切换箭头方向
-        if (icon.attr('data-lucide') === 'chevron-down') {
-          icon.attr('data-lucide', 'chevron-right');
+      // L3展开折叠
+      $(document).on('click', '.l3-toggle-btn', function() {
+        const body = $(this).closest('.l3-section').find('.l3-body');
+        const icon = $(this).find('.l3-toggle-icon');
+        body.toggleClass('hidden');
+        if (body.hasClass('hidden')) {
+          icon.css('transform', 'rotate(0deg)');
         } else {
-          icon.attr('data-lucide', 'chevron-down');
-        }
-        lucide.createIcons();
-      });
-
-      // === L3折叠/展开 ===
-      $('#l1-content-area').on('click', '.l3-toggle-btn', function (e) {
-        e.stopPropagation();
-        var l3Section = $(this).closest('.l3-section');
-        var l3Body = l3Section.find('.l3-body');
-        var icon = $(this).find('.l3-toggle-icon');
-
-        l3Body.slideToggle(200);
-        if (icon.attr('data-lucide') === 'chevron-down') {
-          icon.attr('data-lucide', 'chevron-right');
-        } else {
-          icon.attr('data-lucide', 'chevron-down');
-        }
-        lucide.createIcons();
-      });
-
-      // === L1编辑 ===
-      $('#l1-tabs').on('click', '.l1-edit-btn', function (e) {
-        e.stopPropagation();
-        // 编辑L1业务域 - 点击后弹出编辑对话框：
-        // 1. 根据当前L1数据填充弹窗中的名称和所有者字段
-        // 2. 用户修改后点击保存，更新DOM中对应的L1选项卡文字
-        // 3. 点击取消关闭弹窗不做任何修改
-        $('#dialog-l1').removeClass('hidden');
-      });
-
-      // === L1删除 ===
-      $('#l1-tabs').on('click', '.l1-delete-btn', function (e) {
-        e.stopPropagation();
-        var l1Id = $(this).data('l1-id');
-        $('#delete-message').text('确定要删除此L1业务域及其所有子层级吗？此操作不可撤销。');
-        $('#dialog-delete').removeClass('hidden');
-        // 删除确认后：
-        // 1. 移除对应的l1-tab和l1-content DOM节点
-        // 2. 如果删除的是当前选中的L1，自动选中第一个剩余的L1
-        // 3. 如果没有剩余L1，显示空状态提示
-      });
-
-      // === L2编辑 ===
-      $('#l1-content-area').on('click', '.l2-edit-btn', function (e) {
-        e.stopPropagation();
-        // 编辑L2业务组 - 点击后弹出编辑对话框：
-        // 1. 根据当前L2数据填充弹窗中的编号、名称和所有者字段
-        // 2. 用户修改后点击保存，更新DOM中对应的L2卡片标题文字
-        // 3. 点击取消关闭弹窗不做任何修改
-        $('#dialog-l2').removeClass('hidden');
-      });
-
-      // === L2删除 ===
-      $('#l1-content-area').on('click', '.l2-delete-btn', function (e) {
-        e.stopPropagation();
-        $('#delete-message').text('确定要删除此L2业务组及其所有子层级吗？此操作不可撤销。');
-        $('#dialog-delete').removeClass('hidden');
-        // 删除确认后：
-        // 1. 移除对应的l2-card DOM节点
-      });
-
-      // === L3编辑 ===
-      $('#l1-content-area').on('click', '.l3-edit-btn', function (e) {
-        e.stopPropagation();
-        // 编辑L3业务段 - 点击后弹出编辑对话框：
-        // 1. 根据当前L3数据填充弹窗中的编号、名称和所有者字段
-        // 2. 用户修改后点击保存，更新DOM中对应的L3标题文字
-        // 3. 点击取消关闭弹窗不做任何修改
-        $('#dialog-l3').removeClass('hidden');
-      });
-
-      // === L3删除 ===
-      $('#l1-content-area').on('click', '.l3-delete-btn', function (e) {
-        e.stopPropagation();
-        $('#delete-message').text('确定要删除此L3业务段及其所有子层级吗？此操作不可撤销。');
-        $('#dialog-delete').removeClass('hidden');
-        // 删除确认后：
-        // 1. 移除对应的l3-section DOM节点
-      });
-
-      // === L4编辑 ===
-      $('#l1-content-area').on('click', '.l4-edit-btn', function (e) {
-        e.stopPropagation();
-        // 编辑L4职能流程 - 点击后弹出编辑对话框：
-        // 1. 根据当前L4数据填充弹窗中的流程编码、名称、所有者、所属部门、版本、格式、分类字段
-        // 2. 用户修改后点击保存，更新DOM中对应的L4行文字和Badge
-        // 3. 点击取消关闭弹窗不做任何修改
-        $('#dialog-l4').removeClass('hidden');
-      });
-
-      // === L4删除 ===
-      $('#l1-content-area').on('click', '.l4-delete-btn', function (e) {
-        e.stopPropagation();
-        $('#delete-message').text('确定要删除此L4职能流程吗？此操作不可撤销。');
-        $('#dialog-delete').removeClass('hidden');
-        // 删除确认后：
-        // 1. 移除对应的l4-item DOM节点
-      });
-
-      // === 新增L1（顶部按钮） ===
-      $('#btn-add-l1').on('click', function () {
-        // 新增L1业务域 - 点击后弹出新增对话框：
-        // 1. 清空弹窗中的名称和所有者字段
-        // 2. 用户填写后点击保存，在l1-tabs末尾（+号按钮前）插入新的L1选项卡
-        // 3. 同时在l1-content-area中创建对应的l1-content区域
-        // 4. 自动选中新创建的L1
-        $('#dialog-l1').removeClass('hidden');
-        $('#input-l1-name').val('');
-        $('#input-l1-owner').val('');
-      });
-
-      // === 新增L1（选项卡末尾+号） ===
-      $('#btn-add-l1-tab').on('click', function () {
-        // 同上，弹出新增L1对话框
-        $('#dialog-l1').removeClass('hidden');
-        $('#input-l1-name').val('');
-        $('#input-l1-owner').val('');
-      });
-
-      // === 新增L2 ===
-      $('#l1-content-area').on('click', '[id^="btn-add-l2"]', function () {
-        // 新增L2业务组 - 点击后弹出新增对话框：
-        // 1. 清空弹窗中的编号、名称和所有者字段
-        // 2. 用户填写后点击保存，在当前L1下的L2列表末尾插入新的L2卡片
-        $('#dialog-l2').removeClass('hidden');
-        $('#input-l2-code').val('');
-        $('#input-l2-name').val('');
-        $('#input-l2-owner').val('');
-      });
-
-      // === 新增L3 ===
-      $('#l1-content-area').on('click', '.l3-add-btn', function () {
-        // 新增L3业务段 - 点击后弹出新增对话框：
-        // 1. 清空弹窗中的编号、名称和所有者字段
-        // 2. 用户填写后点击保存，在当前L2下的L3列表末尾插入新的L3区域
-        $('#dialog-l3').removeClass('hidden');
-        $('#input-l3-code').val('');
-        $('#input-l3-name').val('');
-        $('#input-l3-owner').val('');
-      });
-
-      // === 新增L4 ===
-      $('#l1-content-area').on('click', '.l4-add-btn', function () {
-        // 新增L4职能流程 - 点击后弹出新增对话框：
-        // 1. 清空弹窗中的所有字段
-        // 2. 用户填写后点击保存，在当前L3下的L4列表末尾插入新的L4行
-        $('#dialog-l4').removeClass('hidden');
-        $('#input-l4-code').val('');
-        $('#input-l4-name').val('');
-        $('#input-l4-owner').val('');
-        $('#input-l4-dept').val('');
-        $('#input-l4-version').val('');
-        $('#input-l4-format').val('集团模板');
-        $('#input-l4-category').val('流程');
-      });
-
-      // === 弹窗关闭 ===
-      $('#dialog-l1-cancel').on('click', function () { $('#dialog-l1').addClass('hidden'); });
-      $('#dialog-l2-cancel').on('click', function () { $('#dialog-l2').addClass('hidden'); });
-      $('#dialog-l3-cancel').on('click', function () { $('#dialog-l3').addClass('hidden'); });
-      $('#dialog-l4-cancel').on('click', function () { $('#dialog-l4').addClass('hidden'); });
-      $('#dialog-delete-cancel').on('click', function () { $('#dialog-delete').addClass('hidden'); });
-
-      // === 弹窗保存（简单提示） ===
-      $('#dialog-l1-save').on('click', function () {
-        // 保存L1：
-        // 1. 校验名称非空
-        // 2. 更新对应l1-tab中的名称和所有者文字
-        // 3. 关闭弹窗
-        console.log('保存L1:', $('#input-l1-name').val(), $('#input-l1-owner').val());
-        $('#dialog-l1').addClass('hidden');
-      });
-      $('#dialog-l2-save').on('click', function () {
-        // 保存L2：
-        // 1. 校验编号和名称非空
-        // 2. 更新对应l2-card中的编号、名称和所有者文字
-        // 3. 关闭弹窗
-        console.log('保存L2:', $('#input-l2-code').val(), $('#input-l2-name').val(), $('#input-l2-owner').val());
-        $('#dialog-l2').addClass('hidden');
-      });
-      $('#dialog-l3-save').on('click', function () {
-        // 保存L3：
-        // 1. 校验编号和名称非空
-        // 2. 更新对应l3-section中的编号、名称和所有者文字
-        // 3. 关闭弹窗
-        console.log('保存L3:', $('#input-l3-code').val(), $('#input-l3-name').val(), $('#input-l3-owner').val());
-        $('#dialog-l3').addClass('hidden');
-      });
-      $('#dialog-l4-save').on('click', function () {
-        // 保存L4：
-        // 1. 校验流程编码和名称非空
-        // 2. 更新对应l4-item中的编码、名称、所有者文字及Badge样式
-        // 3. 关闭弹窗
-        console.log('保存L4:', $('#input-l4-code').val(), $('#input-l4-name').val(), $('#input-l4-owner').val(), $('#input-l4-dept').val(), $('#input-l4-version').val(), $('#input-l4-format').val(), $('#input-l4-category').val());
-        $('#dialog-l4').addClass('hidden');
-      });
-
-      // === 删除确认 ===
-      $('#dialog-delete-confirm').on('click', function () {
-        // 删除确认：
-        // 1. 根据当前待删除的层级类型和ID，移除对应的DOM节点
-        // 2. 如果删除的是L1，还需移除对应的l1-tab，并自动选中下一个可用的L1
-        // 3. 关闭弹窗
-        console.log('确认删除');
-        $('#dialog-delete').addClass('hidden');
-      });
-
-      // === 点击弹窗背景关闭 ===
-      $('#dialog-l1, #dialog-l2, #dialog-l3, #dialog-l4, #dialog-delete').on('click', function (e) {
-        if ($(e.target).is(this)) {
-          $(this).addClass('hidden');
+          icon.css('transform', 'rotate(90deg)');
         }
       });
 
+      // 打开编辑弹窗
+      $(document).on('click', '.l1-edit-btn, #btn-edit-l1-header', function() { $('#dialog-l1').removeClass('hidden').css('display','flex'); });
+      $(document).on('click', '.l2-edit-btn', function() { $('#dialog-l2').removeClass('hidden').css('display','flex'); });
+      $(document).on('click', '.l4-edit-btn', function() { $('#dialog-l4').removeClass('hidden').css('display','flex'); });
+
+      // 删除弹窗
+      $(document).on('click', '.l1-delete-btn, #btn-delete-l1-header', function() {
+        $('#delete-msg').text('确定要删除此业务域吗？删除后其下所有业务组、业务段和流程将一并删除。');
+        $('#dialog-delete').removeClass('hidden').css('display','flex');
+      });
+      $(document).on('click', '.l2-delete-btn', function() {
+        $('#delete-msg').text('确定要删除此业务组吗？删除后其下所有业务段和流程将一并删除。');
+        $('#dialog-delete').removeClass('hidden').css('display','flex');
+      });
+      $(document).on('click', '.l3-delete-btn', function() {
+        $('#delete-msg').text('确定要删除此业务段吗？删除后其下所有流程将一并删除。');
+        $('#dialog-delete').removeClass('hidden').css('display','flex');
+      });
+      $(document).on('click', '.l4-delete-btn', function() {
+        $('#delete-msg').text('确定要删除此流程吗？');
+        $('#dialog-delete').removeClass('hidden').css('display','flex');
+      });
+
+      // 关闭弹窗
+      $(document).on('click', '.dialog-cancel-btn', function() { $(this).closest('.fixed').addClass('hidden').css('display',''); });
+      $(document).on('click', '.fixed', function(e) { if (e.target === this) { $(this).addClass('hidden').css('display',''); } });
     });
   </script>
 
-  <script>lucide.createIcons();</script>
 </body>
-
 </html>
