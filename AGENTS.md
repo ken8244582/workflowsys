@@ -20,8 +20,7 @@
 | 一级菜单 | 二级菜单 | 路径 | 说明 |
 |---------|---------|------|------|
 | 统计概览 | - | `/` | 流程数据统计看板 |
-| 职能流程 | 流程架构 | `/functional/architecture` | L1-L4 树形层级展示 |
-| | 流程清单 | `/functional/list` | 筛选+分页+导出Excel |
+| 职能流程 | 流程清单 | `/functional/list` | 筛选+分页+导出Excel+树形视图架构CRUD |
 | | 修订记录 | `/functional/revision` | 历史修订记录查询+导出 |
 | | 修订计划 | `/functional/plan` | 修订计划列表+详情管理 |
 | 端到端流程 | 流程概览 | `/e2e/overview` | 端到端流程统计看板 |
@@ -43,8 +42,7 @@
 │   │   ├── login/page.tsx          # 登录页
 │   │   ├── monitoring/page.tsx     # 指标监控(占位页)
 │   │   ├── functional/
-│   │   │   ├── architecture/page.tsx  # 流程架构页 (L1-L4树形展示)
-│   │   │   ├── list/page.tsx          # 流程清单页 (筛选+表格+导出)
+│   │   │   ├── list/page.tsx          # 流程清单页 (筛选+表格+导出+树形视图架构CRUD)
 │   │   │   ├── revision/page.tsx      # 修订记录页 (筛选+表格+导出)
 │   │   │   └── plan/
 │   │   │       ├── page.tsx           # 修订计划列表 (分页+创建+下发)

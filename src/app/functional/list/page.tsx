@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
 import { Search, Download, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, RotateCcw, AlertTriangle } from 'lucide-react';
 
 import { MultiSelectFilter } from '@/components/multi-select-filter';
@@ -105,6 +107,23 @@ export default function FunctionalListPage() {
   const [detailItem, setDetailItem] = useState<FlowItem | null>(null);
   const [detailDialog, setDetailDialog] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+
+  // Architecture CRUD state (tree view)
+  const [archEditOpen, setArchEditOpen] = useState(false);
+  const [archEditForm, setArchEditForm] = useState<{ level: 'L1' | 'L2' | 'L3'; oldName: string; newName: string; newOwner: string; l1Name: string; l2Name: string }>({ level: 'L1', oldName: '', newName: '', newOwner: '', l1Name: '', l2Name: '' });
+  const [archSaving, setArchSaving] = useState(false);
+
+  const [archDeleteOpen, setArchDeleteOpen] = useState(false);
+  const [archDeleteTarget, setArchDeleteTarget] = useState<{ level: 'L1' | 'L2' | 'L3'; name: string; l1Name: string; l2Name: string; count: number } | null>(null);
+  const [archDeleting, setArchDeleting] = useState(false);
+
+  const [archAddOpen, setArchAddOpen] = useState(false);
+  const [archAddLevel, setArchAddLevel] = useState<'L2' | 'L3'>('L2');
+  const [archAddName, setArchAddName] = useState('');
+  const [archAddOwner, setArchAddOwner] = useState('');
+  const [archAddL1Name, setArchAddL1Name] = useState('');
+  const [archAddL2Name, setArchAddL2Name] = useState('');
+  const [archAdding, setArchAdding] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -211,6 +230,111 @@ export default function FunctionalListPage() {
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
+  };
+
+  // Architecture CRUD handlers
+  const levelToLabel = (n: number): 'L1' | 'L2' | 'L3' => `L${n}` as 'L1' | 'L2' | 'L3';
+
+  const handleArchEdit = (level: number, name: string, owner: string, l1Name: string, l2Name: string) => {
+    const l = levelToLabel(level);
+    setArchEditForm({ level: l, oldName: name, newName: name, newOwner: owner, l1Name, l2Name });
+    setArchEditOpen(true);
+  };
+
+  const handleArchEditSave = async () => {
+    if (!archEditForm.newName.trim()) return;
+    setArchSaving(true);
+    try {
+      const res = await fetch('/api/architecture', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(archEditForm),
+      });
+      if (res.ok) {
+        setArchEditOpen(false);
+        fetchData();
+      } else {
+        const data = await res.json();
+        alert(data.error || '修改失败');
+      }
+    } finally {
+      setArchSaving(false);
+    }
+  };
+
+  const handleArchDeleteClick = (level: number, name: string, l1Name: string, l2Name: string, count: number) => {
+    const l = levelToLabel(level);
+    setArchDeleteTarget({ level: l, name, l1Name, l2Name, count });
+    setArchDeleteOpen(true);
+  };
+
+  const handleArchDeleteConfirm = async () => {
+    if (!archDeleteTarget) return;
+    setArchDeleting(true);
+    try {
+      const params = new URLSearchParams({ level: archDeleteTarget.level, name: archDeleteTarget.name });
+      if (archDeleteTarget.l1Name) params.set('l1Name', archDeleteTarget.l1Name);
+      if (archDeleteTarget.l2Name) params.set('l2Name', archDeleteTarget.l2Name);
+      const res = await fetch(`/api/architecture?${params}`, { method: 'DELETE' });
+      if (res.ok) {
+        setArchDeleteOpen(false);
+        fetchData();
+      } else {
+        const data = await res.json();
+        alert(data.error || '删除失败');
+      }
+    } finally {
+      setArchDeleting(false);
+    }
+  };
+
+  const handleArchAddClick = (level: 'L2' | 'L3', l1Name: string, l2Name: string) => {
+    setArchAddLevel(level);
+    setArchAddName('');
+    setArchAddOwner('');
+    setArchAddL1Name(l1Name);
+    setArchAddL2Name(l2Name);
+    setArchAddOpen(true);
+  };
+
+  const handleArchAddSave = async () => {
+    if (!archAddName.trim()) return;
+    setArchAdding(true);
+    try {
+      const res = await fetch('/api/flows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          l1Domain: archAddL1Name,
+          l1Owner: '',
+          l2Group: archAddLevel === 'L2' ? archAddName : archAddL2Name,
+          l2Owner: archAddLevel === 'L2' ? archAddOwner : '',
+          l3Segment: archAddLevel === 'L3' ? archAddName : '默认段',
+          l3Owner: archAddLevel === 'L3' ? archAddOwner : '',
+          l4Process: '待补充',
+          processCode: '',
+          department: '',
+          version: '',
+          format: '',
+          category: '',
+        }),
+      });
+      if (res.ok) {
+        setArchAddOpen(false);
+        fetchData();
+      } else {
+        const data = await res.json();
+        alert(data.error || '新增失败');
+      }
+    } finally {
+      setArchAdding(false);
+    }
+  };
+
+  // Count L4 items under a tree node recursively
+  const countItems = (node: TreeNode): number => {
+    if (node.level === 3) return node.items.length;
+    return node.children.reduce((sum, child) => sum + countItems(child), 0);
   };
 
   // Handlers
@@ -375,11 +499,13 @@ export default function FunctionalListPage() {
     3: { icon: <LevelIcon level={3} className="shrink-0" />, color: 'text-violet-600', bgColor: 'bg-violet-50', borderColor: 'border-l-violet-300' },
   };
 
-  const renderTreeNode = (node: TreeNode, parentKey: string = '') => {
+  const renderTreeNode = (node: TreeNode, parentKey: string = '', parentL1Name: string = '', parentL2Name: string = '') => {
     const key = `${parentKey}||${node.name}`;
     const isExpanded = expandedNodes.has(key);
-    const count = node.level === 3 ? node.items.length : node.children.length;
+    const count = countItems(node);
     const cfg = levelConfig[node.level] || levelConfig[3];
+    const l1Name = node.level === 1 ? node.name : parentL1Name;
+    const l2Name = node.level === 2 ? node.name : parentL2Name;
 
     return (
       <div key={key}>
@@ -393,8 +519,14 @@ export default function FunctionalListPage() {
           <span className={`font-medium ${cfg.color} truncate`}>{node.name}</span>
           {node.owner && <span className="text-gray-400 text-xs ml-1 shrink-0">({node.owner})</span>}
           <span className={`ml-auto shrink-0 text-xs px-2 py-0.5 rounded-full ${cfg.bgColor} ${cfg.color} font-medium`}>{count}</span>
+          <button onClick={e => { e.stopPropagation(); handleArchEdit(node.level, node.name, node.owner, l1Name, l2Name); }} className="p-0.5 rounded hover:bg-gray-200/50 text-gray-400 hover:text-[#1e3a5f] shrink-0">
+            <Pencil className="h-3 w-3" />
+          </button>
+          <button onClick={e => { e.stopPropagation(); handleArchDeleteClick(node.level, node.name, l1Name, l2Name, count); }} className="p-0.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 shrink-0">
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
-        {isExpanded && node.children.map(child => renderTreeNode(child, key))}
+        {isExpanded && node.children.map(child => renderTreeNode(child, key, l1Name, l2Name))}
         {isExpanded && node.level === 3 && node.items.map(item => (
           <div key={item.id} className="flex items-center gap-2 py-1.5 px-3 text-xs border-b border-gray-50 border-l-3 border-l-gray-200 bg-white/50" style={{ paddingLeft: `${4 * 20 + 12}px` }}>
             <LevelIcon level={4} className="shrink-0" />
@@ -408,6 +540,22 @@ export default function FunctionalListPage() {
             </span>
           </div>
         ))}
+        {isExpanded && node.level === 2 && (
+          <div style={{ paddingLeft: `${3 * 20 + 12}px` }}>
+            <button onClick={() => handleArchAddClick('L3', l1Name, l2Name)}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-[#1e3a5f] hover:bg-[#1e3a5f]/5 rounded transition-colors">
+              <Plus className="h-3 w-3" />添加L3业务段
+            </button>
+          </div>
+        )}
+        {isExpanded && node.level === 1 && (
+          <div style={{ paddingLeft: `${2 * 20 + 12}px` }}>
+            <button onClick={() => handleArchAddClick('L2', l1Name, '')}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-[#1e3a5f] hover:bg-[#1e3a5f]/5 rounded transition-colors">
+              <Plus className="h-3 w-3" />添加L2业务组
+            </button>
+          </div>
+        )}
       </div>
     );
   };
@@ -544,11 +692,18 @@ export default function FunctionalListPage() {
       {viewMode === 'tree' && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">职能流程层级结构</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">职能流程层级结构</CardTitle>
+              <span className="text-xs text-gray-400">支持编辑、删除、新增层级节点</span>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="max-h-[600px] overflow-y-auto">
-              {treeData.map(node => renderTreeNode(node))}
+              {treeData.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm">暂无数据</div>
+              ) : (
+                treeData.map(node => renderTreeNode(node))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -865,6 +1020,78 @@ export default function FunctionalListPage() {
               })}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Architecture Edit Dialog */}
+      <Dialog open={archEditOpen} onOpenChange={setArchEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>编辑{archEditForm.level} - {archEditForm.oldName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>{archEditForm.level}名称</Label>
+              <Input value={archEditForm.newName} onChange={e => setArchEditForm(f => ({ ...f, newName: e.target.value }))} placeholder="请输入名称" />
+            </div>
+            <div className="space-y-2">
+              <Label>{archEditForm.level}所有者</Label>
+              <Input value={archEditForm.newOwner} onChange={e => setArchEditForm(f => ({ ...f, newOwner: e.target.value }))} placeholder="请输入所有者" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchEditOpen(false)}>取消</Button>
+            <Button onClick={handleArchEditSave} disabled={archSaving || !archEditForm.newName.trim()} className="bg-[#1e3a5f] hover:bg-[#163050]">
+              {archSaving ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Architecture Delete Dialog */}
+      <AlertDialog open={archDeleteOpen} onOpenChange={setArchDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除{archDeleteTarget?.level}「{archDeleteTarget?.name}」吗？
+              此操作将同时删除该层级下所有 {archDeleteTarget?.count} 个L4流程数据，且不可恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleArchDeleteConfirm} disabled={archDeleting} className="bg-red-600 hover:bg-red-700">
+              {archDeleting ? '删除中...' : '确认删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Architecture Add Dialog */}
+      <Dialog open={archAddOpen} onOpenChange={setArchAddOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>新增{archAddLevel}层级</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>{archAddLevel}名称</Label>
+              <Input value={archAddName} onChange={e => setArchAddName(e.target.value)} placeholder={`请输入${archAddLevel}名称`} />
+            </div>
+            <div className="space-y-2">
+              <Label>{archAddLevel}所有者</Label>
+              <Input value={archAddOwner} onChange={e => setArchAddOwner(e.target.value)} placeholder="请输入所有者" />
+            </div>
+            <p className="text-xs text-gray-400">
+              新增后将在此层级下创建一条占位流程记录，可在流程清单中进一步编辑。
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchAddOpen(false)}>取消</Button>
+            <Button onClick={handleArchAddSave} disabled={archAdding || !archAddName.trim()} className="bg-[#1e3a5f] hover:bg-[#163050]">
+              {archAdding ? '创建中...' : '创建'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       </div>
