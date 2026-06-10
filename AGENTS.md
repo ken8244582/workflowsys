@@ -12,7 +12,7 @@
 - **Styling**: Tailwind CSS 4
 - **Charts**: Recharts
 - **Database**: Supabase PostgreSQL (Drizzle ORM)
-- **认证**: 自建 JWT + bcrypt 会话认证
+- **认证**: 自建 JWT + bcrypt 会话认证（Session Cookie + 1小时超时）
 
 ## 导航与功能模块
 
@@ -65,7 +65,7 @@
 │   │       ├── e2e/                   # 端到端API (processes+plans)
 │   │       └── sys/                   # 系统管理API (users+menus)
 │   ├── components/
-│   │   ├── auth-provider.tsx          # 认证上下文 (登录态+菜单权限)
+│   │   ├── auth-provider.tsx          # 认证上下文 (登录态+菜单权限+401自动跳转)
 │   │   ├── app-shell.tsx              # 应用壳 (登录检测+布局)
 │   │   ├── nav-menu.tsx               # 动态导航栏
 │   │   ├── change-password-dialog.tsx  # 修改密码弹窗
@@ -75,17 +75,31 @@
 │   │   └── ui/                         # shadcn/ui 组件库
 │   ├── lib/
 │   │   ├── flow-data.ts              # 流程数据类型+统计计算
-│   │   ├── e2e-store.ts              # 端到端流程数据存储(文件)
-│   │   ├── auth.ts                   # JWT认证工具
+│   │   ├── e2e-store.ts              # 端到端流程数据存储(Supabase数据库)
+│   │   ├── auth.ts                   # JWT认证工具(环境变量密钥+Session Cookie+1h超时)
+│   │   ├── api-auth.ts               # API统一鉴权(requireAuth中间件)
 │   │   ├── sys-data.ts               # 系统管理数据访问
 │   │   ├── supabase.ts               # Supabase客户端
-│   │   └── utils.ts                  # 通用工具 (cn, beijingNow)
+│   │   └── utils.ts                  # 通用工具 (cn, beijingNow, escapeIlike)
 │   └── storage/database/
 │       └── shared/schema.ts          # Drizzle ORM 表定义
-└── DESIGN.md                         # 设计规范
+├── .env.local                        # 环境变量(JWT_SECRET等)
+├── DESIGN.md                         # 设计规范
+├── AGENTS.md                         # 本文件
+└── REQUIREMENTS.md                   # 需求与Bug跟踪文档
 ```
 
 ## 数据库表结构 (Supabase PostgreSQL)
+
+### 公共审计字段（所有业务表共有）
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| created_by | text | 创建人用户名 |
+| created_at_ts | text | 创建时间 (北京时间) |
+| updated_by | text | 最后修改人用户名 |
+| updated_at_ts | text | 最后修改时间 (北京时间) |
+
+> 含审计字段的表：`flows`、`revision_records`、`revision_plans`、`plan_tasks`、`e2e_processes`、`e2e_plans`
 
 ### flows — 流程清单
 | 字段 | 类型 | 说明 |
@@ -108,6 +122,7 @@
 | it_sub_category | text | IT支撑分类 |
 | it_score | integer | IT支撑分 |
 | status | text | 状态 |
+| + 审计字段 | | created_by, created_at_ts, updated_by, updated_at_ts |
 
 ### revision_records — 修订记录
 | 字段 | 类型 | 说明 |
@@ -123,6 +138,7 @@
 | revision_type | text | 修订类型 |
 | description | text | 修订描述 |
 | operator | text | 操作人 |
+| + 审计字段 | | created_by, created_at_ts, updated_by, updated_at_ts |
 
 ### revision_plans — 修订计划
 | 字段 | 类型 | 说明 |
@@ -135,6 +151,7 @@
 | completed_count | integer | 已完成数 |
 | created_at | text | 创建时间 |
 | updated_at | text | 更新时间 |
+| + 审计字段 | | created_by, updated_by |
 
 ### plan_tasks — 修订计划任务
 | 字段 | 类型 | 说明 |
@@ -158,6 +175,38 @@
 | sort_order | integer | 排序 |
 | remarks | text | 备注 |
 | created_at | text | 创建时间 |
+| + 审计字段 | | created_by, updated_by, updated_at_ts |
+
+### e2e_processes — 端到端流程
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | text PK | 自动生成 (e2e-001) |
+| name | text | 流程名称 |
+| owner | text | 负责人 |
+| department | text | 所属部门 |
+| responsible_person | text | 责任人 |
+| current_progress | integer | 当前进度(0-100) |
+| target_progress | integer | 目标进度 |
+| status | text | 状态 (not_started/in_progress/completed) |
+| start_date | text | 开始日期 |
+| completed_date | text | 完成日期 |
+| description | text | 描述 |
+| + 审计字段 | | created_by, created_at_ts, updated_by, updated_at_ts |
+
+### e2e_plans — 端到端梳理计划
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | text PK | 自动生成 (plan-timestamp-hash) |
+| process_id | text FK | 关联e2e_processes |
+| plan_type | text | 计划类型 (monthly/quarterly) |
+| year | integer | 年份 |
+| period | integer | 期间 |
+| plan_content | text | 计划内容 |
+| plan_progress | integer | 计划进度 |
+| actual_progress | integer | 实际进度 |
+| status | text | 状态 (planned/in_progress/completed) |
+| notes | text | 备注 |
+| + 审计字段 | | created_by, created_at_ts, updated_by, updated_at_ts |
 
 ### sys_users — 系统用户
 | 字段 | 类型 | 说明 |
@@ -195,19 +244,29 @@
 - **Section 2 端到端流程工作**：4指标卡 + 端到端进度图 + 工作说明
 
 ### 修订计划完整链路
-1. **创建计划**：指定月份+名称 → 自动生成计划名
-2. **添加任务**：从流程清单选择，携带编码/名称/所有者/部门/版本/格式/分类
+1. **创建计划**：指定月份+名称 → 自动生成计划名，记录创建人和创建时间
+2. **添加任务**：从流程清单选择，携带编码/名称/所有者/部门/版本/格式/分类，记录操作人
 3. **下发计划**：草稿→已下发，任务状态变为"待执行"
 4. **执行任务**：待执行→进行中→已完成(记录完成时间，使用北京时间)
 5. **撤回任务**：已完成→待执行(清除完成时间)
-6. **顺延任务**：创建下月计划+复制任务，原任务标记"已顺延"
+6. **顺延任务**：校验下月计划是否已存在→创建或追加+复制任务，原任务标记"已顺延"
 7. **导出Excel**：Sheet1任务明细 + Sheet2部门完成进度统计
 
 ### 认证与权限
-- 登录：bcrypt验证 → JWT token存入cookie
-- 会话：cookie中的token → 验证用户
+- 登录：bcrypt验证 → JWT token存入Session Cookie（浏览器关闭即失效）
+- 密钥：JWT_SECRET 从环境变量读取，缺失时拒绝启动
+- 超时：JWT Token有效期1小时，过期需重新登录
+- 会话：Cookie中的token → 验证用户（getSession）
 - 权限：用户关联菜单权限，导航栏动态渲染有权限的菜单
 - 超管：拥有所有菜单权限
+- API鉴权：所有业务API通过 `requireAuth()` 中间件校验登录态，未登录返回401
+- 前端401处理：`auth-provider.tsx` 拦截401响应，自动跳转登录页
+- 自我保护：禁止删除当前登录账号（前后端双重校验）
+
+### 数据安全
+- **搜索注入防护**：`escapeIlike()` 函数转义 `%`、`_`、`\`，所有 ilike 查询参数统一转义
+- **审计追踪**：所有业务表含 created_by/created_at_ts/updated_by/updated_at_ts，每次操作自动记录
+- **密码安全**：bcrypt hash 存储，修改密码需验证旧密码
 
 ### 数据初始化
 - `POST /api/flows/reinitialize`：上传Excel → 自动查找L1-L4流程清单Sheet → 解析标题行 → 清空旧数据 → 批量写入
@@ -216,6 +275,14 @@
 ### 时区处理
 - `beijingNow()` (utils.ts)：返回北京时间 `YYYY-MM-DD HH:mm:ss`，所有用户可见时间统一使用此函数
 
+## 环境变量
+
+| 变量名 | 必需 | 说明 |
+|--------|------|------|
+| JWT_SECRET | 是 | JWT签名密钥，缺失时服务拒绝启动 |
+| NEXT_PUBLIC_SUPABASE_URL | 是 | Supabase项目URL |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | 是 | Supabase匿名Key |
+
 ## 共享组件
 
 | 组件 | 路径 | 说明 |
@@ -223,6 +290,17 @@
 | PaginationBar | components/pagination-bar.tsx | 统一分页(页码+跳转+条数选择) |
 | TruncateDiv | components/truncate-cell.tsx | 截断文本+悬浮Tooltip |
 | MultiSelectFilter | components/multi-select-filter.tsx | 多选筛选下拉 |
+
+## 共享工具函数
+
+| 函数 | 路径 | 说明 |
+|------|------|------|
+| cn() | lib/utils.ts | className合并 (clsx+tailwind-merge) |
+| beijingNow() | lib/utils.ts | 返回北京时间字符串 |
+| escapeIlike() | lib/utils.ts | 转义ilike通配符，防搜索注入 |
+| requireAuth() | lib/api-auth.ts | API鉴权中间件，校验登录态并返回用户信息 |
+| getSession() | lib/auth.ts | 解析JWT token获取会话信息 |
+| createSession() | lib/auth.ts | 创建JWT token并设置Session Cookie |
 
 ## 构建与测试命令
 
