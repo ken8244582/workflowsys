@@ -7,7 +7,11 @@ let seeded = false;
 export async function GET() {
   try {
     if (!seeded) {
-      await seedInitialData();
+      try {
+        await seedInitialData();
+      } catch (seedError) {
+        console.error('[auth/session] seedInitialData failed:', seedError);
+      }
       seeded = true;
     }
 

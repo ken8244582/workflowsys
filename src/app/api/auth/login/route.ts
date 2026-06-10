@@ -9,7 +9,12 @@ export async function POST(request: Request) {
   try {
     // Seed initial data if not done
     if (!seeded) {
-      await seedInitialData();
+      try {
+        await seedInitialData();
+      } catch (seedError) {
+        console.error('[auth/login] seedInitialData failed:', seedError);
+        // Continue with login even if seeding fails
+      }
       seeded = true;
     }
 
@@ -48,6 +53,7 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
+    console.error('[auth/login] Error:', error);
     const message = error instanceof Error ? error.message : '登录失败';
     return NextResponse.json({ error: message }, { status: 500 });
   }
