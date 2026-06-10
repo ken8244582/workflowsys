@@ -3,6 +3,22 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { requireAuth, isSession } from '@/lib/api-auth';
 import { escapeIlike, beijingNow } from '@/lib/utils';
 
+function mapRevisionRow(row: Record<string, unknown>) {
+  return {
+    id: row.id as number,
+    revisionDate: row.revision_date as string || '',
+    processCode: row.process_code as string || '',
+    l4Process: row.l4_process as string || '',
+    version: row.version as string || '',
+    l1Domain: row.l1_domain as string || '',
+    l2Group: row.l2_group as string || '',
+    l3Segment: row.l3_segment as string || '',
+    revisionType: row.revision_type as string || '',
+    description: row.description as string || '',
+    operator: row.operator as string || '',
+  };
+}
+
 // GET /api/revisions - List revision records with filtering
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth();
@@ -51,7 +67,7 @@ export async function GET(request: NextRequest) {
   const totalPages = Math.ceil(total / pageSize);
 
   return NextResponse.json({
-    items: data || [],
+    items: (data || []).map(mapRevisionRow),
     total,
     page,
     pageSize,
@@ -94,5 +110,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(mapRevisionRow(data as Record<string, unknown>));
 }

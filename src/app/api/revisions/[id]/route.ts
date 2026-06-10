@@ -3,6 +3,22 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { requireAuth, isSession } from '@/lib/api-auth';
 import { beijingNow } from '@/lib/utils';
 
+function mapRevisionRow(row: Record<string, unknown>) {
+  return {
+    id: row.id as number,
+    revisionDate: row.revision_date as string || '',
+    processCode: row.process_code as string || '',
+    l4Process: row.l4_process as string || '',
+    version: row.version as string || '',
+    l1Domain: row.l1_domain as string || '',
+    l2Group: row.l2_group as string || '',
+    l3Segment: row.l3_segment as string || '',
+    revisionType: row.revision_type as string || '',
+    description: row.description as string || '',
+    operator: row.operator as string || '',
+  };
+}
+
 // GET /api/revisions/[id] - Get single revision record
 export async function GET(
   _request: NextRequest,
@@ -25,7 +41,7 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(mapRevisionRow(data as Record<string, unknown>));
 }
 
 // PUT /api/revisions/[id] - Update revision record
@@ -69,7 +85,7 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(mapRevisionRow(data as Record<string, unknown>));
 }
 
 // DELETE /api/revisions/[id] - Delete revision record

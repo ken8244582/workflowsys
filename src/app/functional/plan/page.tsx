@@ -71,17 +71,23 @@ export default function RevisionPlanPage() {
     setCreating(true);
     try {
       const name = newPlanName || `${newPlanMonth.replace('-', '年')}月流程修订计划`;
-      await fetch('/api/revision-plans', {
+      const res = await fetch('/api/revision-plans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planMonth: newPlanMonth, planName: name }),
       });
-      setShowCreateDialog(false);
-      setNewPlanMonth('');
-      setNewPlanName('');
-      fetchData();
+      if (res.ok) {
+        setShowCreateDialog(false);
+        setNewPlanMonth('');
+        setNewPlanName('');
+        fetchData();
+      } else {
+        const data = await res.json();
+        alert(data.error || '创建失败');
+      }
     } catch (err) {
       console.error('Failed to create plan:', err);
+      alert('创建失败，请重试');
     } finally {
       setCreating(false);
     }

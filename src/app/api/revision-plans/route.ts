@@ -3,6 +3,21 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { requireAuth, isSession } from '@/lib/api-auth';
 import { beijingNow } from '@/lib/utils';
 
+function mapPlanRow(row: Record<string, unknown>) {
+  return {
+    id: row.id as number,
+    planMonth: row.plan_month as string || '',
+    planName: row.plan_name as string || '',
+    status: row.status as string || '',
+    taskCount: row.task_count as number || 0,
+    completedCount: row.completed_count as number || 0,
+    createdAt: row.created_at as string || '',
+    updatedAt: row.updated_at as string || '',
+    createdBy: row.created_by as string || '',
+    updatedBy: row.updated_by as string || '',
+  };
+}
+
 // GET /api/revision-plans - List revision plans
 export async function GET(_request: NextRequest) {
   const authResult = await requireAuth();
@@ -18,7 +33,7 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data || []);
+  return NextResponse.json({ items: (data || []).map(mapPlanRow) });
 }
 
 // POST /api/revision-plans - Create a new revision plan
@@ -62,5 +77,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(mapPlanRow(data as Record<string, unknown>));
 }
+
+export { mapPlanRow };
