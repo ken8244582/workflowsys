@@ -78,7 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
-      if (response.status === 401) {
+      // Skip 401 handling for login endpoint (it returns 401 for wrong credentials)
+      const url = typeof args[0] === 'string' ? args[0] : args[0] instanceof Request ? args[0].url : '';
+      if (response.status === 401 && !url.includes('/api/auth/login')) {
         // Session expired — redirect to login
         setUser(null);
         setMenus([]);

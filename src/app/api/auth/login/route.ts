@@ -33,7 +33,6 @@ export async function POST(request: Request) {
     if (!result) {
       return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 });
     }
-
     const userRecord = await getUserById(result.payload.userId);
 
     // Generate JWT token and set on response cookie
@@ -60,6 +59,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error('[auth/login] Error:', error);
-    return NextResponse.json({ error: '登录失败，请稍后重试' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: `登录失败: ${msg}` }, { status: 500 });
   }
 }
