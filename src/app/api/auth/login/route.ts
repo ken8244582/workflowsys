@@ -1,17 +1,12 @@
 import { NextResponse } from 'next/server';
 import { loginUser, seedInitialData, getUserById } from '@/lib/sys-data';
-import { generateSessionToken, setSessionCookie, isJwtConfigured } from '@/lib/auth';
+import { generateSessionToken, setSessionCookie } from '@/lib/auth';
 
 // Seed on first request
 let seeded = false;
 
 export async function POST(request: Request) {
   try {
-    // Check JWT configuration
-    if (!isJwtConfigured()) {
-      return NextResponse.json({ error: '系统配置错误：JWT_SECRET 未配置，请联系管理员' }, { status: 500 });
-    }
-
     // Seed initial data if not done
     if (!seeded) {
       try {
