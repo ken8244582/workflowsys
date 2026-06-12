@@ -12,18 +12,24 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { oldPassword, newPassword } = body;
 
-    if (!oldPassword || !newPassword) {
-      return NextResponse.json({ error: '旧密码和新密码不能为空' }, { status: 400 });
+    if (!newPassword) {
+      return NextResponse.json({ error: '新密码不能为空' }, { status: 400 });
     }
 
     if (newPassword.length < 6) {
       return NextResponse.json({ error: '新密码长度不能少于6位' }, { status: 400 });
     }
 
-    // Verify old password
-    const verified = await verifyUserPassword(session.userId, oldPassword);
-    if (!verified) {
-      return NextResponse.json({ error: '旧密码不正确' }, { status: 400 });
+    // 如果不是强制修改密码（管理员重置），则需要验证旧密码
+    if (!session.mustChangePassword) {
+      if (!oldPassword) {
+        return NextResponse.json({ error: '旧密码不能为空' }, { status: 400 });
+      }
+      // Verify old password
+      const verified = await verifyUserPassword(session.userId, oldPassword);
+      if (!verified) {
+        return NextResponse.json({ error: '旧密码不正确' }, { status: 400 });
+      }
     }
 
     await changePassword(session.userId, newPassword);
