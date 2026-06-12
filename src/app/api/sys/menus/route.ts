@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       supported_actions: '["view"]', // Default to view only
     });
 
-    return NextResponse.json({ menu }, { status: 201 });
+    return NextResponse.json({ success: true, menu }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : '创建菜单失败';
     return NextResponse.json({ error: message }, { status: 500 });
