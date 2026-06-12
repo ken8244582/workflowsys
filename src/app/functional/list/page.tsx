@@ -645,7 +645,7 @@ export default function FunctionalListPage() {
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">IT覆盖</TableHead>
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">IT支撑分</TableHead>
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-[80px] top-0 bg-gray-50 z-20">状态</TableHead>
-                    {(can('edit') || can('delete')) && (
+                    {editMode && can('edit_toggle') && (
                       <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
                     )}
                   </TableRow>
