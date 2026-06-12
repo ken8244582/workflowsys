@@ -503,14 +503,14 @@ export default function MenusPage() {
             <div className="space-y-2">
               <Label>上级菜单</Label>
               <Select
-                value={formParentId?.toString() || ''}
-                onValueChange={(v) => setFormParentId(v ? parseInt(v) : null)}
+                value={formParentId?.toString() || 'none'}
+                onValueChange={(v) => setFormParentId(v === 'none' ? null : parseInt(v))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="无 (一级菜单)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">无 (一级菜单)</SelectItem>
+                  <SelectItem value="none">无 (一级菜单)</SelectItem>
                   {topMenus.map(m => (
                     <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
                   ))}
@@ -580,14 +580,14 @@ export default function MenusPage() {
             <div className="space-y-2">
               <Label>上级菜单</Label>
               <Select
-                value={formParentId?.toString() || ''}
-                onValueChange={(v) => setFormParentId(v ? parseInt(v) : null)}
+                value={formParentId?.toString() || 'none'}
+                onValueChange={(v) => setFormParentId(v === 'none' ? null : parseInt(v))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="无 (一级菜单)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">无 (一级菜单)</SelectItem>
+                  <SelectItem value="none">无 (一级菜单)</SelectItem>
                   {topMenus.filter(m => m.id !== selectedMenu?.id).map(m => (
                     <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
                   ))}
