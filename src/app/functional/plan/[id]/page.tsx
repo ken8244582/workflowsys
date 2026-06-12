@@ -55,10 +55,8 @@ interface FlowItem {
 
 export default function PlanDetailPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const planId = params.id as string;
-  const ownerFilter = searchParams.get('owner') || '';
 
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [tasks, setTasks] = useState<PlanTask[]>([]);
@@ -67,12 +65,10 @@ export default function PlanDetailPage() {
   const [pageSize, setPageSize] = useState(50);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [l4OwnerOptions, setL4OwnerOptions] = useState<string[]>([]); // L4所有者下拉选项（实时同步流程清单）
   const [taskTypeOptions, setTaskTypeOptions] = useState<string[]>([]); // 任务类型下拉选项（动态从数据库获取）
   const [taskStatusOptions, setTaskStatusOptions] = useState<string[]>([]); // 任务状态下拉选项（动态从数据库获取）
 
   // Filters
-  const [filterOwner, setFilterOwner] = useState<string[]>(ownerFilter ? [ownerFilter] : []);
   const [filterType, setFilterType] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -113,7 +109,6 @@ export default function PlanDetailPage() {
       params.set('page', page.toString());
       params.set('pageSize', pageSize.toString());
       // Send all filter values as comma-separated strings
-      if (filterOwner.length > 0) params.set('owner', filterOwner.join(','));
       if (filterType.length > 0) params.set('taskType', filterType.join(','));
       if (filterStatus.length > 0) params.set('status', filterStatus.join(','));
       if (searchText) params.set('search', searchText);
@@ -127,23 +122,10 @@ export default function PlanDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [planId, page, pageSize, filterOwner, filterType, filterStatus, searchText]);
+  }, [planId, page, pageSize, filterType, filterStatus, searchText]);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
-
-  // Fetch L4 owners from flow list for real-time sync
-  const fetchL4Owners = useCallback(async () => {
-    try {
-      const res = await fetch('/api/flows/l4-owners');
-      const data = await res.json();
-      setL4OwnerOptions(data.owners || []);
-    } catch (err) {
-      console.error('Failed to fetch L4 owners:', err);
-    }
-  }, []);
-
-  useEffect(() => { fetchL4Owners(); }, [fetchL4Owners]);
 
   // Fetch filter options (task types and statuses) dynamically from database
   const fetchFilterOptions = useCallback(async () => {
@@ -404,7 +386,6 @@ export default function PlanDetailPage() {
   };
 
   // Dynamic filter options - all from database for real-time accuracy
-  const ownerOptions = l4OwnerOptions;
   const typeOptions = taskTypeOptions;
   const statusOptions = taskStatusOptions;
 
@@ -589,12 +570,6 @@ export default function PlanDetailPage() {
       <Card>
         <CardContent className="p-3">
           <div className="flex flex-wrap items-center gap-3">
-            <MultiSelectFilter
-              label="L4所有者"
-              options={ownerOptions}
-              selected={filterOwner}
-              onChange={setFilterOwner}
-            />
             <MultiSelectFilter
               label="任务类型"
               options={typeOptions}
