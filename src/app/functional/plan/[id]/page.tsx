@@ -53,7 +53,7 @@ interface FlowItem {
   category: string;
 }
 
-const TASK_TYPES = ['新增流程', '修订流程', '废止流程'];
+const TASK_TYPES = ['新增流程', '修订流程', '废止流程', '内容修订'];
 const TASK_STATUSES = ['待执行', '进行中', '已完成', '已顺延'];
 
 export default function PlanDetailPage() {
