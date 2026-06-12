@@ -34,15 +34,16 @@ interface MenuFunction {
 const DEFAULT_FUNCTIONS = [
   { code: 'view', name: '查看', order: 1 },
   { code: 'add', name: '新增', order: 2 },
-  { code: 'edit', name: '编辑', order: 3 },
-  { code: 'delete', name: '删除', order: 4 },
-  { code: 'export', name: '导出', order: 5 },
-  { code: 'import', name: '导入', order: 6 },
-  { code: 'init', name: '初始化', order: 7 },
-  { code: 'publish', name: '发布', order: 8 },
-  { code: 'reset_password', name: '重置密码', order: 9 },
-  { code: 'config_permission', name: '权限配置', order: 10 },
-  { code: 'config_function', name: '功能配置', order: 11 },
+  { code: 'edit_toggle', name: '编辑开关', order: 3 },
+  { code: 'edit', name: '编辑', order: 4 },
+  { code: 'delete', name: '删除', order: 5 },
+  { code: 'export', name: '导出', order: 6 },
+  { code: 'import', name: '导入', order: 7 },
+  { code: 'init', name: '初始化', order: 8 },
+  { code: 'publish', name: '发布', order: 9 },
+  { code: 'reset_password', name: '重置密码', order: 10 },
+  { code: 'config_permission', name: '权限配置', order: 11 },
+  { code: 'config_function', name: '功能配置', order: 12 },
 ];
 
 export default function MenusPage() {

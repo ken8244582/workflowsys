@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Search, Download, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Search, Download, Plus, Pencil, Trash2, RotateCw, XCircle, ChevronRight, ChevronDown, Undo2, RotateCcw, AlertTriangle, Lock, LockOpen } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 import { MultiSelectFilter } from '@/components/multi-select-filter';
 import { PaginationBar } from '@/components/pagination-bar';
@@ -76,6 +77,7 @@ export default function FunctionalListPage() {
   const [allData, setAllData] = useState<FlowItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'tree'>('table');
+  const [editMode, setEditMode] = useState(false); // 编辑开关，控制编辑/删除/新增操作
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const pageSizeOptions = [50, 100, 200, 500];
@@ -514,12 +516,16 @@ export default function FunctionalListPage() {
           <span className={`font-medium ${cfg.color} truncate`}>{node.name}</span>
           {node.owner && <span className="text-gray-400 text-xs ml-1 shrink-0">({node.owner})</span>}
           <span className={`ml-auto shrink-0 text-xs px-2 py-0.5 rounded-full ${cfg.bgColor} ${cfg.color} font-medium`}>{count}</span>
-          <button onClick={e => { e.stopPropagation(); handleArchEdit(node.level, node.name, node.owner, l1Name, l2Name); }} className="p-0.5 rounded hover:bg-gray-200/50 text-gray-400 hover:text-[#1e3a5f] shrink-0">
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button onClick={e => { e.stopPropagation(); handleArchDeleteClick(node.level, node.name, l1Name, l2Name, count); }} className="p-0.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 shrink-0">
-            <Trash2 className="h-3 w-3" />
-          </button>
+          {editMode && can('edit_toggle') && (
+            <button onClick={e => { e.stopPropagation(); handleArchEdit(node.level, node.name, node.owner, l1Name, l2Name); }} className="p-0.5 rounded hover:bg-gray-200/50 text-gray-400 hover:text-[#1e3a5f] shrink-0">
+              <Pencil className="h-3 w-3" />
+            </button>
+          )}
+          {editMode && can('edit_toggle') && (
+            <button onClick={e => { e.stopPropagation(); handleArchDeleteClick(node.level, node.name, l1Name, l2Name, count); }} className="p-0.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 shrink-0">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
         </div>
         {isExpanded && node.children.map(child => renderTreeNode(child, key, l1Name, l2Name))}
         {isExpanded && node.level === 3 && node.items.map(item => (
@@ -535,7 +541,7 @@ export default function FunctionalListPage() {
             </span>
           </div>
         ))}
-        {isExpanded && node.level === 2 && (
+        {isExpanded && editMode && can('edit_toggle') && node.level === 2 && (
           <div style={{ paddingLeft: `${3 * 20 + 12}px` }}>
             <button onClick={() => handleArchAddClick('L3', l1Name, l2Name)}
               className="flex items-center gap-1 px-3 py-1.5 text-xs text-[#1e3a5f] hover:bg-[#1e3a5f]/5 rounded transition-colors">
@@ -543,7 +549,7 @@ export default function FunctionalListPage() {
             </button>
           </div>
         )}
-        {isExpanded && node.level === 1 && (
+        {isExpanded && editMode && can('edit_toggle') && node.level === 1 && (
           <div style={{ paddingLeft: `${2 * 20 + 12}px` }}>
             <button onClick={() => handleArchAddClick('L2', l1Name, '')}
               className="flex items-center gap-1 px-3 py-1.5 text-xs text-[#1e3a5f] hover:bg-[#1e3a5f]/5 rounded transition-colors">
@@ -574,6 +580,14 @@ export default function FunctionalListPage() {
           <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
         </div>
         <div className="flex items-center gap-2">
+          {/* 编辑开关 */}
+          {can('edit_toggle') && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border bg-gray-50">
+              {editMode ? <LockOpen className="h-3.5 w-3.5 text-green-600" /> : <Lock className="h-3.5 w-3.5 text-gray-400" />}
+              <span className="text-xs text-gray-600">编辑</span>
+              <Switch checked={editMode} onCheckedChange={setEditMode} className="h-4 w-7 data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300" />
+            </div>
+          )}
           {can('export') && (
             <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
               <Download className="h-3.5 w-3.5 mr-1" /> 导出
@@ -584,7 +598,7 @@ export default function FunctionalListPage() {
               <RotateCcw className="h-3.5 w-3.5 mr-1" /> 数据初始化
             </Button>
           )}
-          {can('add') && (
+          {can('add') && editMode && (
             <Button onClick={handleCreate} size="sm" className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
               <Plus className="h-3.5 w-3.5 mr-1" /> 新增
             </Button>
@@ -659,20 +673,17 @@ export default function FunctionalListPage() {
                             <TableCell className="text-center sticky right-[80px] bg-white z-10">{statusBadge(item.status)}</TableCell>
                             <TableCell className="text-center sticky right-0 bg-white z-10">
                               <div className="flex items-center justify-center gap-0.5" onClick={e => e.stopPropagation()}>
-                                {item.status === '已废止' ? (
-                                  can('edit') && (
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
-                                      <Undo2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  )
-                                ) : (
-                                  can('edit') && (
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
-                                      <Pencil className="h-3.5 w-3.5 text-gray-500" />
-                                    </Button>
-                                  )
+                                {editMode && can('edit_toggle') && item.status === '已废止' && (
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
+                                    <Undo2 className="h-3.5 w-3.5" />
+                                  </Button>
                                 )}
-                                {can('delete') && (
+                                {editMode && can('edit_toggle') && item.status !== '已废止' && (
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
+                                    <Pencil className="h-3.5 w-3.5 text-gray-500" />
+                                  </Button>
+                                )}
+                                {editMode && can('edit_toggle') && (
                                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
                                     <Trash2 className="h-3.5 w-3.5 text-gray-400" />
                                   </Button>
@@ -695,9 +706,11 @@ export default function FunctionalListPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">职能流程层级结构</CardTitle>
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleArchAddClick('L1', '', '')}>
-                <Plus className="h-3.5 w-3.5 mr-1" />添加L1业务域
-              </Button>
+              {editMode && can('edit_toggle') && (
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleArchAddClick('L1', '', '')}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />添加L1业务域
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>

@@ -71,6 +71,14 @@ export function usePermission(pagePath?: string) {
   };
 
   /**
+   * 检查用户是否有指定路径的编辑开关权限（流程清单专用）
+   */
+  const canEditToggle = (path?: string): boolean => {
+    const targetPath = pagePath ?? path;
+    return targetPath ? hasPermission(targetPath, 'edit_toggle') : false;
+  };
+
+  /**
    * 检查用户是否有指定路径的导出权限
    */
   const canExport = (path?: string): boolean => {
@@ -125,6 +133,7 @@ export function usePermission(pagePath?: string) {
     canAdd,
     canEdit,
     canDelete,
+    canEditToggle,
     canExport,
     canInit,
     canPublish,
