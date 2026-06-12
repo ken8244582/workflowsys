@@ -53,9 +53,6 @@ interface FlowItem {
   category: string;
 }
 
-const TASK_TYPES = ['新增流程', '修订流程', '废止流程', '内容修订'];
-const TASK_STATUSES = ['待执行', '进行中', '已完成', '已顺延'];
-
 export default function PlanDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -71,6 +68,8 @@ export default function PlanDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [l4OwnerOptions, setL4OwnerOptions] = useState<string[]>([]); // L4所有者下拉选项（实时同步流程清单）
+  const [taskTypeOptions, setTaskTypeOptions] = useState<string[]>([]); // 任务类型下拉选项（动态从数据库获取）
+  const [taskStatusOptions, setTaskStatusOptions] = useState<string[]>([]); // 任务状态下拉选项（动态从数据库获取）
 
   // Filters
   const [filterOwner, setFilterOwner] = useState<string[]>(ownerFilter ? [ownerFilter] : []);
@@ -145,6 +144,20 @@ export default function PlanDetailPage() {
   }, []);
 
   useEffect(() => { fetchL4Owners(); }, [fetchL4Owners]);
+
+  // Fetch filter options (task types and statuses) dynamically from database
+  const fetchFilterOptions = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/revision-plans/${planId}/filter-options`);
+      const data = await res.json();
+      setTaskTypeOptions(data.taskTypes || []);
+      setTaskStatusOptions(data.statuses || []);
+    } catch (err) {
+      console.error('Failed to fetch filter options:', err);
+    }
+  }, [planId]);
+
+  useEffect(() => { fetchFilterOptions(); }, [fetchFilterOptions]);
 
   // Fetch flow items for add dialog
   const fetchFlowItems = async () => {
@@ -390,10 +403,10 @@ export default function PlanDetailPage() {
     }
   };
 
-  // Dynamic filter options - L4 owners from flow list (real-time sync), others from constants
+  // Dynamic filter options - all from database for real-time accuracy
   const ownerOptions = l4OwnerOptions;
-  const typeOptions = TASK_TYPES;
-  const statusOptions = TASK_STATUSES;
+  const typeOptions = taskTypeOptions;
+  const statusOptions = taskStatusOptions;
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -889,7 +902,7 @@ export default function PlanDetailPage() {
                   onChange={e => setNewTaskType(e.target.value)}
                   className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  {['新增流程', '修订流程', '废止流程'].map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="flex-1 min-w-0">
