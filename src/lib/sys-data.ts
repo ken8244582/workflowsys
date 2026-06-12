@@ -22,6 +22,7 @@ export interface SysMenu {
   parent_id: number | null;
   sort_order: number;
   is_visible: boolean;
+  supported_actions: string | null; // JSON array of supported actions like ["view","add","edit","delete"]
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +31,22 @@ export interface SysUserMenu {
   id: number;
   user_id: number;
   menu_id: number;
+  can_view: boolean;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+
+// 用户菜单权限详情（包含菜单信息和权限）
+export interface UserMenuPermission {
+  menu_id: number;
+  menu_name: string;
+  menu_path: string | null;
+  supported_actions: string[];
+  can_view: boolean;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
 }
 
 const DEFAULT_PASSWORD = '123456';
@@ -68,19 +85,19 @@ export async function seedInitialData(): Promise<void> {
 
   if (!existingMenus || existingMenus.length === 0) {
     const defaultMenus = [
-      { name: '统计概览', path: '/', icon: 'LayoutDashboard', parent_id: null, sort_order: 1, is_visible: true },
-      { name: '职能流程', path: null, icon: 'GitBranch', parent_id: null, sort_order: 2, is_visible: true },
-      { name: '流程架构', path: '/functional/architecture', icon: null, parent_id: null, sort_order: 1, is_visible: true },
-      { name: '流程清单', path: '/functional/list', icon: null, parent_id: null, sort_order: 2, is_visible: true },
-      { name: '修订记录', path: '/functional/revision', icon: null, parent_id: null, sort_order: 3, is_visible: true },
-      { name: '修订计划', path: '/functional/plan', icon: null, parent_id: null, sort_order: 4, is_visible: true },
-      { name: '端到端流程', path: null, icon: 'Workflow', parent_id: null, sort_order: 3, is_visible: true },
-      { name: '流程概览', path: '/e2e/overview', icon: null, parent_id: null, sort_order: 1, is_visible: true },
-      { name: '流程管理', path: '/e2e/list', icon: null, parent_id: null, sort_order: 2, is_visible: true },
-      { name: '梳理计划', path: '/e2e/plan', icon: null, parent_id: null, sort_order: 3, is_visible: true },
-      { name: '系统管理', path: null, icon: 'Settings', parent_id: null, sort_order: 4, is_visible: true },
-      { name: '用户管理', path: '/system/users', icon: null, parent_id: null, sort_order: 1, is_visible: true },
-      { name: '菜单管理', path: '/system/menus', icon: null, parent_id: null, sort_order: 2, is_visible: true },
+      { name: '统计概览', path: '/', icon: 'LayoutDashboard', parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view"]' },
+      { name: '职能流程', path: null, icon: 'GitBranch', parent_id: null, sort_order: 2, is_visible: true, supported_actions: '[]' },
+      { name: '流程架构', path: '/functional/architecture', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
+      { name: '流程清单', path: '/functional/list', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view","add","edit","delete","export","import"]' },
+      { name: '修订记录', path: '/functional/revision', icon: null, parent_id: null, sort_order: 3, is_visible: true, supported_actions: '["view","export"]' },
+      { name: '修订计划', path: '/functional/plan', icon: null, parent_id: null, sort_order: 4, is_visible: true, supported_actions: '["view","add","edit","delete","export"]' },
+      { name: '端到端流程', path: null, icon: 'Workflow', parent_id: null, sort_order: 3, is_visible: true, supported_actions: '[]' },
+      { name: '流程概览', path: '/e2e/overview', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view"]' },
+      { name: '流程管理', path: '/e2e/list', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
+      { name: '梳理计划', path: '/e2e/plan', icon: null, parent_id: null, sort_order: 3, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
+      { name: '系统管理', path: null, icon: 'Settings', parent_id: null, sort_order: 4, is_visible: true, supported_actions: '[]' },
+      { name: '用户管理', path: '/system/users', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view","add","edit","delete","reset_password"]' },
+      { name: '菜单管理', path: '/system/menus', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
     ];
 
     const { data: insertedMenus, error: menuError } = await client
@@ -331,7 +348,7 @@ export async function deleteMenu(menuId: number): Promise<void> {
   if (error) throw new Error(`删除菜单失败: ${error.message}`);
 }
 
-// Get user menu IDs
+// Get user menu IDs with permissions
 export async function getUserMenuIds(userId: number): Promise<number[]> {
   const client = getSupabaseClient();
   const { data, error } = await client
@@ -342,8 +359,28 @@ export async function getUserMenuIds(userId: number): Promise<number[]> {
   return (data || []).map((d: { menu_id: number }) => d.menu_id);
 }
 
-// Update user menu permissions
-export async function updateUserMenus(userId: number, menuIds: number[]): Promise<void> {
+// Get user menu permissions (full details)
+export async function getUserMenuPermissions(userId: number): Promise<SysUserMenu[]> {
+  const client = getSupabaseClient();
+  const { data, error } = await client
+    .from('sys_user_menus')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) throw new Error(`查询用户菜单权限失败: ${error.message}`);
+  return (data || []) as SysUserMenu[];
+}
+
+// Permission input type for updating user menus
+export interface MenuPermissionInput {
+  menu_id: number;
+  can_view: boolean;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+
+// Update user menu permissions with detailed permissions
+export async function updateUserMenus(userId: number, permissions: MenuPermissionInput[]): Promise<void> {
   const client = getSupabaseClient();
 
   // Delete existing permissions
@@ -354,13 +391,75 @@ export async function updateUserMenus(userId: number, menuIds: number[]): Promis
   if (deleteError) throw new Error(`清除用户菜单权限失败: ${deleteError.message}`);
 
   // Insert new permissions
-  if (menuIds.length > 0) {
-    const inserts = menuIds.map(menu_id => ({ user_id: userId, menu_id }));
+  if (permissions.length > 0) {
+    const inserts = permissions.map(p => ({
+      user_id: userId,
+      menu_id: p.menu_id,
+      can_view: p.can_view,
+      can_add: p.can_add,
+      can_edit: p.can_edit,
+      can_delete: p.can_delete,
+    }));
     const { error: insertError } = await client
       .from('sys_user_menus')
       .insert(inserts);
     if (insertError) throw new Error(`设置用户菜单权限失败: ${insertError.message}`);
   }
+}
+
+// Get user permissions for a specific menu path (for frontend permission check)
+export async function getUserPermissionForPath(userId: number, isSuperAdmin: boolean, menuPath: string): Promise<{
+  can_view: boolean;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  supported_actions: string[];
+} | null> {
+  if (isSuperAdmin) {
+    // Super admin has all permissions
+    const allMenus = await getAllMenus();
+    const menu = allMenus.find(m => m.path === menuPath);
+    if (!menu) return null;
+    const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+    return {
+      can_view: true,
+      can_add: supported.includes('add'),
+      can_edit: supported.includes('edit'),
+      can_delete: supported.includes('delete'),
+      supported_actions: supported,
+    };
+  }
+
+  const client = getSupabaseClient();
+  
+  // Find menu by path
+  const { data: menu, error: menuError } = await client
+    .from('sys_menus')
+    .select('*')
+    .eq('path', menuPath)
+    .maybeSingle();
+  
+  if (menuError || !menu) return null;
+  
+  // Get user permission for this menu
+  const { data: userMenu, error: permError } = await client
+    .from('sys_user_menus')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('menu_id', menu.id)
+    .maybeSingle();
+  
+  if (permError || !userMenu) return null;
+  
+  const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+  
+  return {
+    can_view: userMenu.can_view,
+    can_add: userMenu.can_add,
+    can_edit: userMenu.can_edit,
+    can_delete: userMenu.can_delete,
+    supported_actions: supported,
+  };
 }
 
 // Get menus accessible by a user (super admin gets all, others get assigned)
@@ -398,4 +497,62 @@ export async function getUserAccessibleMenus(userId: number, isSuperAdmin: boole
   }
 
   return allMenus.filter(m => includedIds.has(m.id));
+}
+
+// Get all user menu permissions for frontend context (path -> permissions mapping)
+export async function getUserAllPermissions(userId: number, isSuperAdmin: boolean): Promise<Record<string, {
+  can_view: boolean;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  supported_actions: string[];
+}>> {
+  const allMenus = await getAllMenus();
+  const result: Record<string, {
+    can_view: boolean;
+    can_add: boolean;
+    can_edit: boolean;
+    can_delete: boolean;
+    supported_actions: string[];
+  }> = {};
+
+  if (isSuperAdmin) {
+    // Super admin has all permissions for supported actions
+    for (const menu of allMenus) {
+      if (menu.path) {
+        const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+        result[menu.path] = {
+          can_view: true,
+          can_add: supported.includes('add'),
+          can_edit: supported.includes('edit'),
+          can_delete: supported.includes('delete'),
+          supported_actions: supported,
+        };
+      }
+    }
+    return result;
+  }
+
+  // Get user's assigned menus with permissions
+  const userPermissions = await getUserMenuPermissions(userId);
+  const permMap = new Map<number, SysUserMenu>();
+  for (const perm of userPermissions) {
+    permMap.set(perm.menu_id, perm);
+  }
+
+  for (const menu of allMenus) {
+    if (menu.path && permMap.has(menu.id)) {
+      const perm = permMap.get(menu.id)!;
+      const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+      result[menu.path] = {
+        can_view: perm.can_view,
+        can_add: perm.can_add,
+        can_edit: perm.can_edit,
+        can_delete: perm.can_delete,
+        supported_actions: supported,
+      };
+    }
+  }
+
+  return result;
 }

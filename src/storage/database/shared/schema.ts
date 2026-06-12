@@ -195,6 +195,7 @@ export const sysMenus = pgTable("sys_menus", {
 	parent_id: integer("parent_id"),
 	sort_order: integer("sort_order").default(0).notNull(),
 	is_visible: boolean("is_visible").default(true).notNull(),
+	supported_actions: text("supported_actions").default('["view"]'),
 	created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -206,6 +207,10 @@ export const sysUserMenus = pgTable("sys_user_menus", {
 	id: serial().primaryKey().notNull(),
 	user_id: integer("user_id").notNull().references(() => sysUsers.id, { onDelete: "cascade" }),
 	menu_id: integer("menu_id").notNull().references(() => sysMenus.id, { onDelete: "cascade" }),
+	can_view: boolean("can_view").default(true).notNull(),
+	can_add: boolean("can_add").default(false).notNull(),
+	can_edit: boolean("can_edit").default(false).notNull(),
+	can_delete: boolean("can_delete").default(false).notNull(),
 }, (table) => [
 	index("idx_sys_user_menus_user_id").using("btree", table.user_id.asc().nullsLast().op("int4_ops")),
 	index("idx_sys_user_menus_menu_id").using("btree", table.menu_id.asc().nullsLast().op("int4_ops")),

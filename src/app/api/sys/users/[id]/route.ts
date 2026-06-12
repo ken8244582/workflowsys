@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { updateUser, deleteUser, resetUserPassword, getUserMenuIds, updateUserMenus } from '@/lib/sys-data';
+import { updateUser, deleteUser, getUserMenuPermissions, updateUserMenus, type MenuPermissionInput } from '@/lib/sys-data';
 
 export async function PUT(
   request: Request,
@@ -15,12 +15,19 @@ export async function PUT(
     const { id } = await params;
     const userId = parseInt(id, 10);
     const body = await request.json();
-    const { display_name, is_active, menuIds } = body;
+    const { display_name, is_active, menuPermissions } = body;
 
     await updateUser(userId, { display_name, is_active });
 
-    if (menuIds && Array.isArray(menuIds)) {
-      await updateUserMenus(userId, menuIds);
+    if (menuPermissions && Array.isArray(menuPermissions)) {
+      const permissions: MenuPermissionInput[] = menuPermissions.map(p => ({
+        menu_id: p.menu_id,
+        can_view: p.can_view ?? true,
+        can_add: p.can_add ?? false,
+        can_edit: p.can_edit ?? false,
+        can_delete: p.can_delete ?? false,
+      }));
+      await updateUserMenus(userId, permissions);
     }
 
     return NextResponse.json({ success: true });

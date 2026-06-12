@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getUserAccessibleMenus, getUserById, seedInitialData } from '@/lib/sys-data';
+import { getUserAccessibleMenus, getUserById, getUserAllPermissions, seedInitialData } from '@/lib/sys-data';
 
 let seeded = false;
 
@@ -22,6 +22,7 @@ export async function GET() {
 
     const userRecord = await getUserById(session.userId);
     const menus = await getUserAccessibleMenus(session.userId, session.isSuperAdmin);
+    const permissions = await getUserAllPermissions(session.userId, session.isSuperAdmin);
 
     return NextResponse.json({
       authenticated: true,
@@ -33,6 +34,7 @@ export async function GET() {
         mustChangePassword: session.mustChangePassword,
       },
       menus,
+      permissions,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : '获取会话失败';

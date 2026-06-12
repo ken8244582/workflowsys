@@ -3,6 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/auth-provider';
 
+interface MenuPermission {
+  menu_id: number;
+  menu_name: string;
+  can_view: boolean;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+
 interface UserItem {
   id: number;
   username: string;
@@ -12,7 +21,7 @@ interface UserItem {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  menuIds: number[];
+  menuPermissions: MenuPermission[];
 }
 
 interface MenuOption {
@@ -20,6 +29,16 @@ interface MenuOption {
   name: string;
   parent_id: number | null;
   path: string | null;
+  supported_actions: string | null;
+}
+
+// 权限编辑状态
+interface PermissionEdit {
+  menu_id: number;
+  can_view: boolean;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
 }
 
 export default function UsersPage() {
@@ -34,7 +53,7 @@ export default function UsersPage() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
-  const [selectedMenuIds, setSelectedMenuIds] = useState<number[]>([]);
+  const [editingPermissions, setEditingPermissions] = useState<PermissionEdit[]>([]);
 
   // Form states
   const [formUsername, setFormUsername] = useState('');
@@ -48,6 +67,7 @@ export default function UsersPage() {
       const res = await fetch('/api/sys/users');
       const data = await res.json();
       if (data.users) setUsers(data.users);
+      if (data.menus) setMenus(data.menus);
     } catch (e) {
       console.error('获取用户列表失败', e);
     } finally {
@@ -55,20 +75,9 @@ export default function UsersPage() {
     }
   }, []);
 
-  const fetchMenus = useCallback(async () => {
-    try {
-      const res = await fetch('/api/sys/menus');
-      const data = await res.json();
-      if (data.menus) setMenus(data.menus);
-    } catch (e) {
-      console.error('获取菜单列表失败', e);
-    }
-  }, []);
-
   useEffect(() => {
     fetchUsers();
-    fetchMenus();
-  }, [fetchUsers, fetchMenus]);
+  }, [fetchUsers]);
 
   const filteredUsers = users.filter(u =>
     u.username.includes(searchTerm) || (u.display_name && u.display_name.includes(searchTerm))
@@ -130,7 +139,6 @@ export default function UsersPage() {
 
   // Delete user
   const handleDeleteUser = async (userId: number) => {
-    // B008: Prevent super admin from deleting themselves
     if (currentUser?.userId === userId) {
       alert('不能删除当前登录用户');
       return;
@@ -166,16 +174,86 @@ export default function UsersPage() {
     }
   };
 
-  // Update permissions
+  // Open permission dialog
+  const openPermissionDialog = (user: UserItem) => {
+    setSelectedUser(user);
+    // Convert user's current permissions to edit state
+    const permMap = new Map<number, MenuPermission>();
+    user.menuPermissions.forEach(p => permMap.set(p.menu_id, p));
+    
+    // Build permission edit state for all leaf menus (menus with paths)
+    const edits: PermissionEdit[] = menus
+      .filter(m => m.path) // Only menus with paths have actions
+      .map(m => {
+        const existing = permMap.get(m.id);
+        const supported = m.supported_actions ? JSON.parse(m.supported_actions) : ['view'];
+        return {
+          menu_id: m.id,
+          can_view: existing?.can_view ?? true, // Default view permission
+          can_add: existing?.can_add ?? false,
+          can_edit: existing?.can_edit ?? false,
+          can_delete: existing?.can_delete ?? false,
+        };
+      });
+    
+    setEditingPermissions(edits);
+    setError('');
+    setShowPermissionDialog(true);
+  };
+
+  // Update permission in editing state
+  const updatePermission = (menuId: number, action: 'can_view' | 'can_add' | 'can_edit' | 'can_delete', value: boolean) => {
+    setEditingPermissions(prev => prev.map(p => 
+      p.menu_id === menuId ? { ...p, [action]: value } : p
+    ));
+  };
+
+  // Toggle all permissions for a menu
+  const toggleMenuPermissions = (menuId: number, checked: boolean) => {
+    const menu = menus.find(m => m.id === menuId);
+    const supported = menu?.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+    
+    setEditingPermissions(prev => prev.map(p => {
+      if (p.menu_id === menuId) {
+        if (checked) {
+          // Enable all supported actions
+          return {
+            ...p,
+            can_view: supported.includes('view'),
+            can_add: supported.includes('add'),
+            can_edit: supported.includes('edit'),
+            can_delete: supported.includes('delete'),
+          };
+        } else {
+          // Disable all but keep view (default minimum)
+          return { ...p, can_view: true, can_add: false, can_edit: false, can_delete: false };
+        }
+      }
+      return p;
+    }));
+  };
+
+  // Save permissions
   const handleSavePermissions = async () => {
     if (!selectedUser) return;
     setSubmitting(true);
     setError('');
     try {
+      // Filter to only permissions that have at least can_view=true
+      const permissionsToSend = editingPermissions
+        .filter(p => p.can_view)
+        .map(p => ({
+          menu_id: p.menu_id,
+          can_view: p.can_view,
+          can_add: p.can_add,
+          can_edit: p.can_edit,
+          can_delete: p.can_delete,
+        }));
+
       const res = await fetch(`/api/sys/users/${selectedUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ menuIds: selectedMenuIds }),
+        body: JSON.stringify({ menuPermissions: permissionsToSend }),
       });
       const data = await res.json();
       if (data.success) {
@@ -192,15 +270,19 @@ export default function UsersPage() {
     }
   };
 
-  const toggleMenuId = (menuId: number) => {
-    setSelectedMenuIds(prev =>
-      prev.includes(menuId) ? prev.filter(id => id !== menuId) : [...prev, menuId]
-    );
-  };
-
   // Build menu tree for display
   const topMenus = menus.filter(m => m.parent_id === null);
   const getSubMenus = (parentId: number) => menus.filter(m => m.parent_id === parentId);
+
+  // Get permission edit for a menu
+  const getPermissionEdit = (menuId: number): PermissionEdit | undefined => 
+    editingPermissions.find(p => p.menu_id === menuId);
+
+  // Check if a menu has any permission enabled (beyond just view)
+  const hasActionPermission = (menuId: number): boolean => {
+    const p = getPermissionEdit(menuId);
+    return p ? (p.can_add || p.can_edit || p.can_delete) : false;
+  };
 
   if (!currentUser?.isSuperAdmin) {
     return <div className="text-center py-20 text-muted-foreground">无权限访问此页面</div>;
@@ -297,12 +379,7 @@ export default function UsersPage() {
                             编辑
                           </button>
                           <button
-                            onClick={() => {
-                              setSelectedUser(u);
-                              setSelectedMenuIds(u.menuIds || []);
-                              setError('');
-                              setShowPermissionDialog(true);
-                            }}
+                            onClick={() => openPermissionDialog(u)}
                             className="text-[#1e3a5f] hover:underline text-xs"
                           >
                             权限
@@ -459,69 +536,123 @@ export default function UsersPage() {
       {/* Permission Dialog */}
       {showPermissionDialog && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-xl border border-border bg-white p-6 shadow-xl max-h-[85vh] overflow-y-auto">
             <h2 className="text-lg font-semibold text-[#1e3a5f] mb-1">菜单权限设置</h2>
             <p className="text-sm text-muted-foreground mb-4">用户: {selectedUser.username} ({selectedUser.display_name || '-'})</p>
             {error && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+            
+            <div className="mb-3 text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
+              提示：勾选菜单表示可访问，勾选操作权限表示可执行对应操作。默认只开启查看权限。
+            </div>
 
             <div className="space-y-3">
               {topMenus.map(top => {
-                const subMenus = getSubMenus(top.id);
-                const allSubIds = subMenus.map(s => s.id);
-                const checkedSubIds = selectedMenuIds.filter(id => allSubIds.includes(id));
-                const allChecked = subMenus.length > 0 && checkedSubIds.length === subMenus.length;
-
+                const subMenus = getSubMenus(top.id).filter(s => s.path); // Only show menus with paths
+                
                 return (
-                  <div key={top.id} className="rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      {subMenus.length > 0 ? (
-                        <input
-                          type="checkbox"
-                          checked={allChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedMenuIds(prev => [...new Set([...prev, ...allSubIds])]);
-                            } else {
-                              setSelectedMenuIds(prev => prev.filter(id => !allSubIds.includes(id)));
-                            }
-                          }}
-                          className="h-4 w-4 rounded border-border"
-                        />
-                      ) : (
-                        <input
-                          type="checkbox"
-                          checked={selectedMenuIds.includes(top.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedMenuIds(prev => [...prev, top.id]);
-                            } else {
-                              setSelectedMenuIds(prev => prev.filter(id => id !== top.id));
-                            }
-                          }}
-                          className="h-4 w-4 rounded border-border"
-                        />
-                      )}
-                      <span className="text-sm font-medium">{top.name}</span>
+                  <div key={top.id} className="rounded-lg border border-border">
+                    <div className="bg-muted/20 px-4 py-2 border-b border-border">
+                      <span className="text-sm font-medium text-[#1e3a5f]">{top.name}</span>
                     </div>
                     {subMenus.length > 0 && (
-                      <div className="ml-6 space-y-1.5">
-                        {subMenus.map(sub => (
-                          <div key={sub.id} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedMenuIds.includes(sub.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedMenuIds(prev => [...prev, sub.id]);
-                                } else {
-                                  setSelectedMenuIds(prev => prev.filter(id => id !== sub.id));
-                                }
-                              }}
-                              className="h-4 w-4 rounded border-border"
-                            />
-                            <span className="text-sm text-muted-foreground">{sub.name}</span>
-                          </div>
-                        ))}
+                      <div className="p-3">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-muted-foreground">
+                              <th className="w-[30%] text-left pb-2 font-medium">菜单名称</th>
+                              <th className="w-[15%] text-center pb-2 font-medium">可访问</th>
+                              <th className="w-[15%] text-center pb-2 font-medium">新增</th>
+                              <th className="w-[15%] text-center pb-2 font-medium">修改</th>
+                              <th className="w-[15%] text-center pb-2 font-medium">删除</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subMenus.map(sub => {
+                              const perm = getPermissionEdit(sub.id);
+                              const supported = sub.supported_actions ? JSON.parse(sub.supported_actions) : ['view'];
+                              const hasAdd = supported.includes('add');
+                              const hasEdit = supported.includes('edit');
+                              const hasDelete = supported.includes('delete');
+                              const hasExport = supported.includes('export');
+                              const hasImport = supported.includes('import');
+                              const hasResetPwd = supported.includes('reset_password');
+                              
+                              return (
+                                <tr key={sub.id} className="border-t border-border/50">
+                                  <td className="py-2.5 text-foreground">{sub.name}</td>
+                                  <td className="py-2.5 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={perm?.can_view ?? false}
+                                      onChange={(e) => updatePermission(sub.id, 'can_view', e.target.checked)}
+                                      className="h-4 w-4 rounded border-border"
+                                    />
+                                  </td>
+                                  <td className="py-2.5 text-center">
+                                    {hasAdd && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perm?.can_add ?? false}
+                                        onChange={(e) => updatePermission(sub.id, 'can_add', e.target.checked)}
+                                        className="h-4 w-4 rounded border-border"
+                                      />
+                                    )}
+                                    {!hasAdd && hasImport && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perm?.can_add ?? false}
+                                        onChange={(e) => updatePermission(sub.id, 'can_add', e.target.checked)}
+                                        className="h-4 w-4 rounded border-border"
+                                        title="导入"
+                                      />
+                                    )}
+                                    {!hasAdd && !hasImport && <span className="text-muted-foreground/40">-</span>}
+                                  </td>
+                                  <td className="py-2.5 text-center">
+                                    {hasEdit && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perm?.can_edit ?? false}
+                                        onChange={(e) => updatePermission(sub.id, 'can_edit', e.target.checked)}
+                                        className="h-4 w-4 rounded border-border"
+                                      />
+                                    )}
+                                    {!hasEdit && <span className="text-muted-foreground/40">-</span>}
+                                  </td>
+                                  <td className="py-2.5 text-center">
+                                    {hasDelete && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perm?.can_delete ?? false}
+                                        onChange={(e) => updatePermission(sub.id, 'can_delete', e.target.checked)}
+                                        className="h-4 w-4 rounded border-border"
+                                      />
+                                    )}
+                                    {!hasDelete && !hasExport && !hasResetPwd && <span className="text-muted-foreground/40">-</span>}
+                                    {!hasDelete && hasExport && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perm?.can_delete ?? false}
+                                        onChange={(e) => updatePermission(sub.id, 'can_delete', e.target.checked)}
+                                        className="h-4 w-4 rounded border-border"
+                                        title="导出"
+                                      />
+                                    )}
+                                    {!hasDelete && hasResetPwd && (
+                                      <input
+                                        type="checkbox"
+                                        checked={perm?.can_delete ?? false}
+                                        onChange={(e) => updatePermission(sub.id, 'can_delete', e.target.checked)}
+                                        className="h-4 w-4 rounded border-border"
+                                        title="重置密码"
+                                      />
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>

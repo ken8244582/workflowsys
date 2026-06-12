@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       parent_id: parent_id || null,
       sort_order: sort_order || 0,
       is_visible: is_visible !== false,
+      supported_actions: '["view"]', // Default to view only
     });
 
     return NextResponse.json({ menu }, { status: 201 });
