@@ -61,7 +61,9 @@ export async function GET(
   const supabase = getSupabaseClient();
   const { searchParams } = new URL(request.url);
   const department = searchParams.get('department');
-  const owner = searchParams.get('owner');
+  // Support multiple values for owner (comma-separated)
+  const ownerParam = searchParams.get('owner');
+  const owners = ownerParam ? ownerParam.split(',').filter(Boolean) : [];
   // Support multiple values for taskType and status (comma-separated)
   const taskTypeParam = searchParams.get('taskType');
   const statusParam = searchParams.get('status');
@@ -77,7 +79,7 @@ export async function GET(
     .eq('plan_id', id);
 
   if (department) query = query.eq('department', department);
-  if (owner) query = query.eq('owner', owner);
+  if (owners.length > 0) query = query.in('owner', owners);
   if (taskTypes.length > 0) query = query.in('task_type', taskTypes);
   if (statuses.length > 0) query = query.in('status', statuses);
   if (search) {
