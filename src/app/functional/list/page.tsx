@@ -18,6 +18,7 @@ import { MultiSelectFilter } from '@/components/multi-select-filter';
 import { PaginationBar } from '@/components/pagination-bar';
 import { TruncateDiv } from '@/components/truncate-cell';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { usePermission } from '@/lib/use-permission';
 
 /* ========== Unified L1-L4 Hierarchy Icons ========== */
 function LevelIcon({ level, className }: { level: number; className?: string }) {
@@ -71,6 +72,7 @@ interface TreeNode {
 
 
 export default function FunctionalListPage() {
+  const { can } = usePermission('/functional/list');
   const [allData, setAllData] = useState<FlowItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'tree'>('table');
@@ -572,15 +574,21 @@ export default function FunctionalListPage() {
           <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
-            <Download className="h-3.5 w-3.5 mr-1" /> 导出
-          </Button>
-          <Button onClick={() => setShowReinitDialog(true)} variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
-            <RotateCcw className="h-3.5 w-3.5 mr-1" /> 数据初始化
-          </Button>
-          <Button onClick={handleCreate} size="sm" className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
-            <Plus className="h-3.5 w-3.5 mr-1" /> 新增
-          </Button>
+          {can('export') && (
+            <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
+              <Download className="h-3.5 w-3.5 mr-1" /> 导出
+            </Button>
+          )}
+          {can('init') && (
+            <Button onClick={() => setShowReinitDialog(true)} variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
+              <RotateCcw className="h-3.5 w-3.5 mr-1" /> 数据初始化
+            </Button>
+          )}
+          {can('add') && (
+            <Button onClick={handleCreate} size="sm" className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
+              <Plus className="h-3.5 w-3.5 mr-1" /> 新增
+            </Button>
+          )}
         </div>
       </div>
 
@@ -623,7 +631,9 @@ export default function FunctionalListPage() {
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">IT覆盖</TableHead>
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">IT支撑分</TableHead>
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-[80px] top-0 bg-gray-50 z-20">状态</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
+                    {(can('edit') || can('delete')) && (
+                      <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -650,17 +660,23 @@ export default function FunctionalListPage() {
                             <TableCell className="text-center sticky right-0 bg-white z-10">
                               <div className="flex items-center justify-center gap-0.5" onClick={e => e.stopPropagation()}>
                                 {item.status === '已废止' ? (
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
-                                    <Undo2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                  can('edit') && (
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
+                                      <Undo2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )
                                 ) : (
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
-                                    <Pencil className="h-3.5 w-3.5 text-gray-500" />
+                                  can('edit') && (
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
+                                      <Pencil className="h-3.5 w-3.5 text-gray-500" />
+                                    </Button>
+                                  )
+                                )}
+                                {can('delete') && (
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
+                                    <Trash2 className="h-3.5 w-3.5 text-gray-400" />
                                   </Button>
                                 )}
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
-                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>

@@ -31,10 +31,7 @@ export interface SysUserMenu {
   id: number;
   user_id: number;
   menu_id: number;
-  can_view: boolean;
-  can_add: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
+  permissions: Record<string, boolean>; // JSON object like {"view": true, "add": false, "edit": false}
 }
 
 // 用户菜单权限详情（包含菜单信息和权限）
@@ -43,10 +40,7 @@ export interface UserMenuPermission {
   menu_name: string;
   menu_path: string | null;
   supported_actions: string[];
-  can_view: boolean;
-  can_add: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
+  permissions: Record<string, boolean>; // 具体操作权限
 }
 
 const DEFAULT_PASSWORD = '123456';
@@ -373,10 +367,7 @@ export async function getUserMenuPermissions(userId: number): Promise<SysUserMen
 // Permission input type for updating user menus
 export interface MenuPermissionInput {
   menu_id: number;
-  can_view: boolean;
-  can_add: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
+  permissions: Record<string, boolean>; // 具体操作权限 {"view": true, "add": false, ...}
 }
 
 // Update user menu permissions with detailed permissions
@@ -395,10 +386,7 @@ export async function updateUserMenus(userId: number, permissions: MenuPermissio
     const inserts = permissions.map(p => ({
       user_id: userId,
       menu_id: p.menu_id,
-      can_view: p.can_view,
-      can_add: p.can_add,
-      can_edit: p.can_edit,
-      can_delete: p.can_delete,
+      permissions: p.permissions,
     }));
     const { error: insertError } = await client
       .from('sys_user_menus')
@@ -409,10 +397,7 @@ export async function updateUserMenus(userId: number, permissions: MenuPermissio
 
 // Get user permissions for a specific menu path (for frontend permission check)
 export async function getUserPermissionForPath(userId: number, isSuperAdmin: boolean, menuPath: string): Promise<{
-  can_view: boolean;
-  can_add: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
+  permissions: Record<string, boolean>;
   supported_actions: string[];
 } | null> {
   if (isSuperAdmin) {
@@ -421,11 +406,13 @@ export async function getUserPermissionForPath(userId: number, isSuperAdmin: boo
     const menu = allMenus.find(m => m.path === menuPath);
     if (!menu) return null;
     const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+    // Super admin has all supported actions enabled
+    const fullPermissions: Record<string, boolean> = {};
+    supported.forEach((action: string) => {
+      fullPermissions[action] = true;
+    });
     return {
-      can_view: true,
-      can_add: supported.includes('add'),
-      can_edit: supported.includes('edit'),
-      can_delete: supported.includes('delete'),
+      permissions: fullPermissions,
       supported_actions: supported,
     };
   }
@@ -452,12 +439,10 @@ export async function getUserPermissionForPath(userId: number, isSuperAdmin: boo
   if (permError || !userMenu) return null;
   
   const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+  const perms = (userMenu as SysUserMenu).permissions || {};
   
   return {
-    can_view: userMenu.can_view,
-    can_add: userMenu.can_add,
-    can_edit: userMenu.can_edit,
-    can_delete: userMenu.can_delete,
+    permissions: perms,
     supported_actions: supported,
   };
 }
@@ -501,18 +486,12 @@ export async function getUserAccessibleMenus(userId: number, isSuperAdmin: boole
 
 // Get all user menu permissions for frontend context (path -> permissions mapping)
 export async function getUserAllPermissions(userId: number, isSuperAdmin: boolean): Promise<Record<string, {
-  can_view: boolean;
-  can_add: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
+  permissions: Record<string, boolean>;
   supported_actions: string[];
 }>> {
   const allMenus = await getAllMenus();
   const result: Record<string, {
-    can_view: boolean;
-    can_add: boolean;
-    can_edit: boolean;
-    can_delete: boolean;
+    permissions: Record<string, boolean>;
     supported_actions: string[];
   }> = {};
 
@@ -521,11 +500,12 @@ export async function getUserAllPermissions(userId: number, isSuperAdmin: boolea
     for (const menu of allMenus) {
       if (menu.path) {
         const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+        const fullPermissions: Record<string, boolean> = {};
+        supported.forEach((action: string) => {
+          fullPermissions[action] = true;
+        });
         result[menu.path] = {
-          can_view: true,
-          can_add: supported.includes('add'),
-          can_edit: supported.includes('edit'),
-          can_delete: supported.includes('delete'),
+          permissions: fullPermissions,
           supported_actions: supported,
         };
       }
@@ -545,10 +525,7 @@ export async function getUserAllPermissions(userId: number, isSuperAdmin: boolea
       const perm = permMap.get(menu.id)!;
       const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
       result[menu.path] = {
-        can_view: perm.can_view,
-        can_add: perm.can_add,
-        can_edit: perm.can_edit,
-        can_delete: perm.can_delete,
+        permissions: perm.permissions || {},
         supported_actions: supported,
       };
     }

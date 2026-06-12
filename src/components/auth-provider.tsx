@@ -24,10 +24,7 @@ export interface MenuItem {
 
 // 权限类型
 export interface PathPermission {
-  can_view: boolean;
-  can_add: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
+  permissions: Record<string, boolean>; // 具体操作权限 {"view": true, "add": false, ...}
   supported_actions: string[];
 }
 
@@ -40,7 +37,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
-  hasPermission: (path: string, action: 'view' | 'add' | 'edit' | 'delete') => boolean;
+  hasPermission: (path: string, action: string) => boolean; // 支持任意操作类型
   getPermission: (path: string) => PathPermission | null;
 }
 
@@ -143,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // 检查是否有特定路径的特定操作权限
-  const hasPermission = useCallback((path: string, action: 'view' | 'add' | 'edit' | 'delete'): boolean => {
+  const hasPermission = useCallback((path: string, action: string): boolean => {
     // 超级管理员有所有权限
     if (user?.isSuperAdmin) {
       // 对于超管，只要菜单支持该操作就返回 true
@@ -158,18 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const perm = permissions[path];
     if (!perm) return false;
     
-    switch (action) {
-      case 'view':
-        return perm.can_view && perm.supported_actions.includes('view');
-      case 'add':
-        return perm.can_add && perm.supported_actions.includes('add');
-      case 'edit':
-        return perm.can_edit && perm.supported_actions.includes('edit');
-      case 'delete':
-        return perm.can_delete && perm.supported_actions.includes('delete');
-      default:
-        return false;
-    }
+    // 检查该操作是否在支持列表中，并且权限为 true
+    return perm.supported_actions.includes(action) && perm.permissions[action] === true;
   }, [user?.isSuperAdmin, menus, permissions]);
 
   // 获取特定路径的完整权限信息
@@ -178,11 +165,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user?.isSuperAdmin) {
       const menu = menus.find(m => m.path === path);
       const supported = menu?.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+      const fullPermissions: Record<string, boolean> = {};
+      supported.forEach((a: string) => {
+        fullPermissions[a] = true;
+      });
       return {
-        can_view: true,
-        can_add: supported.includes('add'),
-        can_edit: supported.includes('edit'),
-        can_delete: supported.includes('delete'),
+        permissions: fullPermissions,
         supported_actions: supported,
       };
     }

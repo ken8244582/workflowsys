@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getAllUsers, createUser, updateUser, deleteUser, resetUserPassword, getUserMenuPermissions, updateUserMenus, getAllMenus, type MenuPermissionInput } from '@/lib/sys-data';
+import { getAllUsers, createUser, getUserMenuPermissions, getAllMenus, type MenuPermissionInput } from '@/lib/sys-data';
 
 export async function GET() {
   try {
@@ -18,17 +18,17 @@ export async function GET() {
         if (user.is_super_admin) {
           return { ...user, menuPermissions: [] };
         }
-        const permissions = await getUserMenuPermissions(user.id);
+        const perms = await getUserMenuPermissions(user.id);
         // Transform permissions to include menu info
-        const menuPermissions = permissions.map(p => {
+        const menuPermissions = perms.map(p => {
           const menu = allMenus.find(m => m.id === p.menu_id);
+          const supportedActions = menu?.supported_actions ? JSON.parse(menu.supported_actions) : [];
           return {
             menu_id: p.menu_id,
             menu_name: menu?.name || '',
-            can_view: p.can_view,
-            can_add: p.can_add,
-            can_edit: p.can_edit,
-            can_delete: p.can_delete,
+            path: menu?.path || null,
+            supported_actions: supportedActions,
+            permissions: p.permissions || {},
           };
         });
         return { ...user, menuPermissions };
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { username, display_name, is_active, menuPermissions } = body;
+    const { username, display_name, is_active, permissions } = body;
 
     if (!username) {
       return NextResponse.json({ error: '用户名不能为空' }, { status: 400 });
@@ -59,15 +59,14 @@ export async function POST(request: Request) {
     const user = await createUser(username, display_name || '', is_active !== false);
 
     // Set menu permissions if provided
-    if (menuPermissions && Array.isArray(menuPermissions) && menuPermissions.length > 0) {
-      const permissions: MenuPermissionInput[] = menuPermissions.map(p => ({
+    if (permissions && Array.isArray(permissions) && permissions.length > 0) {
+      const permsInput: MenuPermissionInput[] = permissions.map(p => ({
         menu_id: p.menu_id,
-        can_view: p.can_view ?? true,
-        can_add: p.can_add ?? false,
-        can_edit: p.can_edit ?? false,
-        can_delete: p.can_delete ?? false,
+        permissions: p.permissions || { view: true },
       }));
-      await updateUserMenus(user.id, permissions);
+      // Import updateUserMenus at top and call it
+      const { updateUserMenus } = await import('@/lib/sys-data');
+      await updateUserMenus(user.id, permsInput);
     }
 
     const userPermissions = await getUserMenuPermissions(user.id);
