@@ -649,7 +649,7 @@ export default function UsersPage() {
 
       {/* Permission Config Dialog */}
       <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>权限配置</DialogTitle>
             <DialogDescription>
@@ -679,20 +679,20 @@ export default function UsersPage() {
                         className="flex items-center justify-between p-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => toggleExpand(parentNode.menu_id)}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-shrink-0" style={{ maxWidth: '240px' }}>
                           {parentNode.children.length > 0 ? (
-                            isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           ) : (
-                            <span className="w-4" />
+                            <span className="w-4 flex-shrink-0" />
                           )}
-                          <span className="font-medium">{parentNode.menu_name}</span>
+                          <span className="font-medium truncate whitespace-nowrap" title={parentNode.menu_name}>{parentNode.menu_name}</span>
                           {parentNode.menu_path && (
-                            <span className="text-xs text-muted-foreground font-mono ml-2">{parentNode.menu_path}</span>
+                            <span className="text-xs text-muted-foreground font-mono flex-shrink-0 ml-2">{parentNode.menu_path}</span>
                           )}
                         </div>
                         {/* Parent functions */}
                         {parentNode.functions.length > 0 && (
-                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end ml-4">
                             {parentNode.functions.map(func => (
                               <Badge
                                 key={func.function_code}
@@ -720,14 +720,14 @@ export default function UsersPage() {
 
                         return (
                           <div key={childNode.menu_id} className="flex items-center justify-between p-3 pl-10 border-t bg-white hover:bg-muted/10 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm">{childNode.menu_name}</span>
+                            <div className="flex items-center gap-3 min-w-0 flex-shrink-0" style={{ maxWidth: '220px' }}>
+                              <span className="text-sm truncate whitespace-nowrap" title={childNode.menu_name}>{childNode.menu_name}</span>
                               {childNode.menu_path && (
-                                <span className="text-xs text-muted-foreground font-mono">{childNode.menu_path}</span>
+                                <span className="text-xs text-muted-foreground font-mono flex-shrink-0">{childNode.menu_path}</span>
                               )}
                             </div>
                             {/* Child functions */}
-                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end ml-4">
                               {childNode.functions.map(func => (
                                 <Badge
                                   key={func.function_code}

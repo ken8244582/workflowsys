@@ -61,8 +61,12 @@ export async function GET(
   const supabase = getSupabaseClient();
   const { searchParams } = new URL(request.url);
   const department = searchParams.get('department');
-  const taskType = searchParams.get('taskType');
-  const status = searchParams.get('status');
+  const owner = searchParams.get('owner');
+  // Support multiple values for taskType and status (comma-separated)
+  const taskTypeParam = searchParams.get('taskType');
+  const statusParam = searchParams.get('status');
+  const taskTypes = taskTypeParam ? taskTypeParam.split(',').filter(Boolean) : [];
+  const statuses = statusParam ? statusParam.split(',').filter(Boolean) : [];
   const search = searchParams.get('search');
   const page = parseInt(searchParams.get('page') || '1');
   const pageSize = parseInt(searchParams.get('pageSize') || '50');
@@ -73,8 +77,9 @@ export async function GET(
     .eq('plan_id', id);
 
   if (department) query = query.eq('department', department);
-  if (taskType) query = query.eq('task_type', taskType);
-  if (status) query = query.eq('status', status);
+  if (owner) query = query.eq('owner', owner);
+  if (taskTypes.length > 0) query = query.in('task_type', taskTypes);
+  if (statuses.length > 0) query = query.in('status', statuses);
   if (search) {
     const escaped = escapeIlike(search);
     query = query.or(`process_code.ilike.%${escaped}%,process_name.ilike.%${escaped}%,description.ilike.%${escaped}%`);

@@ -70,6 +70,7 @@ export default function PlanDetailPage() {
   const [pageSize, setPageSize] = useState(50);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [l4OwnerOptions, setL4OwnerOptions] = useState<string[]>([]); // L4所有者下拉选项（实时同步流程清单）
 
   // Filters
   const [filterOwner, setFilterOwner] = useState<string[]>(ownerFilter ? [ownerFilter] : []);
@@ -112,9 +113,10 @@ export default function PlanDetailPage() {
       const params = new URLSearchParams();
       params.set('page', page.toString());
       params.set('pageSize', pageSize.toString());
-      if (filterOwner.length > 0) params.set('owner', filterOwner[0]);
-      if (filterType.length > 0) params.set('taskType', filterType[0]);
-      if (filterStatus.length > 0) params.set('status', filterStatus[0]);
+      // Send all filter values as comma-separated strings
+      if (filterOwner.length > 0) params.set('owner', filterOwner.join(','));
+      if (filterType.length > 0) params.set('taskType', filterType.join(','));
+      if (filterStatus.length > 0) params.set('status', filterStatus.join(','));
       if (searchText) params.set('search', searchText);
 
       const res = await fetch(`/api/revision-plans/${planId}/tasks?${params}`);
@@ -130,6 +132,19 @@ export default function PlanDetailPage() {
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
+
+  // Fetch L4 owners from flow list for real-time sync
+  const fetchL4Owners = useCallback(async () => {
+    try {
+      const res = await fetch('/api/flows/l4-owners');
+      const data = await res.json();
+      setL4OwnerOptions(data.owners || []);
+    } catch (err) {
+      console.error('Failed to fetch L4 owners:', err);
+    }
+  }, []);
+
+  useEffect(() => { fetchL4Owners(); }, [fetchL4Owners]);
 
   // Fetch flow items for add dialog
   const fetchFlowItems = async () => {
@@ -375,8 +390,8 @@ export default function PlanDetailPage() {
     }
   };
 
-  // Dynamic filter options from tasks data
-  const ownerOptions = plan?.ownerProgress?.map(d => d.owner) || [];
+  // Dynamic filter options - L4 owners from flow list (real-time sync), others from constants
+  const ownerOptions = l4OwnerOptions;
   const typeOptions = TASK_TYPES;
   const statusOptions = TASK_STATUSES;
 
