@@ -712,16 +712,25 @@ export async function updateUserMenuFunctions(userId: number, menuId: number, fu
  */
 export async function updateUserAllMenuFunctions(userId: number, permissions: Array<{ menu_id: number; functions: Array<{ function_code: string; is_enabled: boolean }> }>): Promise<void> {
   const sb = getSupabaseClient();
-  // 先删除所有现有权限
+  
+  // 先删除所有现有功能权限
   await sb
     .from('sys_user_menu_functions')
     .delete()
     .eq('user_id', userId);
 
-  // 批量插入新权限
+  // 批量插入新功能权限
   const allInserts: Array<{ user_id: number; menu_id: number; function_code: string; is_enabled: boolean }> = [];
   
+  // 计算应该分配的菜单（有任何一个 is_enabled: true 的功能权限）
+  const assignedMenuIds = new Set<number>();
+  
   for (const perm of permissions) {
+    const hasAnyEnabled = perm.functions.some(f => f.is_enabled);
+    if (hasAnyEnabled) {
+      assignedMenuIds.add(perm.menu_id);
+    }
+    
     for (const func of perm.functions) {
       allInserts.push({
         user_id: userId,
@@ -736,6 +745,24 @@ export async function updateUserAllMenuFunctions(userId: number, permissions: Ar
     await sb
       .from('sys_user_menu_functions')
       .insert(allInserts);
+  }
+  
+  // 同步更新 sys_user_menus 表（菜单分配）
+  // 先删除所有现有菜单分配
+  await sb
+    .from('sys_user_menus')
+    .delete()
+    .eq('user_id', userId);
+  
+  // 插入新的菜单分配（只有有权限的菜单）
+  if (assignedMenuIds.size > 0) {
+    const menuInserts = Array.from(assignedMenuIds).map(menuId => ({
+      user_id: userId,
+      menu_id: menuId,
+    }));
+    await sb
+      .from('sys_user_menus')
+      .insert(menuInserts);
   }
 }
 
