@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Download, Trash2, AlertTriangle } from 'lucide-react';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
+import { usePermission } from '@/lib/use-permission';
 
 interface RevisionRecord {
   id: number;
@@ -111,6 +112,7 @@ function PaginationBar({
 }
 
 export default function FunctionalRevisionPage() {
+  const { canExport, canDelete } = usePermission('/functional/revision');
   const [allData, setAllData] = useState<RevisionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -216,9 +218,11 @@ export default function FunctionalRevisionPage() {
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-500">共 {filteredData.length} 条修订记录</div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
-            <Download className="h-3.5 w-3.5 mr-1" /> 批量导出
-          </Button>
+          {canExport() && (
+            <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
+              <Download className="h-3.5 w-3.5 mr-1" /> 批量导出
+            </Button>
+          )}
         </div>
       </div>
 
@@ -260,13 +264,13 @@ export default function FunctionalRevisionPage() {
                 <TableHead>所属业务域-业务组-业务段</TableHead>
                 <TableHead className="text-center">修订类型</TableHead>
                 <TableHead>修订说明</TableHead>
-                <TableHead className="text-center w-16">操作</TableHead>
+                {canDelete() && <TableHead className="text-center w-16">操作</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {pagedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-gray-400">
+                  <TableCell colSpan={canDelete() ? 9 : 8} className="text-center py-12 text-gray-400">
                     暂无修订记录
                   </TableCell>
                 </TableRow>
@@ -290,13 +294,15 @@ export default function FunctionalRevisionPage() {
                       {item.description || '-'}
                     </TableCell>
                     <TableCell className="text-center">
-                      <button
-                        onClick={() => { setDeleteId(item.id); setDeleteConfirmOpen(true); }}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
-                        title="删除此记录"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {canDelete() && (
+                        <button
+                          onClick={() => { setDeleteId(item.id); setDeleteConfirmOpen(true); }}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                          title="删除此记录"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

@@ -12,12 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, ClipboardList, CheckCircle2, Clock, Plus, ArrowRight, ChevronRight, BarChart3, Target, TrendingUp, Trash2 } from 'lucide-react';
 import type { RevisionPlan, OwnerProgress } from '@/lib/flow-data';
 import { PaginationBar } from '@/components/pagination-bar';
+import { usePermission } from '@/lib/use-permission';
 
 interface PlanWithProgress extends RevisionPlan {
   ownerProgress?: OwnerProgress[];
 }
 
 export default function RevisionPlanPage() {
+  const { canAdd, canDelete } = usePermission('/functional/plan');
   const [plans, setPlans] = useState<PlanWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -228,9 +230,11 @@ export default function RevisionPlanPage() {
             <Calendar className="h-4 w-4 text-[#1e3a5f]" />
             修订计划列表
           </CardTitle>
-          <Button size="sm" onClick={() => setShowCreateDialog(true)} className="gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
-            <Plus className="h-4 w-4" /> 创建月度计划
-          </Button>
+          {canAdd() && (
+            <Button size="sm" onClick={() => setShowCreateDialog(true)} className="gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              <Plus className="h-4 w-4" /> 创建月度计划
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -261,7 +265,7 @@ export default function RevisionPlanPage() {
                           {Math.round(plan.completedCount / plan.taskCount * 100)}%
                         </strong></span>
                       )}
-                      {plan.status === '草稿' && (
+                      {plan.status === '草稿' && canDelete() && (
                         <Button
                           variant="ghost"
                           size="sm"

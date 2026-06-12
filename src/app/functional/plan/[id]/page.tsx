@@ -23,6 +23,7 @@ import { TruncateDiv } from '@/components/truncate-cell';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { RevisionPlan, PlanTask, OwnerProgress } from '@/lib/flow-data';
 import { MultiSelectFilter } from '@/components/multi-select-filter';
+import { usePermission } from '@/lib/use-permission';
 
 interface DeptProgress {
   department: string;
@@ -54,6 +55,7 @@ interface FlowItem {
 }
 
 export default function PlanDetailPage() {
+  const { canAdd, canPublish } = usePermission('/functional/plan');
   const params = useParams();
   const router = useRouter();
   const planId = params.id as string;
@@ -447,22 +449,30 @@ export default function PlanDetailPage() {
           </Button>
           {isDraft && (
             <>
-              <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
-                <Plus className="h-4 w-4" /> 添加任务
-              </Button>
-              <Button size="sm" onClick={() => setShowPublishDialog(true)} className="gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
-                <Send className="h-4 w-4" /> 下发计划
-              </Button>
+              {canAdd() && (
+                <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> 添加任务
+                </Button>
+              )}
+              {canPublish() && (
+                <Button size="sm" onClick={() => setShowPublishDialog(true)} className="gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+                  <Send className="h-4 w-4" /> 下发计划
+                </Button>
+              )}
             </>
           )}
           {isPublished && (
             <>
-              <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
-                <Plus className="h-4 w-4" /> 添加任务
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleWithdraw} className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50">
-                <RotateCcw className="h-4 w-4" /> 撤回草稿
-              </Button>
+              {canAdd() && (
+                <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
+                  <Plus className="h-4 w-4" /> 添加任务
+                </Button>
+              )}
+              {canPublish() && (
+                <Button variant="outline" size="sm" onClick={handleWithdraw} className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50">
+                  <RotateCcw className="h-4 w-4" /> 撤回草稿
+                </Button>
+              )}
             </>
           )}
         </div>
