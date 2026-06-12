@@ -89,8 +89,10 @@ export default function MenusPage() {
     try {
       const res = await fetch('/api/sys/menus');
       const data = await res.json();
-      if (data.success) {
+      if (data.menus) {
         setMenus(data.menus);
+      } else if (data.error) {
+        console.error('获取菜单失败:', data.error);
       }
     } catch {
       console.error('获取菜单失败');

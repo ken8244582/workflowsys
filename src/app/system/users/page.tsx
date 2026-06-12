@@ -26,6 +26,7 @@ interface MenuWithFunctions {
   menu_path: string | null;
   parent_id: number | null;
   functions: MenuFunction[];
+  checkedFunctions?: Record<string, boolean>;
 }
 
 interface UserFunctionPermission {
@@ -224,11 +225,12 @@ export default function UsersPage() {
       const res = await fetch(`/api/sys/user-functions?user_id=${user.id}`);
       const data = await res.json();
 
-      if (data.menuFunctionTree) {
-        // Build permission tree from API data
-        const tree = buildPermissionTree(data.menuFunctionTree, menus);
+      if (data.menuFunctionTree && data.menus) {
+        // Build permission tree directly from API data
+        const tree = buildPermissionTreeFromApi(data.menuFunctionTree);
         setPermissionTree(tree);
-        setExpandedMenuIds(new Set(tree.filter(t => t.functions.length > 0).map(t => t.menu_id)));
+        // Auto-expand menus that have functions configured
+        setExpandedMenuIds(new Set(tree.filter(t => t.functions.length > 0 || t.children.some(c => c.functions.length > 0)).map(t => t.menu_id)));
       }
     } catch (e) {
       console.error('获取权限数据失败', e);
@@ -238,7 +240,40 @@ export default function UsersPage() {
     }
   };
 
-  // Build permission tree from API data
+  // Build permission tree directly from API response
+  const buildPermissionTreeFromApi = (menuFunctionTree: MenuWithFunctions[]): PermissionNode[] => {
+    // Find root menus (parent_id === null)
+    const roots = menuFunctionTree.filter(m => m.parent_id === null);
+
+    return roots.map(root => {
+      // Find children of this root
+      const children = menuFunctionTree
+        .filter(m => m.parent_id === root.menu_id)
+        .map(child => ({
+          menu_id: child.menu_id,
+          menu_name: child.menu_name,
+          menu_path: child.menu_path,
+          parent_id: child.parent_id,
+          functions: child.functions || [],
+          checkedFunctions: child.checkedFunctions || {},
+          expanded: false,
+          children: []
+        }));
+
+      return {
+        menu_id: root.menu_id,
+        menu_name: root.menu_name,
+        menu_path: root.menu_path,
+        parent_id: root.parent_id,
+        functions: root.functions || [],
+        checkedFunctions: root.checkedFunctions || {},
+        expanded: false,
+        children
+      };
+    });
+  };
+
+  // Build permission tree from API data (legacy - kept for reference)
   const buildPermissionTree = (
     menuFunctions: MenuWithFunctions[],
     menuList: MenuOption[]
@@ -519,7 +554,7 @@ export default function UsersPage() {
                           size="sm"
                           className="h-7 px-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
                           onClick={() => handleDeleteUser(user.id, user.username)}
-                          disabled={user.username === '10020580' || user.username === user?.username}
+                          disabled={user.username === user?.username}
                         >
                           <Trash2 className="h-3 w-3 mr-1" />
                           删除
@@ -641,32 +676,34 @@ export default function UsersPage() {
                   if (!hasFunctions) return null;
 
                   return (
-                    <div key={parentNode.menu_id} className="border rounded-lg">
+                    <div key={parentNode.menu_id} className="border rounded-lg overflow-hidden">
                       {/* Parent menu header */}
                       <div
-                        className="flex items-center gap-3 p-3 bg-muted/30 cursor-pointer"
+                        className="flex items-center justify-between p-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => toggleExpand(parentNode.menu_id)}
                       >
-                        {parentNode.children.length > 0 ? (
-                          isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
-                        ) : (
-                          <span className="w-4" />
-                        )}
-                        <span className="font-medium">{parentNode.menu_name}</span>
-                        {parentNode.menu_path && (
-                          <span className="text-xs text-muted-foreground font-mono">{parentNode.menu_path}</span>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {parentNode.children.length > 0 ? (
+                            isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <span className="w-4" />
+                          )}
+                          <span className="font-medium">{parentNode.menu_name}</span>
+                          {parentNode.menu_path && (
+                            <span className="text-xs text-muted-foreground font-mono ml-2">{parentNode.menu_path}</span>
+                          )}
+                        </div>
                         {/* Parent functions */}
                         {parentNode.functions.length > 0 && (
-                          <div className="flex items-center gap-2 ml-4">
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
                             {parentNode.functions.map(func => (
                               <Badge
                                 key={func.function_code}
                                 variant={parentNode.checkedFunctions[func.function_code] ? "default" : "outline"}
-                                className={`cursor-pointer px-2 py-0.5 text-xs ${
+                                className={`cursor-pointer px-2.5 py-1 text-xs transition-all ${
                                   parentNode.checkedFunctions[func.function_code]
-                                    ? 'bg-[#1e3a5f] text-white'
-                                    : 'hover:bg-[#1e3a5f]/10'
+                                    ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]'
+                                    : 'border-muted-foreground/30 hover:border-[#1e3a5f] hover:text-[#1e3a5f]'
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -685,22 +722,23 @@ export default function UsersPage() {
                         if (childNode.functions.length === 0) return null;
 
                         return (
-                          <div key={childNode.menu_id} className="flex items-center gap-3 p-3 pl-8 border-t">
-                            <span className="w-4" />
-                            <span>{childNode.menu_name}</span>
-                            {childNode.menu_path && (
-                              <span className="text-xs text-muted-foreground font-mono">{childNode.menu_path}</span>
-                            )}
+                          <div key={childNode.menu_id} className="flex items-center justify-between p-3 pl-10 border-t bg-white hover:bg-muted/10 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm">{childNode.menu_name}</span>
+                              {childNode.menu_path && (
+                                <span className="text-xs text-muted-foreground font-mono">{childNode.menu_path}</span>
+                              )}
+                            </div>
                             {/* Child functions */}
-                            <div className="flex items-center gap-2 ml-4 flex-wrap">
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
                               {childNode.functions.map(func => (
                                 <Badge
                                   key={func.function_code}
                                   variant={childNode.checkedFunctions[func.function_code] ? "default" : "outline"}
-                                  className={`cursor-pointer px-2 py-0.5 text-xs ${
+                                  className={`cursor-pointer px-2.5 py-1 text-xs transition-all ${
                                     childNode.checkedFunctions[func.function_code]
-                                      ? 'bg-[#1e3a5f] text-white'
-                                      : 'hover:bg-[#1e3a5f]/10'
+                                      ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]'
+                                      : 'border-muted-foreground/30 hover:border-[#1e3a5f] hover:text-[#1e3a5f]'
                                   }`}
                                   onClick={(e) => {
                                     e.stopPropagation();
