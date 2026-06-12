@@ -68,7 +68,7 @@ interface PermissionNode {
 }
 
 export default function UsersPage() {
-  const { user } = useAuth();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [menus, setMenus] = useState<MenuOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,13 +170,10 @@ export default function UsersPage() {
   };
 
   // Delete user
-  const handleDeleteUser = async (userId: number, username: string) => {
-    if (username === user?.username) {
-      alert('不能删除当前登录的账号');
-      return;
-    }
-    if (username === '10020580') {
-      alert('不能删除超级管理员账号');
+  const handleDeleteUser = async (userId: number, username: string, isSuperAdmin: boolean) => {
+    // 只有超级管理员无法删除（无论是什么账号登录）
+    if (isSuperAdmin) {
+      alert('超级管理员账户不能删除');
       return;
     }
     if (!confirm(`确定要删除用户 ${username} 吗？`)) return;
@@ -431,7 +428,7 @@ export default function UsersPage() {
     return <div className="text-center py-20 text-muted-foreground">加载中...</div>;
   }
 
-  if (!user?.isSuperAdmin) {
+  if (!currentUser?.isSuperAdmin) {
     return <div className="text-center py-20 text-muted-foreground">无权限访问此页面</div>;
   }
 
@@ -553,8 +550,8 @@ export default function UsersPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
-                          onClick={() => handleDeleteUser(user.id, user.username)}
-                          disabled={user.username === user?.username}
+                          onClick={() => handleDeleteUser(user.id, user.username, user.is_super_admin)}
+                          disabled={user.is_super_admin}
                         >
                           <Trash2 className="h-3 w-3 mr-1" />
                           删除

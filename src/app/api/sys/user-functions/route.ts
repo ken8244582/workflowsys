@@ -87,9 +87,8 @@ export async function POST(request: NextRequest) {
     for (const [menuId, funcs] of Object.entries(permissions)) {
       const functions: Array<{ function_code: string; is_enabled: boolean }> = [];
       for (const [funcCode, isEnabled] of Object.entries(funcs as Record<string, boolean>)) {
-        if (isEnabled) {
-          functions.push({ function_code: funcCode, is_enabled: true });
-        }
+        // 保存所有功能权限，包括未勾选的（is_enabled: false）
+        functions.push({ function_code: funcCode, is_enabled: Boolean(isEnabled) });
       }
       if (functions.length > 0) {
         permArray.push({ menu_id: parseInt(menuId), functions });

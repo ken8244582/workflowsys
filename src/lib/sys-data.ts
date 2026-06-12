@@ -500,7 +500,7 @@ export async function getUserAllPermissions(userId: number, isSuperAdmin: boolea
     // Super admin has all permissions for supported actions
     for (const menu of allMenus) {
       if (menu.path) {
-        const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+        const supported = menu.supported_actions ? JSON.parse(menu.supported_actions as string) : ['view'];
         const fullPermissions: Record<string, boolean> = {};
         supported.forEach((action: string) => {
           fullPermissions[action] = true;
@@ -514,19 +514,32 @@ export async function getUserAllPermissions(userId: number, isSuperAdmin: boolea
     return result;
   }
 
-  // Get user's assigned menus with permissions
-  const userPermissions = await getUserMenuPermissions(userId);
-  const permMap = new Map<number, SysUserMenu>();
-  for (const perm of userPermissions) {
-    permMap.set(perm.menu_id, perm);
+  // Get user's assigned menus (from sys_user_menus)
+  const userMenus = await getUserMenuPermissions(userId);
+  const assignedMenuIds = new Set(userMenus.map(m => m.menu_id));
+
+  // Get user's function permissions (from sys_user_menu_functions)
+  const userFunctionPerms = await getUserMenuFunctionPermissions(userId);
+  const funcPermMap = new Map<number, Map<string, boolean>>();
+  for (const perm of userFunctionPerms) {
+    if (!funcPermMap.has(perm.menu_id)) {
+      funcPermMap.set(perm.menu_id, new Map());
+    }
+    funcPermMap.get(perm.menu_id)!.set(perm.function_code, perm.is_enabled);
   }
 
   for (const menu of allMenus) {
-    if (menu.path && permMap.has(menu.id)) {
-      const perm = permMap.get(menu.id)!;
-      const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : ['view'];
+    if (menu.path && assignedMenuIds.has(menu.id)) {
+      const supported = menu.supported_actions ? JSON.parse(menu.supported_actions as string) : ['view'];
+      // Merge permissions from sys_user_menu_functions
+      const menuFuncPerms = funcPermMap.get(menu.id);
+      const permissions: Record<string, boolean> = {};
+      for (const action of supported) {
+        // Use function-level permission if available, otherwise default to false
+        permissions[action] = menuFuncPerms?.get(action) ?? false;
+      }
       result[menu.path] = {
-        permissions: perm.permissions || {},
+        permissions,
         supported_actions: supported,
       };
     }
