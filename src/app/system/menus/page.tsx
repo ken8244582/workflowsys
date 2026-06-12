@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -324,8 +324,8 @@ export default function MenusPage() {
                     const isExpanded = expandedIds.has(top.id);
 
                     return (
-                      <>
-                        <TableRow key={top.id} className="hover:bg-muted/10">
+                      <Fragment key={top.id}>
+                        <TableRow className="hover:bg-muted/10">
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {subMenus.length > 0 ? (
@@ -458,7 +458,7 @@ export default function MenusPage() {
                             </TableCell>
                           </TableRow>
                         ))}
-                      </>
+                      </Fragment>
                     );
                   })
                 )}
