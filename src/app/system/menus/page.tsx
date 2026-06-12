@@ -1,9 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { ChevronRight, ChevronDown, Plus, Pencil, Trash2, Settings, Check, X } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 
-interface MenuItem {
+interface SysMenu {
   id: number;
   name: string;
   path: string | null;
@@ -11,68 +20,159 @@ interface MenuItem {
   parent_id: number | null;
   sort_order: number;
   is_visible: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
+interface MenuFunction {
+  id: number;
+  menu_id: number;
+  function_code: string;
+  function_name: string;
+  sort_order: number;
+}
+
+// Default function templates
+const DEFAULT_FUNCTIONS = [
+  { code: 'view', name: '查看', order: 1 },
+  { code: 'add', name: '新增', order: 2 },
+  { code: 'edit', name: '编辑', order: 3 },
+  { code: 'delete', name: '删除', order: 4 },
+  { code: 'export', name: '导出', order: 5 },
+  { code: 'import', name: '导入', order: 6 },
+  { code: 'init', name: '初始化', order: 7 },
+  { code: 'publish', name: '发布', order: 8 },
+  { code: 'reset_password', name: '重置密码', order: 9 },
+  { code: 'config_permission', name: '权限配置', order: 10 },
+  { code: 'config_function', name: '功能配置', order: 11 },
+];
+
 export default function MenusPage() {
-  const { user: currentUser } = useAuth();
-  const [menus, setMenus] = useState<MenuItem[]>([]);
+  const { user } = useAuth();
+  const [menus, setMenus] = useState<SysMenu[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
-  // Dialog states
+  // Add/Edit dialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
-
-  // Form states
+  const [selectedMenu, setSelectedMenu] = useState<SysMenu | null>(null);
   const [formName, setFormName] = useState('');
   const [formPath, setFormPath] = useState('');
   const [formIcon, setFormIcon] = useState('');
   const [formParentId, setFormParentId] = useState<number | null>(null);
   const [formSortOrder, setFormSortOrder] = useState(0);
   const [formIsVisible, setFormIsVisible] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetchMenus = useCallback(async () => {
-    try {
-      const res = await fetch('/api/sys/menus');
-      const data = await res.json();
-      if (data.menus) {
-        setMenus(data.menus);
-        // Auto-expand all parent menus
-        const parentIds = new Set<number>(data.menus.filter((m: MenuItem) => m.parent_id === null).map((m: MenuItem) => m.id));
-        setExpandedIds(parentIds);
-      }
-    } catch (e) {
-      console.error('获取菜单列表失败', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchMenus();
-  }, [fetchMenus]);
+  // Function config dialog state
+  const [showFuncDialog, setShowFuncDialog] = useState(false);
+  const [funcMenuId, setFuncMenuId] = useState<number | null>(null);
+  const [funcMenuName, setFuncMenuName] = useState('');
+  const [menuFunctions, setMenuFunctions] = useState<MenuFunction[]>([]);
+  const [funcLoading, setFuncLoading] = useState(false);
 
   const topMenus = menus.filter(m => m.parent_id === null).sort((a, b) => a.sort_order - b.sort_order);
   const getSubMenus = (parentId: number) => menus.filter(m => m.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order);
 
   const toggleExpand = (id: number) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const newSet = new Set(expandedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setExpandedIds(newSet);
+  };
+
+  const fetchMenus = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/sys/menus');
+      const data = await res.json();
+      if (data.success) {
+        setMenus(data.menus);
+      }
+    } catch {
+      console.error('获取菜单失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMenus();
+  }, []);
+
+  // Fetch menu functions
+  const fetchMenuFunctions = async (menuId: number) => {
+    setFuncLoading(true);
+    try {
+      const res = await fetch(`/api/sys/menu-functions?menu_id=${menuId}`);
+      const data = await res.json();
+      setMenuFunctions(data.functions || []);
+    } catch {
+      console.error('获取菜单功能失败');
+      setMenuFunctions([]);
+    } finally {
+      setFuncLoading(false);
+    }
+  };
+
+  // Open function config dialog
+  const openFuncDialog = (menu: SysMenu) => {
+    setFuncMenuId(menu.id);
+    setFuncMenuName(menu.name);
+    fetchMenuFunctions(menu.id);
+    setShowFuncDialog(true);
+  };
+
+  // Add function to menu
+  const handleAddFunction = async (template: { code: string; name: string; order: number }) => {
+    if (!funcMenuId) return;
+    // Check if already exists
+    if (menuFunctions.some(f => f.function_code === template.code)) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/sys/menu-functions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          menu_id: funcMenuId,
+          function_code: template.code,
+          function_name: template.name,
+          sort_order: template.order
+        })
+      });
+      const data = await res.json();
+      if (data.function) {
+        setMenuFunctions([...menuFunctions, data.function].sort((a, b) => a.sort_order - b.sort_order));
+      }
+    } catch {
+      console.error('添加功能失败');
+    }
+  };
+
+  // Remove function from menu
+  const handleRemoveFunction = async (funcId: number) => {
+    try {
+      const res = await fetch(`/api/sys/menu-functions/${funcId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setMenuFunctions(menuFunctions.filter(f => f.id !== funcId));
+      }
+    } catch {
+      console.error('删除功能失败');
+    }
   };
 
   // Add menu
   const handleAddMenu = async () => {
+    if (!formName.trim()) {
+      setError('菜单名称不能为空');
+      return;
+    }
     setError('');
-    if (!formName.trim()) { setError('菜单名称不能为空'); return; }
     setSubmitting(true);
     try {
       const res = await fetch('/api/sys/menus', {
@@ -88,7 +188,7 @@ export default function MenusPage() {
         }),
       });
       const data = await res.json();
-      if (data.menu) {
+      if (data.success) {
         setShowAddDialog(false);
         resetForm();
         fetchMenus();
@@ -165,295 +265,428 @@ export default function MenusPage() {
     setError('');
   };
 
-  if (!currentUser?.isSuperAdmin) {
+  if (!user?.isSuperAdmin) {
     return <div className="text-center py-20 text-muted-foreground">无权限访问此页面</div>;
   }
 
-  // Build flat rows for the table (avoids nested tbody)
-  const tableRows: React.ReactNode[] = [];
-  topMenus.forEach(top => {
-    const subMenus = getSubMenus(top.id);
-    const isExpanded = expandedIds.has(top.id);
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-semibold text-[#1e3a5f]">菜单管理</h1>
+        <p className="mt-1 text-sm text-muted-foreground">管理系统的菜单结构和功能配置</p>
+      </div>
 
-    tableRows.push(
-      <tr key={top.id} className="border-b border-border hover:bg-muted/10">
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
-            {subMenus.length > 0 ? (
-              <button onClick={() => toggleExpand(top.id)} className="text-muted-foreground hover:text-foreground shrink-0">
-                <svg className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </button>
-            ) : (
-              <span className="w-4 inline-block shrink-0" />
-            )}
-            <span className="font-medium text-foreground">{top.name}</span>
-          </div>
-        </td>
-        <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{top.path || '-'}</td>
-        <td className="px-4 py-3 text-muted-foreground text-xs">{top.icon || '-'}</td>
-        <td className="px-4 py-3 text-muted-foreground">{top.sort_order}</td>
-        <td className="px-4 py-3">
-          {top.is_visible ? <span className="text-green-600">是</span> : <span className="text-red-500">否</span>}
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setSelectedMenu(top);
-                setFormName(top.name);
-                setFormPath(top.path || '');
-                setFormIcon(top.icon || '');
-                setFormParentId(top.parent_id);
-                setFormSortOrder(top.sort_order);
-                setFormIsVisible(top.is_visible);
-                setError('');
-                setShowEditDialog(true);
-              }}
-              className="text-[#1e3a5f] hover:underline text-xs"
-            >
-              编辑
-            </button>
-            <button
+      {/* Menu List Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">菜单列表</CardTitle>
+            <Button
               onClick={() => {
                 resetForm();
-                setFormParentId(top.id);
                 setShowAddDialog(true);
               }}
-              className="text-green-600 hover:underline text-xs"
+              className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
             >
-              添加子菜单
-            </button>
-            <button
-              onClick={() => handleDeleteMenu(top.id, subMenus.length > 0)}
-              className="text-red-500 hover:underline text-xs"
-            >
-              删除
-            </button>
+              <Plus className="h-4 w-4 mr-1" />
+              添加菜单
+            </Button>
           </div>
-        </td>
-      </tr>
-    );
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-10 text-muted-foreground">加载中...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-[25%]">菜单名称</TableHead>
+                  <TableHead className="w-[20%]">路径</TableHead>
+                  <TableHead className="w-[12%]">图标</TableHead>
+                  <TableHead className="w-[8%]">排序</TableHead>
+                  <TableHead className="w-[8%]">可见</TableHead>
+                  <TableHead className="w-[25%]">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topMenus.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                      暂无数据
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  topMenus.map(top => {
+                    const subMenus = getSubMenus(top.id);
+                    const isExpanded = expandedIds.has(top.id);
 
-    if (isExpanded) {
-      subMenus.forEach(sub => {
-        tableRows.push(
-          <tr key={sub.id} className="border-b border-border last:border-0 hover:bg-muted/10 bg-muted/5">
-            <td className="px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="w-4 inline-block shrink-0" />
-                <span className="ml-4 text-foreground">{sub.name}</span>
-              </div>
-            </td>
-            <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{sub.path || '-'}</td>
-            <td className="px-4 py-3 text-muted-foreground text-xs">{sub.icon || '-'}</td>
-            <td className="px-4 py-3 text-muted-foreground">{sub.sort_order}</td>
-            <td className="px-4 py-3">
-              {sub.is_visible ? <span className="text-green-600">是</span> : <span className="text-red-500">否</span>}
-            </td>
-            <td className="px-4 py-3">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setSelectedMenu(sub);
-                    setFormName(sub.name);
-                    setFormPath(sub.path || '');
-                    setFormIcon(sub.icon || '');
-                    setFormParentId(sub.parent_id);
-                    setFormSortOrder(sub.sort_order);
-                    setFormIsVisible(sub.is_visible);
-                    setError('');
-                    setShowEditDialog(true);
-                  }}
-                  className="text-[#1e3a5f] hover:underline text-xs"
-                >
-                  编辑
-                </button>
-                <button
-                  onClick={() => handleDeleteMenu(sub.id, false)}
-                  className="text-red-500 hover:underline text-xs"
-                >
-                  删除
-                </button>
-              </div>
-            </td>
-          </tr>
-        );
-      });
-    }
-  });
+                    return (
+                      <>
+                        <TableRow key={top.id} className="hover:bg-muted/10">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {subMenus.length > 0 ? (
+                                <button onClick={() => toggleExpand(top.id)} className="text-muted-foreground hover:text-foreground">
+                                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                </button>
+                              ) : (
+                                <span className="w-4 inline-block" />
+                              )}
+                              <span className="font-medium">{top.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{top.path || '-'}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{top.icon || '-'}</TableCell>
+                          <TableCell className="text-muted-foreground">{top.sort_order}</TableCell>
+                          <TableCell>
+                            {top.is_visible ? (
+                              <Badge variant="outline" className="text-green-600 border-green-600">是</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-red-500 border-red-500">否</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10"
+                                onClick={() => {
+                                  setSelectedMenu(top);
+                                  setFormName(top.name);
+                                  setFormPath(top.path || '');
+                                  setFormIcon(top.icon || '');
+                                  setFormParentId(top.parent_id);
+                                  setFormSortOrder(top.sort_order);
+                                  setFormIsVisible(top.is_visible);
+                                  setError('');
+                                  setShowEditDialog(true);
+                                }}
+                              >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                编辑
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-green-600 hover:text-green-600 hover:bg-green-600/10"
+                                onClick={() => {
+                                  resetForm();
+                                  setFormParentId(top.id);
+                                  setShowAddDialog(true);
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                添加子菜单
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                                onClick={() => handleDeleteMenu(top.id, subMenus.length > 0)}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                删除
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
 
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-[#1e3a5f]">菜单管理</h1>
-        <p className="mt-1 text-sm text-muted-foreground">管理系统的菜单结构和显示</p>
-      </div>
-
-      {/* Toolbar */}
-      <div className="mb-4">
-        <button
-          onClick={() => {
-            resetForm();
-            setShowAddDialog(true);
-          }}
-          className="rounded-lg bg-[#1e3a5f] px-4 py-2 text-sm font-medium text-white hover:bg-[#1e3a5f]/90 transition-colors"
-        >
-          添加菜单
-        </button>
-      </div>
-
-      {/* Menu Tree */}
-      {loading ? (
-        <div className="text-center py-10 text-muted-foreground">加载中...</div>
-      ) : (
-        <div className="rounded-lg border border-border bg-white overflow-hidden">
-          <table className="w-full text-sm table-fixed">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[30%]">菜单名称</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[20%]">路径</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[15%]">图标</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[8%]">排序</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[8%]">可见</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-[19%]">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tableRows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
-                    暂无数据
-                  </td>
-                </tr>
-              ) : (
-                tableRows
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                        {isExpanded && subMenus.map(sub => (
+                          <TableRow key={sub.id} className="bg-muted/5 hover:bg-muted/10">
+                            <TableCell>
+                              <div className="flex items-center gap-2 pl-6">
+                                <span className="w-4 inline-block" />
+                                <span>{sub.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{sub.path || '-'}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{sub.icon || '-'}</TableCell>
+                            <TableCell className="text-muted-foreground">{sub.sort_order}</TableCell>
+                            <TableCell>
+                              {sub.is_visible ? (
+                                <Badge variant="outline" className="text-green-600 border-green-600">是</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-red-500 border-red-500">否</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10"
+                                  onClick={() => {
+                                    setSelectedMenu(sub);
+                                    setFormName(sub.name);
+                                    setFormPath(sub.path || '');
+                                    setFormIcon(sub.icon || '');
+                                    setFormParentId(sub.parent_id);
+                                    setFormSortOrder(sub.sort_order);
+                                    setFormIsVisible(sub.is_visible);
+                                    setError('');
+                                    setShowEditDialog(true);
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3 mr-1" />
+                                  编辑
+                                </Button>
+                                {sub.path && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-amber-600 hover:text-amber-600 hover:bg-amber-600/10"
+                                    onClick={() => openFuncDialog(sub)}
+                                  >
+                                    <Settings className="h-3 w-3 mr-1" />
+                                    功能配置
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                                  onClick={() => handleDeleteMenu(sub.id, false)}
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  删除
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add Menu Dialog */}
-      {showAddDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold text-[#1e3a5f] mb-4">添加菜单</h2>
-            {error && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">菜单名称 *</label>
-                <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
-                  placeholder="如：系统管理" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">路径</label>
-                <input type="text" value={formPath} onChange={(e) => setFormPath(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
-                  placeholder="如：/system/users (一级菜单留空)" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">图标名称</label>
-                <input type="text" value={formIcon} onChange={(e) => setFormIcon(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
-                  placeholder="如：Settings (Lucide图标名)" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">上级菜单</label>
-                <select
-                  value={formParentId ?? ''}
-                  onChange={(e) => setFormParentId(e.target.value ? parseInt(e.target.value) : null)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
-                >
-                  <option value="">无 (一级菜单)</option>
-                  {topMenus.map(m => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">排序号</label>
-                <input type="number" value={formSortOrder} onChange={(e) => setFormSortOrder(parseInt(e.target.value) || 0)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20" />
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="addMenuVisible" checked={formIsVisible} onChange={(e) => setFormIsVisible(e.target.checked)}
-                  className="h-4 w-4 rounded border-border" />
-                <label htmlFor="addMenuVisible" className="text-sm">显示在导航中</label>
-              </div>
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>添加菜单</DialogTitle>
+          </DialogHeader>
+          {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>菜单名称 *</Label>
+              <Input
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="如：系统管理"
+              />
             </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => { setShowAddDialog(false); resetForm(); }}
-                className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted transition-colors">取消</button>
-              <button onClick={handleAddMenu} disabled={submitting}
-                className="rounded-lg bg-[#1e3a5f] px-4 py-2 text-sm font-medium text-white hover:bg-[#1e3a5f]/90 disabled:opacity-50 transition-colors">
-                {submitting ? '创建中...' : '创建'}
-              </button>
+            <div className="space-y-2">
+              <Label>路径</Label>
+              <Input
+                value={formPath}
+                onChange={(e) => setFormPath(e.target.value)}
+                placeholder="如：/system/users (一级菜单留空)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>图标名称</Label>
+              <Input
+                value={formIcon}
+                onChange={(e) => setFormIcon(e.target.value)}
+                placeholder="如：Settings (Lucide图标名)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>上级菜单</Label>
+              <Select
+                value={formParentId?.toString() || ''}
+                onValueChange={(v) => setFormParentId(v ? parseInt(v) : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="无 (一级菜单)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">无 (一级菜单)</SelectItem>
+                  {topMenus.map(m => (
+                    <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>排序号</Label>
+              <Input
+                type="number"
+                value={formSortOrder}
+                onChange={(e) => setFormSortOrder(parseInt(e.target.value) || 0)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="addMenuVisible"
+                checked={formIsVisible}
+                onChange={(e) => setFormIsVisible(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              <Label htmlFor="addMenuVisible" className="cursor-pointer">显示在导航中</Label>
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>
+              取消
+            </Button>
+            <Button onClick={handleAddMenu} disabled={submitting} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              {submitting ? '创建中...' : '创建'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Menu Dialog */}
-      {showEditDialog && selectedMenu && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold text-[#1e3a5f] mb-4">编辑菜单</h2>
-            {error && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">菜单名称 *</label>
-                <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">路径</label>
-                <input type="text" value={formPath} onChange={(e) => setFormPath(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
-                  placeholder="如：/system/users" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">图标名称</label>
-                <input type="text" value={formIcon} onChange={(e) => setFormIcon(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">上级菜单</label>
-                <select
-                  value={formParentId ?? ''}
-                  onChange={(e) => setFormParentId(e.target.value ? parseInt(e.target.value) : null)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
-                >
-                  <option value="">无 (一级菜单)</option>
-                  {topMenus.filter(m => m.id !== selectedMenu.id).map(m => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">排序号</label>
-                <input type="number" value={formSortOrder} onChange={(e) => setFormSortOrder(parseInt(e.target.value) || 0)}
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20" />
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="editMenuVisible" checked={formIsVisible} onChange={(e) => setFormIsVisible(e.target.checked)}
-                  className="h-4 w-4 rounded border-border" />
-                <label htmlFor="editMenuVisible" className="text-sm">显示在导航中</label>
-              </div>
+      <Dialog open={showEditDialog} onOpenChange={(open) => { setShowEditDialog(open); if (!open) { setSelectedMenu(null); resetForm(); }}}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>编辑菜单</DialogTitle>
+          </DialogHeader>
+          {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>菜单名称 *</Label>
+              <Input
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+              />
             </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => { setShowEditDialog(false); setSelectedMenu(null); resetForm(); }}
-                className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted transition-colors">取消</button>
-              <button onClick={handleEditMenu} disabled={submitting}
-                className="rounded-lg bg-[#1e3a5f] px-4 py-2 text-sm font-medium text-white hover:bg-[#1e3a5f]/90 disabled:opacity-50 transition-colors">
-                {submitting ? '保存中...' : '保存'}
-              </button>
+            <div className="space-y-2">
+              <Label>路径</Label>
+              <Input
+                value={formPath}
+                onChange={(e) => setFormPath(e.target.value)}
+                placeholder="如：/system/users"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>图标名称</Label>
+              <Input
+                value={formIcon}
+                onChange={(e) => setFormIcon(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>上级菜单</Label>
+              <Select
+                value={formParentId?.toString() || ''}
+                onValueChange={(v) => setFormParentId(v ? parseInt(v) : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="无 (一级菜单)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">无 (一级菜单)</SelectItem>
+                  {topMenus.filter(m => m.id !== selectedMenu?.id).map(m => (
+                    <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>排序号</Label>
+              <Input
+                type="number"
+                value={formSortOrder}
+                onChange={(e) => setFormSortOrder(parseInt(e.target.value) || 0)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="editMenuVisible"
+                checked={formIsVisible}
+                onChange={(e) => setFormIsVisible(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              <Label htmlFor="editMenuVisible" className="cursor-pointer">显示在导航中</Label>
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowEditDialog(false); setSelectedMenu(null); resetForm(); }}>
+              取消
+            </Button>
+            <Button onClick={handleEditMenu} disabled={submitting} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              {submitting ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Function Config Dialog */}
+      <Dialog open={showFuncDialog} onOpenChange={setShowFuncDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>功能配置 - {funcMenuName}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">配置该菜单支持的功能操作，用户权限配置时可勾选开通。</p>
+
+            {funcLoading ? (
+              <div className="text-center py-6 text-muted-foreground">加载中...</div>
+            ) : (
+              <>
+                {/* Current Functions */}
+                <div className="mb-4">
+                  <Label className="mb-2 block">已配置功能</Label>
+                  <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded-lg min-h-[60px]">
+                    {menuFunctions.length === 0 ? (
+                      <span className="text-sm text-muted-foreground">暂无配置功能</span>
+                    ) : (
+                      menuFunctions.map(func => (
+                        <Badge
+                          key={func.id}
+                          variant="secondary"
+                          className="px-3 py-1 gap-1 cursor-pointer hover:bg-destructive/20"
+                          onClick={() => handleRemoveFunction(func.id)}
+                        >
+                          {func.function_name}
+                          <X className="h-3 w-3" />
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Available Functions */}
+                <div>
+                  <Label className="mb-2 block">可选功能模板</Label>
+                  <div className="flex flex-wrap gap-2 p-3 border rounded-lg">
+                    {DEFAULT_FUNCTIONS.filter(t => !menuFunctions.some(f => f.function_code === t.code)).map(template => (
+                      <Badge
+                        key={template.code}
+                        variant="outline"
+                        className="px-3 py-1 gap-1 cursor-pointer hover:bg-[#1e3a5f]/10 hover:border-[#1e3a5f]"
+                        onClick={() => handleAddFunction(template)}
+                      >
+                        <Plus className="h-3 w-3" />
+                        {template.name}
+                      </Badge>
+                    ))}
+                    {DEFAULT_FUNCTIONS.every(t => menuFunctions.some(f => f.function_code === t.code)) && (
+                      <span className="text-sm text-muted-foreground">全部已添加</span>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFuncDialog(false)}>
+              完成
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

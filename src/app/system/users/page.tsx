@@ -1,27 +1,39 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronRight, ChevronDown, Plus, Pencil, Trash2, Key, Settings, Check } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 
-// 操作名称映射
-const ACTION_LABELS: Record<string, string> = {
-  view: '查看',
-  add: '新增',
-  edit: '编辑',
-  delete: '删除',
-  export: '导出',
-  init: '初始化',
-  publish: '下发',
-  reset_password: '重置密码',
-  config_permission: '配置权限',
-};
+interface MenuFunction {
+  id: number;
+  menu_id: number;
+  function_code: string;
+  function_name: string;
+  sort_order: number;
+}
 
-interface MenuPermission {
+interface MenuWithFunctions {
   menu_id: number;
   menu_name: string;
-  path: string | null;
-  supported_actions: string[];
-  permissions: Record<string, boolean>;
+  menu_path: string | null;
+  parent_id: number | null;
+  functions: MenuFunction[];
+}
+
+interface UserFunctionPermission {
+  id: number;
+  user_id: number;
+  menu_id: number;
+  function_code: string;
+  is_enabled: boolean;
 }
 
 interface UserItem {
@@ -33,7 +45,6 @@ interface UserItem {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  menuPermissions: MenuPermission[];
 }
 
 interface MenuOption {
@@ -41,20 +52,22 @@ interface MenuOption {
   name: string;
   parent_id: number | null;
   path: string | null;
-  supported_actions: string | null;
 }
 
-// 权限编辑状态 - 使用 Record<string, boolean> 存储各操作的权限
-interface PermissionEdit {
+// Permission state for editing - tree structure
+interface PermissionNode {
   menu_id: number;
   menu_name: string;
-  path: string | null;
-  supported_actions: string[];
-  permissions: Record<string, boolean>;
+  menu_path: string | null;
+  parent_id: number | null;
+  functions: MenuFunction[];
+  checkedFunctions: Record<string, boolean>; // function_code -> is_enabled
+  expanded: boolean;
+  children: PermissionNode[];
 }
 
 export default function UsersPage() {
-  const { user: currentUser } = useAuth();
+  const { user } = useAuth();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [menus, setMenus] = useState<MenuOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +78,9 @@ export default function UsersPage() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
-  const [editingPermissions, setEditingPermissions] = useState<PermissionEdit[]>([]);
+  const [permissionTree, setPermissionTree] = useState<PermissionNode[]>([]);
+  const [expandedMenuIds, setExpandedMenuIds] = useState<Set<number>>(new Set());
+  const [permLoading, setPermLoading] = useState(false);
 
   // Form states
   const [formUsername, setFormUsername] = useState('');
@@ -75,6 +90,7 @@ export default function UsersPage() {
   const [error, setError] = useState('');
 
   const fetchUsers = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch('/api/sys/users');
       const data = await res.json();
@@ -94,6 +110,10 @@ export default function UsersPage() {
   const filteredUsers = users.filter(u =>
     u.username.includes(searchTerm) || (u.display_name && u.display_name.includes(searchTerm))
   );
+
+  // Build top menus
+  const topMenus = menus.filter(m => m.parent_id === null).sort((a, b) => a.id - b.id);
+  const getSubMenus = (parentId: number) => menus.filter(m => m.parent_id === parentId);
 
   // Add user
   const handleAddUser = async () => {
@@ -150,7 +170,7 @@ export default function UsersPage() {
 
   // Delete user
   const handleDeleteUser = async (userId: number, username: string) => {
-    if (username === currentUser?.username) {
+    if (username === user?.username) {
       alert('不能删除当前登录的账号');
       return;
     }
@@ -188,70 +208,178 @@ export default function UsersPage() {
     }
   };
 
-  // Open permission dialog
-  const openPermissionDialog = (user: UserItem) => {
+  // Open permission dialog - fetch menu functions and user permissions
+  const openPermissionDialog = async (user: UserItem) => {
+    if (user.is_super_admin) {
+      alert('超级管理员拥有所有权限，无需配置');
+      return;
+    }
     setSelectedUser(user);
-    // 初始化权限编辑状态
-    const perms: PermissionEdit[] = menus.map(menu => {
-      const supported = menu.supported_actions ? JSON.parse(menu.supported_actions) : [];
-      const existing = user.menuPermissions.find(p => p.menu_id === menu.id);
-      // 默认 permissions: view=true, 其他=false
-      const defaultPerms: Record<string, boolean> = {};
-      supported.forEach((action: string) => {
-        defaultPerms[action] = action === 'view';
-      });
+    setPermLoading(true);
+    setShowPermissionDialog(true);
+    setError('');
+
+    try {
+      // Fetch all menu functions and user's current permissions
+      const res = await fetch(`/api/sys/user-functions?user_id=${user.id}`);
+      const data = await res.json();
+
+      if (data.menuFunctionTree) {
+        // Build permission tree from API data
+        const tree = buildPermissionTree(data.menuFunctionTree, menus);
+        setPermissionTree(tree);
+        setExpandedMenuIds(new Set(tree.filter(t => t.functions.length > 0).map(t => t.menu_id)));
+      }
+    } catch (e) {
+      console.error('获取权限数据失败', e);
+      setError('获取权限数据失败');
+    } finally {
+      setPermLoading(false);
+    }
+  };
+
+  // Build permission tree from API data
+  const buildPermissionTree = (
+    menuFunctions: MenuWithFunctions[],
+    menuList: MenuOption[]
+  ): PermissionNode[] => {
+    const roots = menuList.filter(m => m.parent_id === null);
+
+    return roots.map(root => {
+      const menuFunc = menuFunctions.find(mf => mf.menu_id === root.id) || {
+        menu_id: root.id,
+        menu_name: root.name,
+        menu_path: root.path,
+        parent_id: root.parent_id,
+        functions: []
+      };
+
+      const children = menuList
+        .filter(m => m.parent_id === root.id)
+        .map(child => {
+          const childFunc = menuFunctions.find(mf => mf.menu_id === child.id) || {
+            menu_id: child.id,
+            menu_name: child.name,
+            menu_path: child.path,
+            parent_id: child.parent_id,
+            functions: []
+          };
+          return {
+            menu_id: child.id,
+            menu_name: child.name,
+            menu_path: child.path,
+            parent_id: child.parent_id,
+            functions: childFunc.functions || [],
+            checkedFunctions: {},
+            expanded: false,
+            children: []
+          };
+        });
+
       return {
-        menu_id: menu.id,
-        menu_name: menu.name,
-        path: menu.path,
-        supported_actions: supported,
-        permissions: existing?.permissions || defaultPerms,
+        menu_id: root.id,
+        menu_name: root.name,
+        menu_path: root.path,
+        parent_id: root.parent_id,
+        functions: menuFunc.functions || [],
+        checkedFunctions: {},
+        expanded: false,
+        children
       };
     });
-    setEditingPermissions(perms);
-    setShowPermissionDialog(true);
   };
 
-  // Update single permission
-  const updatePermission = (menuId: number, action: string, checked: boolean) => {
-    setEditingPermissions(prev => prev.map(p => {
-      if (p.menu_id === menuId) {
-        return {
-          ...p,
-          permissions: { ...p.permissions, [action]: checked },
-        };
-      }
-      return p;
-    }));
+  // Toggle menu expand
+  const toggleExpand = (menuId: number) => {
+    const newSet = new Set(expandedMenuIds);
+    if (newSet.has(menuId)) {
+      newSet.delete(menuId);
+    } else {
+      newSet.add(menuId);
+    }
+    setExpandedMenuIds(newSet);
   };
 
-  // Toggle all permissions for a menu (access toggle)
-  const toggleMenuAccess = (menuId: number, checked: boolean) => {
-    setEditingPermissions(prev => prev.map(p => {
-      if (p.menu_id === menuId) {
-        const newPerms: Record<string, boolean> = {};
-        p.supported_actions.forEach(action => {
-          // 勾选菜单时默认只开启查看，取消勾选时关闭所有
-          newPerms[action] = checked ? (action === 'view') : false;
+  // Toggle function checkbox
+  const toggleFunction = (menuId: number, functionCode: string, checked: boolean) => {
+    setPermissionTree(prev => {
+      const updateNode = (nodes: PermissionNode[]): PermissionNode[] => {
+        return nodes.map(node => {
+          if (node.menu_id === menuId) {
+            return {
+              ...node,
+              checkedFunctions: { ...node.checkedFunctions, [functionCode]: checked }
+            };
+          }
+          if (node.children.length > 0) {
+            return {
+              ...node,
+              children: updateNode(node.children)
+            };
+          }
+          return node;
         });
-        return { ...p, permissions: newPerms };
-      }
-      return p;
-    }));
+      };
+      return updateNode(prev);
+    });
+  };
+
+  // Toggle all functions for a menu
+  const toggleAllFunctions = (menuId: number, checked: boolean) => {
+    setPermissionTree(prev => {
+      const updateNode = (nodes: PermissionNode[]): PermissionNode[] => {
+        return nodes.map(node => {
+          if (node.menu_id === menuId) {
+            const newChecked: Record<string, boolean> = {};
+            node.functions.forEach(f => {
+              newChecked[f.function_code] = checked;
+            });
+            return { ...node, checkedFunctions: newChecked };
+          }
+          if (node.children.length > 0) {
+            return { ...node, children: updateNode(node.children) };
+          }
+          return node;
+        });
+      };
+      return updateNode(prev);
+    });
   };
 
   // Save permissions
   const savePermissions = async () => {
     if (!selectedUser) return;
     setSubmitting(true);
+    setError('');
+
     try {
-      const res = await fetch(`/api/sys/users/${selectedUser.id}`, {
-        method: 'PUT',
+      // Build permissions object from tree
+      const permissions: Record<number, Record<string, boolean>> = {};
+
+      const collectPermissions = (nodes: PermissionNode[]) => {
+        nodes.forEach(node => {
+          if (node.functions.length > 0) {
+            permissions[node.menu_id] = node.checkedFunctions;
+          }
+          if (node.children.length > 0) {
+            collectPermissions(node.children);
+          }
+        });
+      };
+
+      collectPermissions(permissionTree);
+
+      const res = await fetch('/api/sys/user-functions', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ permissions: editingPermissions }),
+        body: JSON.stringify({
+          user_id: selectedUser.id,
+          permissions
+        })
       });
+
       const data = await res.json();
-      if (data.user) {
+      if (data.success) {
         setShowPermissionDialog(false);
         fetchUsers();
       } else {
@@ -264,346 +392,351 @@ export default function UsersPage() {
     }
   };
 
-  // Build menu tree for display
-  const buildMenuTree = (menuList: MenuOption[]): (MenuOption & { children: MenuOption[] })[] => {
-    const roots = menuList.filter(m => m.parent_id === null);
-    return roots.map(root => ({
-      ...root,
-      children: menuList.filter(m => m.parent_id === root.id),
-    }));
-  };
-
-  const menuTree = buildMenuTree(menus);
-
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">加载中...</div>;
+    return <div className="text-center py-20 text-muted-foreground">加载中...</div>;
+  }
+
+  if (!user?.isSuperAdmin) {
+    return <div className="text-center py-20 text-muted-foreground">无权限访问此页面</div>;
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">用户管理</h1>
-        <button
-          onClick={() => { setShowAddDialog(true); setError(''); }}
-          className="px-4 py-2 bg-[#1e3a5f] text-white rounded hover:opacity-90"
-        >
-          新增用户
-        </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-semibold text-[#1e3a5f]">用户管理</h1>
+        <p className="mt-1 text-sm text-muted-foreground">管理系统用户账户和权限配置</p>
       </div>
 
-      {/* Search */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="搜索用户名或显示名..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="w-full max-w-md px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
-        />
-      </div>
+      {/* Search and Add */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">用户列表</CardTitle>
+            <Button
+              onClick={() => { setShowAddDialog(true); setError(''); }}
+              className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              新增用户
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Search input */}
+          <div className="mb-4">
+            <Input
+              placeholder="搜索用户名或显示名..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="max-w-md"
+            />
+          </div>
 
-      {/* User table */}
-      <div className="bg-white rounded shadow overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left">用户名</th>
-              <th className="px-4 py-3 text-left">显示名</th>
-              <th className="px-4 py-3 text-left">类型</th>
-              <th className="px-4 py-3 text-left">状态</th>
-              <th className="px-4 py-3 text-left">密码</th>
-              <th className="px-4 py-3 text-left">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map(user => (
-              <tr key={user.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{user.username}</td>
-                <td className="px-4 py-3">{user.display_name || '-'}</td>
-                <td className="px-4 py-3">
-                  {user.is_super_admin ? (
-                    <span className="text-[#1e3a5f] font-medium">超级管理员</span>
-                  ) : '普通用户'}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={user.is_active ? 'text-green-600' : 'text-red-600'}>
-                    {user.is_active ? '启用' : '禁用'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  {user.must_change_password ? (
-                    <span className="text-orange-600">待修改</span>
-                  ) : '正常'}
-                </td>
-                <td className="px-4 py-3 space-x-2">
-                  <button
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setFormDisplayName(user.display_name || '');
-                      setFormIsActive(user.is_active);
-                      setError('');
-                      setShowEditDialog(true);
-                    }}
-                    className="text-[#1e3a5f] hover:underline"
-                  >
-                    编辑
-                  </button>
-                  <button
-                    onClick={() => openPermissionDialog(user)}
-                    className="text-[#1e3a5f] hover:underline"
-                  >
-                    权限
-                  </button>
-                  <button
-                    onClick={() => handleResetPassword(user.id)}
-                    className="text-[#1e3a5f] hover:underline"
-                  >
-                    重置密码
-                  </button>
-                  <button
-                    onClick={() => handleDeleteUser(user.id, user.username)}
-                    disabled={user.username === '10020580' || user.username === currentUser?.username}
-                    className={`hover:underline ${
-                      user.username === '10020580' || user.username === currentUser?.username
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-red-600'
-                    }`}
-                  >
-                    删除
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filteredUsers.length === 0 && (
-          <div className="p-8 text-center text-gray-500">暂无用户</div>
-        )}
-      </div>
+          {/* User table */}
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30">
+                <TableHead className="w-[15%]">用户名</TableHead>
+                <TableHead className="w-[15%]">显示名</TableHead>
+                <TableHead className="w-[12%]">类型</TableHead>
+                <TableHead className="w-[8%]">状态</TableHead>
+                <TableHead className="w-[8%]">密码</TableHead>
+                <TableHead className="w-[32%]">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                    暂无用户
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map(user => (
+                  <TableRow key={user.id} className="hover:bg-muted/10">
+                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>{user.display_name || '-'}</TableCell>
+                    <TableCell>
+                      {user.is_super_admin ? (
+                        <Badge variant="outline" className="text-[#1e3a5f] border-[#1e3a5f]">超管</Badge>
+                      ) : (
+                        <Badge variant="outline">普通</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {user.is_active ? (
+                        <Badge variant="outline" className="text-green-600 border-green-600">启用</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-red-500 border-red-500">禁用</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {user.must_change_password ? (
+                        <Badge variant="outline" className="text-orange-600 border-orange-600">待修改</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-green-600 border-green-600">正常</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setFormDisplayName(user.display_name || '');
+                            setFormIsActive(user.is_active);
+                            setError('');
+                            setShowEditDialog(true);
+                          }}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          编辑
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-amber-600 hover:text-amber-600 hover:bg-amber-600/10"
+                          onClick={() => openPermissionDialog(user)}
+                          disabled={user.is_super_admin}
+                        >
+                          <Settings className="h-3 w-3 mr-1" />
+                          权限
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10"
+                          onClick={() => handleResetPassword(user.id)}
+                        >
+                          <Key className="h-3 w-3 mr-1" />
+                          重置密码
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                          onClick={() => handleDeleteUser(user.id, user.username)}
+                          disabled={user.username === '10020580' || user.username === user?.username}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          删除
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Add User Dialog */}
-      {showAddDialog && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold mb-4">新增用户</h2>
-            {error && <div className="mb-3 p-2 bg-red-100 text-red-600 rounded text-sm">{error}</div>}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm mb-1">用户名</label>
-                <input
-                  type="text"
-                  value={formUsername}
-                  onChange={e => setFormUsername(e.target.value)}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">显示名</label>
-                <input
-                  type="text"
-                  value={formDisplayName}
-                  onChange={e => setFormDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formIsActive}
-                  onChange={e => setFormIsActive(e.target.checked)}
-                />
-                <label className="text-sm">启用账户</label>
-              </div>
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>新增用户</DialogTitle>
+          </DialogHeader>
+          {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>用户名 *</Label>
+              <Input
+                value={formUsername}
+                onChange={(e) => setFormUsername(e.target.value)}
+                placeholder="输入用户名"
+              />
             </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowAddDialog(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleAddUser}
-                disabled={submitting}
-                className="px-4 py-2 bg-[#1e3a5f] text-white rounded hover:opacity-90 disabled:opacity-50"
-              >
-                {submitting ? '添加中...' : '添加'}
-              </button>
+            <div className="space-y-2">
+              <Label>显示名</Label>
+              <Input
+                value={formDisplayName}
+                onChange={(e) => setFormDisplayName(e.target.value)}
+                placeholder="输入显示名"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="addIsActive"
+                checked={formIsActive}
+                onCheckedChange={(checked) => setFormIsActive(checked === true)}
+              />
+              <Label htmlFor="addIsActive" className="cursor-pointer">启用账户</Label>
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={handleAddUser} disabled={submitting} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              {submitting ? '添加中...' : '添加'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Dialog */}
-      {showEditDialog && selectedUser && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold mb-4">编辑用户</h2>
-            <p className="text-sm text-gray-500 mb-4">用户名：{selectedUser.username}</p>
-            {error && <div className="mb-3 p-2 bg-red-100 text-red-600 rounded text-sm">{error}</div>}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm mb-1">显示名</label>
-                <input
-                  type="text"
-                  value={formDisplayName}
-                  onChange={e => setFormDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formIsActive}
-                  onChange={e => setFormIsActive(e.target.checked)}
-                />
-                <label className="text-sm">启用账户</label>
-              </div>
+      <Dialog open={showEditDialog} onOpenChange={(open) => { setShowEditDialog(open); if (!open) setSelectedUser(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>编辑用户</DialogTitle>
+            <DialogDescription>用户名：{selectedUser?.username}</DialogDescription>
+          </DialogHeader>
+          {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>显示名</Label>
+              <Input
+                value={formDisplayName}
+                onChange={(e) => setFormDisplayName(e.target.value)}
+                placeholder="输入显示名"
+              />
             </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowEditDialog(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleEditUser}
-                disabled={submitting}
-                className="px-4 py-2 bg-[#1e3a5f] text-white rounded hover:opacity-90 disabled:opacity-50"
-              >
-                {submitting ? '保存中...' : '保存'}
-              </button>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="editIsActive"
+                checked={formIsActive}
+                onCheckedChange={(checked) => setFormIsActive(checked === true)}
+              />
+              <Label htmlFor="editIsActive" className="cursor-pointer">启用账户</Label>
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={handleEditUser} disabled={submitting} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              {submitting ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Permission Dialog */}
-      {showPermissionDialog && selectedUser && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded shadow-lg p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto">
-            <h2 className="text-lg font-bold mb-2">配置权限</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              用户：{selectedUser.username} ({selectedUser.display_name || '普通用户'})
-            </p>
-            <p className="text-xs text-gray-400 mb-4 border-b pb-3">
-              勾选菜单表示可访问，勾选操作权限表示可执行对应操作。默认只开启查看权限。
-            </p>
-            {error && <div className="mb-3 p-2 bg-red-100 text-red-600 rounded text-sm">{error}</div>}
-            
-            {/* Permission table */}
-            <table className="w-full text-sm border">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left border-b w-32">可访问</th>
-                  <th className="px-3 py-2 text-left border-b">菜单名称</th>
-                  <th className="px-3 py-2 text-left border-b w-20">路径</th>
-                  {['新增', '修改', '删除', '导出', '初始化', '下发', '重置密码', '配置权限'].map(label => (
-                    <th key={label} className="px-2 py-2 text-center border-b w-16">{label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {menuTree.map(parent => {
-                  const parentPerm = editingPermissions.find(p => p.menu_id === parent.id);
-                  if (!parentPerm) return null;
-                  const parentHasAccess = parentPerm.permissions['view'] === true || 
-                    Object.values(parentPerm.permissions).some(v => v === true);
-                  
+      {/* Permission Config Dialog */}
+      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>权限配置</DialogTitle>
+            <DialogDescription>
+              用户：{selectedUser?.username} ({selectedUser?.display_name || '普通用户'})
+              <br />
+              <span className="text-xs">勾选菜单下的功能操作，开通对应权限。未勾选的功能将无法使用。</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+
+          <div className="flex-1 overflow-y-auto py-4">
+            {permLoading ? (
+              <div className="text-center py-10 text-muted-foreground">加载权限数据...</div>
+            ) : (
+              <div className="space-y-2">
+                {permissionTree.map(parentNode => {
+                  const isExpanded = expandedMenuIds.has(parentNode.menu_id);
+                  const hasFunctions = parentNode.functions.length > 0 || parentNode.children.some(c => c.functions.length > 0);
+
+                  if (!hasFunctions) return null;
+
                   return (
-                    <>
-                      {/* 父菜单行 */}
-                      <tr key={parent.id} className="bg-gray-50/50">
-                        <td className="px-3 py-2 border-b">
-                          {parentPerm.supported_actions.length > 0 ? (
-                            <input
-                              type="checkbox"
-                              checked={parentHasAccess}
-                              onChange={e => toggleMenuAccess(parent.id, e.target.checked)}
-                            />
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 border-b font-medium">{parent.name}</td>
-                        <td className="px-3 py-2 border-b text-gray-400">{parent.path || '-'}</td>
-                        {['add', 'edit', 'delete', 'export', 'init', 'publish', 'reset_password', 'config_permission'].map(action => (
-                          <td key={action} className="px-2 py-2 text-center border-b">
-                            {parentPerm.supported_actions.includes(action) ? (
-                              <input
-                                type="checkbox"
-                                checked={parentPerm.permissions[action] === true}
-                                onChange={e => updatePermission(parent.id, action, e.target.checked)}
-                              />
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                      {/* 子菜单行 */}
-                      {parent.children.map(child => {
-                        const childPerm = editingPermissions.find(p => p.menu_id === child.id);
-                        if (!childPerm) return null;
-                        const childHasAccess = childPerm.permissions['view'] === true || 
-                          Object.values(childPerm.permissions).some(v => v === true);
-                        
-                        return (
-                          <tr key={child.id} className="border-b hover:bg-gray-50">
-                            <td className="px-3 py-2 pl-6">
-                              {childPerm.supported_actions.length > 0 ? (
-                                <input
-                                  type="checkbox"
-                                  checked={childHasAccess}
-                                  onChange={e => toggleMenuAccess(child.id, e.target.checked)}
-                                />
-                              ) : (
-                                <span className="text-gray-400">-</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 pl-6">{child.name}</td>
-                            <td className="px-3 py-2 text-gray-500">{child.path || '-'}</td>
-                            {['add', 'edit', 'delete', 'export', 'init', 'publish', 'reset_password', 'config_permission'].map(action => (
-                              <td key={action} className="px-2 py-2 text-center">
-                                {childPerm.supported_actions.includes(action) ? (
-                                  <input
-                                    type="checkbox"
-                                    checked={childPerm.permissions[action] === true}
-                                    onChange={e => updatePermission(child.id, action, e.target.checked)}
-                                  />
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
+                    <div key={parentNode.menu_id} className="border rounded-lg">
+                      {/* Parent menu header */}
+                      <div
+                        className="flex items-center gap-3 p-3 bg-muted/30 cursor-pointer"
+                        onClick={() => toggleExpand(parentNode.menu_id)}
+                      >
+                        {parentNode.children.length > 0 ? (
+                          isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+                        ) : (
+                          <span className="w-4" />
+                        )}
+                        <span className="font-medium">{parentNode.menu_name}</span>
+                        {parentNode.menu_path && (
+                          <span className="text-xs text-muted-foreground font-mono">{parentNode.menu_path}</span>
+                        )}
+                        {/* Parent functions */}
+                        {parentNode.functions.length > 0 && (
+                          <div className="flex items-center gap-2 ml-4">
+                            {parentNode.functions.map(func => (
+                              <Badge
+                                key={func.function_code}
+                                variant={parentNode.checkedFunctions[func.function_code] ? "default" : "outline"}
+                                className={`cursor-pointer px-2 py-0.5 text-xs ${
+                                  parentNode.checkedFunctions[func.function_code]
+                                    ? 'bg-[#1e3a5f] text-white'
+                                    : 'hover:bg-[#1e3a5f]/10'
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleFunction(parentNode.menu_id, func.function_code, !parentNode.checkedFunctions[func.function_code]);
+                                }}
+                              >
+                                {func.function_name}
+                              </Badge>
                             ))}
-                          </tr>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Child menus */}
+                      {isExpanded && parentNode.children.map(childNode => {
+                        if (childNode.functions.length === 0) return null;
+
+                        return (
+                          <div key={childNode.menu_id} className="flex items-center gap-3 p-3 pl-8 border-t">
+                            <span className="w-4" />
+                            <span>{childNode.menu_name}</span>
+                            {childNode.menu_path && (
+                              <span className="text-xs text-muted-foreground font-mono">{childNode.menu_path}</span>
+                            )}
+                            {/* Child functions */}
+                            <div className="flex items-center gap-2 ml-4 flex-wrap">
+                              {childNode.functions.map(func => (
+                                <Badge
+                                  key={func.function_code}
+                                  variant={childNode.checkedFunctions[func.function_code] ? "default" : "outline"}
+                                  className={`cursor-pointer px-2 py-0.5 text-xs ${
+                                    childNode.checkedFunctions[func.function_code]
+                                      ? 'bg-[#1e3a5f] text-white'
+                                      : 'hover:bg-[#1e3a5f]/10'
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFunction(childNode.menu_id, func.function_code, !childNode.checkedFunctions[func.function_code]);
+                                  }}
+                                >
+                                  {func.function_name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
                         );
                       })}
-                    </>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-            
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowPermissionDialog(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={savePermissions}
-                disabled={submitting}
-                className="px-4 py-2 bg-[#1e3a5f] text-white rounded hover:opacity-90 disabled:opacity-50"
-              >
-                {submitting ? '保存中...' : '保存'}
-              </button>
-            </div>
+
+                {permissionTree.every(p => p.functions.length === 0 && p.children.every(c => c.functions.length === 0)) && (
+                  <div className="text-center py-10 text-muted-foreground">
+                    暂无可配置的功能权限，请先在菜单管理中配置各菜单的功能
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPermissionDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={savePermissions} disabled={submitting} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              {submitting ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

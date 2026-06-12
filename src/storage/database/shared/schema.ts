@@ -212,3 +212,32 @@ export const sysUserMenus = pgTable("sys_user_menus", {
 	index("idx_sys_user_menus_user_id").using("btree", table.user_id.asc().nullsLast().op("int4_ops")),
 	index("idx_sys_user_menus_menu_id").using("btree", table.menu_id.asc().nullsLast().op("int4_ops")),
 ]);
+
+// 菜单功能配置表
+export const sysMenuFunctions = pgTable("sys_menu_functions", {
+	id: serial().primaryKey().notNull(),
+	menu_id: integer("menu_id").notNull().references(() => sysMenus.id, { onDelete: "cascade" }),
+	function_code: varchar("function_code", { length: 50 }).notNull(),
+	function_name: varchar("function_name", { length: 100 }).notNull(),
+	sort_order: integer("sort_order").default(0).notNull(),
+	created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_sys_menu_functions_menu_id").using("btree", table.menu_id.asc().nullsLast().op("int4_ops")),
+]);
+
+// 用户菜单功能权限表
+export const sysUserMenuFunctions = pgTable("sys_user_menu_functions", {
+	id: serial().primaryKey().notNull(),
+	user_id: integer("user_id").notNull().references(() => sysUsers.id, { onDelete: "cascade" }),
+	menu_id: integer("menu_id").notNull().references(() => sysMenus.id, { onDelete: "cascade" }),
+	function_code: varchar("function_code", { length: 50 }).notNull(),
+	is_enabled: boolean("is_enabled").default(false).notNull(),
+	created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_sys_user_menu_functions_user_menu").using("btree", table.user_id.asc().nullsLast().op("int4_ops"), table.menu_id.asc().nullsLast().op("int4_ops")),
+]);
+
+export type SysMenuFunction = typeof sysMenuFunctions.$inferSelect;
+export type NewSysMenuFunction = typeof sysMenuFunctions.$inferInsert;
+export type SysUserMenuFunction = typeof sysUserMenuFunctions.$inferSelect;
+export type NewSysUserMenuFunction = typeof sysUserMenuFunctions.$inferInsert;

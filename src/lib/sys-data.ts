@@ -1,6 +1,7 @@
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import bcrypt from 'bcryptjs';
 import { type SessionPayload } from './auth';
+import { type SysMenuFunction, type SysUserMenuFunction } from '@/storage/database/shared/schema';
 
 export interface SysUser {
   id: number;
@@ -528,6 +529,237 @@ export async function getUserAllPermissions(userId: number, isSuperAdmin: boolea
         permissions: perm.permissions || {},
         supported_actions: supported,
       };
+    }
+  }
+
+  return result;
+}
+
+// ========== 菜单功能配置相关 ==========
+
+/**
+ * 获取菜单的功能配置列表
+ */
+export async function getMenuFunctions(menuId: number): Promise<SysMenuFunction[]> {
+  const sb = getSupabaseClient();
+  const result = await sb
+    .from('sys_menu_functions')
+    .select('*')
+    .eq('menu_id', menuId)
+    .order('sort_order', { ascending: true });
+  return result.data || [];
+}
+
+/**
+ * 获取所有菜单功能配置
+ */
+export async function getAllMenuFunctions(): Promise<SysMenuFunction[]> {
+  const sb = getSupabaseClient();
+  const result = await sb
+    .from('sys_menu_functions')
+    .select('*')
+    .order('menu_id', { ascending: true })
+    .order('sort_order', { ascending: true });
+  return result.data || [];
+}
+
+/**
+ * 创建菜单功能
+ */
+export async function createMenuFunction(data: Omit<SysMenuFunction, 'id' | 'created_at'>): Promise<SysMenuFunction | null> {
+  const sb = getSupabaseClient();
+  const result = await sb
+    .from('sys_menu_functions')
+    .insert({
+      menu_id: data.menu_id,
+      function_code: data.function_code,
+      function_name: data.function_name,
+      sort_order: data.sort_order || 0,
+    })
+    .select()
+    .single();
+  return result.data;
+}
+
+/**
+ * 更新菜单功能
+ */
+export async function updateMenuFunction(id: number, data: Partial<SysMenuFunction>): Promise<SysMenuFunction | null> {
+  const sb = getSupabaseClient();
+  const result = await sb
+    .from('sys_menu_functions')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+  return result.data;
+}
+
+/**
+ * 删除菜单功能
+ */
+export async function deleteMenuFunction(id: number): Promise<boolean> {
+  const sb = getSupabaseClient();
+  const result = await sb
+    .from('sys_menu_functions')
+    .delete()
+    .eq('id', id);
+  return !result.error;
+}
+
+/**
+ * 批量更新菜单功能配置
+ */
+export async function updateMenuFunctions(menuId: number, functions: Array<{ function_code: string; function_name: string; sort_order: number }>): Promise<SysMenuFunction[]> {
+  const sb = getSupabaseClient();
+  // 先删除现有功能
+  await sb
+    .from('sys_menu_functions')
+    .delete()
+    .eq('menu_id', menuId);
+
+  // 再插入新功能
+  if (functions.length === 0) {
+    return [];
+  }
+
+  const insertData = functions.map(f => ({
+    menu_id: menuId,
+    function_code: f.function_code,
+    function_name: f.function_name,
+    sort_order: f.sort_order,
+  }));
+
+  const result = await sb
+    .from('sys_menu_functions')
+    .insert(insertData)
+    .select();
+
+  return result.data || [];
+}
+
+// ========== 用户菜单功能权限相关 ==========
+
+/**
+ * 获取用户的菜单功能权限
+ */
+export async function getUserMenuFunctionPermissions(userId: number): Promise<SysUserMenuFunction[]> {
+  const sb = getSupabaseClient();
+  const result = await sb
+    .from('sys_user_menu_functions')
+    .select('*')
+    .eq('user_id', userId);
+  return result.data || [];
+}
+
+/**
+ * 获取用户在某个菜单的功能权限
+ */
+export async function getUserMenuFunctions(userId: number, menuId: number): Promise<SysUserMenuFunction[]> {
+  const sb = getSupabaseClient();
+  const result = await sb
+    .from('sys_user_menu_functions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('menu_id', menuId);
+  return result.data || [];
+}
+
+/**
+ * 更新用户的菜单功能权限
+ */
+export async function updateUserMenuFunctions(userId: number, menuId: number, functions: Array<{ function_code: string; is_enabled: boolean }>): Promise<void> {
+  const sb = getSupabaseClient();
+  // 先删除现有权限
+  await sb
+    .from('sys_user_menu_functions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('menu_id', menuId);
+
+  // 再插入新权限
+  if (functions.length === 0) {
+    return;
+  }
+
+  const insertData = functions.map(f => ({
+    user_id: userId,
+    menu_id: menuId,
+    function_code: f.function_code,
+    is_enabled: f.is_enabled,
+  }));
+
+  await sb
+    .from('sys_user_menu_functions')
+    .insert(insertData);
+}
+
+/**
+ * 批量更新用户的所有菜单功能权限
+ */
+export async function updateUserAllMenuFunctions(userId: number, permissions: Array<{ menu_id: number; functions: Array<{ function_code: string; is_enabled: boolean }> }>): Promise<void> {
+  const sb = getSupabaseClient();
+  // 先删除所有现有权限
+  await sb
+    .from('sys_user_menu_functions')
+    .delete()
+    .eq('user_id', userId);
+
+  // 批量插入新权限
+  const allInserts: Array<{ user_id: number; menu_id: number; function_code: string; is_enabled: boolean }> = [];
+  
+  for (const perm of permissions) {
+    for (const func of perm.functions) {
+      allInserts.push({
+        user_id: userId,
+        menu_id: perm.menu_id,
+        function_code: func.function_code,
+        is_enabled: func.is_enabled,
+      });
+    }
+  }
+
+  if (allInserts.length > 0) {
+    await sb
+      .from('sys_user_menu_functions')
+      .insert(allInserts);
+  }
+}
+
+/**
+ * 获取用户的所有菜单功能权限（按路径组织）
+ */
+export async function getUserAllMenuFunctionPermissions(userId: number): Promise<Record<string, Record<string, boolean>>> {
+  // 获取所有菜单及其功能配置
+  const menus = await getAllMenus();
+  const allFunctions = await getAllMenuFunctions();
+
+  // 获取用户的权限
+  const userPerms = await getUserMenuFunctionPermissions(userId);
+  const permMap = new Map<string, Map<string, boolean>>();
+
+  for (const perm of userPerms) {
+    const key = `${perm.menu_id}`;
+    if (!permMap.has(key)) {
+      permMap.set(key, new Map());
+    }
+    permMap.get(key)!.set(perm.function_code, perm.is_enabled);
+  }
+
+  // 组织结果
+  const result: Record<string, Record<string, boolean>> = {};
+  
+  for (const menu of menus) {
+    if (!menu.path) continue;
+
+    const menuFunctions = allFunctions.filter(f => f.menu_id === menu.id);
+    if (menuFunctions.length === 0) continue;
+
+    const userMenuPerms = permMap.get(`${menu.id}`) || new Map();
+    
+    result[menu.path] = {};
+    for (const func of menuFunctions) {
+      result[menu.path][func.function_code] = userMenuPerms.get(func.function_code) || false;
     }
   }
 
