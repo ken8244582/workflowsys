@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import {
   ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Forward, Trash2, Search,
-  ClipboardList, Clock, CheckCircle, TrendingUp, Download,
+  ClipboardList, Clock, CheckCircle, TrendingUp, Download, AlertTriangle,
 } from 'lucide-react';
 import { PaginationBar } from '@/components/pagination-bar';
 import { TruncateDiv } from '@/components/truncate-cell';
@@ -55,7 +55,7 @@ interface FlowItem {
 }
 
 export default function PlanDetailPage() {
-  const { canAdd, canPublish } = usePermission('/functional/plan');
+  const { canAdd, canPublish, canInit } = usePermission('/functional/plan');
   const params = useParams();
   const router = useRouter();
   const planId = params.id as string;
@@ -83,6 +83,12 @@ export default function PlanDetailPage() {
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
   const [showBatchCarryDialog, setShowBatchCarryDialog] = useState(false);
   const [operating, setOperating] = useState(false);
+
+  // Data reinitialize state
+  const [showReinitDialog, setShowReinitDialog] = useState(false);
+  const [reinitConfirmText, setReinitConfirmText] = useState('');
+  const [reinitLoading, setReinitLoading] = useState(false);
+  const [reinitFile, setReinitFile] = useState<File | null>(null);
   const [deleteTaskName, setDeleteTaskName] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
@@ -373,6 +379,32 @@ export default function PlanDetailPage() {
     }
   };
 
+  const handleReinitialize = async () => {
+    if (reinitConfirmText !== '数据初始化') return;
+    if (!reinitFile) { alert('请选择要导入的Excel文件'); return; }
+    setReinitLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', reinitFile);
+      const res = await fetch(`/api/revision-plans/${planId}/reinitialize`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        alert(data.error || '初始化失败');
+        return;
+      }
+      setShowReinitDialog(false);
+      setReinitConfirmText('');
+      setReinitFile(null);
+      fetchPlan();
+      fetchTasks();
+      fetchFilterOptions();
+    } catch {
+      alert('数据初始化失败，请检查文件格式');
+    } finally {
+      setReinitLoading(false);
+    }
+  };
+
   const toggleSelect = (id: number) => {
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -449,6 +481,11 @@ export default function PlanDetailPage() {
           </Button>
           {isDraft && (
             <>
+              {canInit() && (
+                <Button variant="outline" size="sm" onClick={() => setShowReinitDialog(true)} className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50">
+                  <RotateCcw className="h-4 w-4" /> 数据初始化
+                </Button>
+              )}
               {canAdd() && (
                 <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
                   <Plus className="h-4 w-4" /> 添加任务
@@ -1022,6 +1059,53 @@ export default function PlanDetailPage() {
               className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
             >
               {operating ? '添加中...' : `确认添加 (${selectedFlowIds.size}项)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 数据初始化确认对话框 */}
+      <Dialog open={showReinitDialog} onOpenChange={setShowReinitDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              数据初始化
+            </DialogTitle>
+            <DialogDescription className="text-left pt-2">
+              此操作将<strong className="text-red-600">清空当前计划所有任务数据</strong>并重新导入，此操作不可撤销！
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-slate-600 mb-3">请输入 <strong className="text-red-600">数据初始化</strong> 以确认操作：</p>
+            <input
+              type="text"
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+              placeholder="请输入：数据初始化"
+              value={reinitConfirmText}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReinitConfirmText(e.target.value)}
+            />
+          </div>
+          <div className="mb-4">
+            <label className="text-sm text-slate-600 mb-2 block">选择要导入的 Excel 文件：</label>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const file = e.target.files?.[0];
+                if (file) setReinitFile(file);
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowReinitDialog(false); setReinitConfirmText(''); setReinitFile(null); }}>取消</Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              disabled={reinitConfirmText !== '数据初始化' || !reinitFile || reinitLoading}
+              onClick={handleReinitialize}
+            >
+              {reinitLoading ? '初始化中...' : '确认初始化'}
             </Button>
           </DialogFooter>
         </DialogContent>
