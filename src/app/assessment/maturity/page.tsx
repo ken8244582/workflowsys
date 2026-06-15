@@ -124,7 +124,12 @@ const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 export default function MaturityAssessmentPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const MATURITY_PATH = '/assessment/maturity';
+  const canAdd = hasPermission(MATURITY_PATH, 'add');
+  const canEdit = hasPermission(MATURITY_PATH, 'edit');
+  const canDelete = hasPermission(MATURITY_PATH, 'delete');
+  const canExport = hasPermission(MATURITY_PATH, 'export');
   const [standards, setStandards] = useState<Standard[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [currentAssessment, setCurrentAssessment] = useState<AssessmentWithDetails | null>(null);
@@ -525,9 +530,11 @@ export default function MaturityAssessmentPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground">成熟度自评列表</h2>
+        {canAdd && (
         <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
           <Plus className="h-3.5 w-3.5 mr-1" />新建自评
         </Button>
+        )}
       </div>
 
       {/* Filters - matching flow list style */}
@@ -601,6 +608,7 @@ export default function MaturityAssessmentPage() {
                             <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => loadAssessment(a.id)}>
                               {a.status === '草稿' ? '填写' : '查看'}
                             </Button>
+                            {canAdd && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -615,6 +623,8 @@ export default function MaturityAssessmentPage() {
                             >
                               <Copy className="h-3.5 w-3.5 text-gray-500" />
                             </Button>
+                            )}
+                            {canExport && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -624,6 +634,8 @@ export default function MaturityAssessmentPage() {
                             >
                               <Download className="h-3.5 w-3.5 text-gray-500" />
                             </Button>
+                            )}
+                            {canDelete && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -633,6 +645,7 @@ export default function MaturityAssessmentPage() {
                             >
                               <Trash2 className="h-3.5 w-3.5 text-gray-400" />
                             </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -660,6 +673,7 @@ export default function MaturityAssessmentPage() {
   const renderAssessView = () => {
     if (!currentAssessment) return null;
     const isDraft = currentAssessment.status === '草稿';
+    const canEditThis = isDraft && canEdit;
 
     return (
       <div className="space-y-4">
@@ -675,19 +689,21 @@ export default function MaturityAssessmentPage() {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            {isDraft && (
+            {canEditThis && (
               <Button onClick={handleSave} disabled={saving} variant="outline" size="sm">
                 {saving ? '保存中...' : '保存'}
               </Button>
             )}
-            {isDraft && (
+            {canEditThis && (
               <Button onClick={handleSubmit} disabled={saving} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90" size="sm">
                 提交
               </Button>
             )}
+            {canExport && (
             <Button variant="outline" onClick={() => handleExport(currentAssessment.id)} size="sm">
               <Download className="h-4 w-4 mr-1" />导出
             </Button>
+            )}
             {assessments.filter(a => a.id !== currentAssessment.id).length > 0 && (
               <Button variant="outline" onClick={() => setShowCompare(true)} size="sm">
                 对比历史
@@ -769,7 +785,7 @@ export default function MaturityAssessmentPage() {
                                 <td className="px-3 py-2 text-xs text-muted-foreground">{std.criteria_desc}</td>
                                 <td className="px-3 py-2 text-center font-mono">{std.standard_score}</td>
                                 <td className="px-3 py-2">
-                                  {isDraft ? (
+                                  {canEditThis ? (
                                     <Textarea
                                       value={statusVal}
                                       onChange={e => updateDetail(std.id, 'current_status', e.target.value)}
@@ -782,7 +798,7 @@ export default function MaturityAssessmentPage() {
                                   )}
                                 </td>
                                 <td className="px-3 py-2 text-center">
-                                  {isDraft ? (
+                                  {canEditThis ? (
                                     <Select
                                       value={scoreVal === '1' ? '1' : '0'}
                                       onValueChange={v => updateDetail(std.id, 'self_score', v)}
@@ -834,7 +850,7 @@ export default function MaturityAssessmentPage() {
                             {/* Current Status */}
                             <div className="flex items-start gap-2">
                               <Label className="text-xs text-muted-foreground shrink-0 pt-1.5">现状:</Label>
-                              {isDraft ? (
+                              {canEditThis ? (
                                 <Textarea
                                   value={detailMap.get(firstStd.id)?.current_status || ''}
                                   onChange={e => {
@@ -860,11 +876,11 @@ export default function MaturityAssessmentPage() {
                                     className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
                                       isSelected
                                         ? 'bg-blue-50 border border-blue-200'
-                                        : isDraft
+                                        : canEditThis
                                         ? 'hover:bg-muted/50 border border-transparent'
                                         : 'border border-transparent'
                                     }`}
-                                    onClick={() => isDraft && selectDegree(groupKey, std.id)}
+                                    onClick={() => canEditThis && selectDegree(groupKey, std.id)}
                                   >
                                     <span className={`text-xs font-mono w-12 ${isSelected ? 'text-blue-600 font-semibold' : 'text-muted-foreground'}`}>
                                       {std.layer5}:

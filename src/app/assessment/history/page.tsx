@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Trash2, Eye, Download } from 'lucide-react';
 import { PaginationBar } from '@/components/pagination-bar';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth-provider';
 
 interface Assessment {
   id: number;
@@ -79,6 +80,11 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 export default function AssessmentHistoryPage() {
   const router = useRouter();
+  const { hasPermission } = useAuth();
+  const HISTORY_PATH = '/assessment/history';
+  const MATURITY_PATH = '/assessment/maturity';
+  const canExport = hasPermission(HISTORY_PATH, 'export');
+  const canDelete = hasPermission(MATURITY_PATH, 'delete');
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [selectedId1, setSelectedId1] = useState<string>('');
   const [selectedId2, setSelectedId2] = useState<string>('');
@@ -279,6 +285,7 @@ export default function AssessmentHistoryPage() {
                           >
                             <Eye className="h-3.5 w-3.5 text-gray-500" />
                           </Button>
+                          {canExport && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -288,6 +295,8 @@ export default function AssessmentHistoryPage() {
                           >
                             <Download className="h-3.5 w-3.5 text-gray-500" />
                           </Button>
+                          )}
+                          {canDelete && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -297,6 +306,7 @@ export default function AssessmentHistoryPage() {
                           >
                             <Trash2 className="h-3.5 w-3.5 text-gray-400" />
                           </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
