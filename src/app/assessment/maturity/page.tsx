@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Trash2, Copy } from 'lucide-react';
+import { Search, Plus, Trash2, Copy, Download } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { PaginationBar } from '@/components/pagination-bar';
 
@@ -324,6 +324,30 @@ export default function MaturityAssessmentPage() {
     }
   };
 
+  // Export assessment as Excel
+  const handleExport = async (id: number) => {
+    try {
+      const res = await fetch(`/api/assessments/${id}/export`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const disposition = res.headers.get('Content-Disposition');
+        let filename = '自评导出.xlsx';
+        if (disposition) {
+          const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)/i);
+          if (match) filename = decodeURIComponent(match[1].replace(/"/g, ''));
+        }
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error('Failed to export:', e);
+    }
+  };
+
   // Compare assessments
   const handleCompare = async () => {
     if (!currentAssessment || !compareAssessmentId) return;
@@ -522,6 +546,15 @@ export default function MaturityAssessmentPage() {
                               size="sm"
                               variant="ghost"
                               className="h-6 w-6 p-0"
+                              title="导出Excel"
+                              onClick={() => handleExport(a.id)}
+                            >
+                              <Download className="h-3.5 w-3.5 text-gray-500" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
                               title="删除"
                               onClick={() => { setDeleteId(a.id); setDeleteName(a.name); }}
                             >
@@ -579,6 +612,9 @@ export default function MaturityAssessmentPage() {
                 提交
               </Button>
             )}
+            <Button variant="outline" onClick={() => handleExport(currentAssessment.id)} size="sm">
+              <Download className="h-4 w-4 mr-1" />导出
+            </Button>
             {assessments.filter(a => a.id !== currentAssessment.id).length > 0 && (
               <Button variant="outline" onClick={() => setShowCompare(true)} size="sm">
                 对比历史

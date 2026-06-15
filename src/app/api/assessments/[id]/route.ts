@@ -8,6 +8,13 @@ import {
   updateAssessment,
   generateComparisonReport,
 } from '@/lib/assessment-data';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
+
+async function resolveDisplayName(username: string): Promise<string> {
+  const client = getSupabaseClient();
+  const { data } = await client.from('sys_users').select('display_name').eq('username', username).maybeSingle();
+  return data?.display_name || username;
+}
 
 // GET /api/assessments/[id] - Get assessment with details
 export async function GET(
@@ -27,7 +34,10 @@ export async function GET(
     if (!assessment) {
       return NextResponse.json({ error: '自评不存在' }, { status: 404 });
     }
-    return NextResponse.json(assessment);
+    // Resolve display names
+    const createdByDn = await resolveDisplayName(assessment.created_by as string);
+    const updatedByDn = await resolveDisplayName(assessment.updated_by as string);
+    return NextResponse.json({ ...assessment, created_by: createdByDn, updated_by: updatedByDn });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '查询自评失败';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -51,6 +61,7 @@ export async function PUT(
 
     const body = await request.json();
     const { action } = body;
+    const displayName = authResult.displayName || authResult.username;
 
     if (action === 'save') {
       // Save assessment details
@@ -58,18 +69,18 @@ export async function PUT(
       if (!Array.isArray(details)) {
         return NextResponse.json({ error: '明细数据格式错误' }, { status: 400 });
       }
-      const assessment = await saveAssessmentDetails(assessmentId, details, authResult.username);
+      const assessment = await saveAssessmentDetails(assessmentId, details, displayName);
       return NextResponse.json(assessment);
     }
 
     if (action === 'submit') {
-      const assessment = await submitAssessment(assessmentId, authResult.username);
+      const assessment = await submitAssessment(assessmentId, displayName);
       return NextResponse.json(assessment);
     }
 
     if (action === 'update') {
       const { name, period, remarks } = body;
-      const assessment = await updateAssessment(assessmentId, { name, period, remarks }, authResult.username);
+      const assessment = await updateAssessment(assessmentId, { name, period, remarks }, displayName);
       return NextResponse.json(assessment);
     }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, isSession } from '@/lib/api-auth';
 import { getAssessments, createAssessment, copyAssessment, seedStandardsIfNeeded } from '@/lib/assessment-data';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // GET /api/assessments - List all assessments
 export async function GET() {
@@ -10,7 +11,23 @@ export async function GET() {
   try {
     await seedStandardsIfNeeded();
     const assessments = await getAssessments();
-    return NextResponse.json(assessments);
+
+    // Resolve created_by username -> display_name
+    const client = getSupabaseClient();
+    const { data: users } = await client.from('sys_users').select('username, display_name');
+    const nameMap = new Map<string, string>();
+    if (users) {
+      for (const u of users) {
+        nameMap.set(u.username, u.display_name || u.username);
+      }
+    }
+    const enriched = assessments.map((a) => ({
+      ...a,
+      created_by: nameMap.get(a.created_by) || a.created_by,
+      updated_by: nameMap.get(a.updated_by) || a.updated_by,
+    }));
+
+    return NextResponse.json(enriched);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '查询自评列表失败';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -29,13 +46,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '名称和周期不能为空' }, { status: 400 });
     }
 
+    const displayName = authResult.displayName || authResult.username;
+
     if (copyFromId) {
       // Copy from an existing assessment
-      const assessment = await copyAssessment(copyFromId, name, period, authResult.username);
+      const assessment = await copyAssessment(copyFromId, name, period, displayName);
       return NextResponse.json(assessment);
     }
 
-    const assessment = await createAssessment(name, period, authResult.username);
+    const assessment = await createAssessment(name, period, displayName);
     return NextResponse.json(assessment);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '创建自评失败';

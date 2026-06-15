@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Search, Trash2, Eye } from 'lucide-react';
+import { Search, Trash2, Eye, Download } from 'lucide-react';
 import { PaginationBar } from '@/components/pagination-bar';
 import { useRouter } from 'next/navigation';
 
@@ -174,6 +174,29 @@ export default function AssessmentHistoryPage() {
     }
   };
 
+  const handleExport = async (id: number) => {
+    try {
+      const res = await fetch(`/api/assessments/${id}/export`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const disposition = res.headers.get('Content-Disposition');
+        let filename = '自评导出.xlsx';
+        if (disposition) {
+          const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)/i);
+          if (match) filename = decodeURIComponent(match[1].replace(/"/g, ''));
+        }
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error('Failed to export:', e);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -255,6 +278,15 @@ export default function AssessmentHistoryPage() {
                             onClick={() => router.push('/assessment/maturity')}
                           >
                             <Eye className="h-3.5 w-3.5 text-gray-500" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            title="导出Excel"
+                            onClick={() => handleExport(a.id)}
+                          >
+                            <Download className="h-3.5 w-3.5 text-gray-500" />
                           </Button>
                           <Button
                             size="sm"

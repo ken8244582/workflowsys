@@ -67,7 +67,7 @@
 │   │       ├── plan-tasks/[id]/       # 单任务操作API (完成/撤回/顺延)
 │   │       ├── e2e/                   # 端到端API (processes+plans)
 │   │       ├── assessment/            # 评价体系API (standards+seed)
-│   │       ├── assessments/           # 自评API (CRUD+对比+报告)
+│   │       ├── assessments/           # 自评API (CRUD+对比+报告+导出)
 │   │       └── sys/                   # 系统管理API (users+menus)
 │   ├── components/
 │   │   ├── auth-provider.tsx          # 认证上下文 (登录态+菜单权限+401自动跳转)
@@ -311,6 +311,8 @@
 7. **复制自评**：从历史自评复制为新草稿，包含所有评分明细，可直接在之前版本上修改
 8. **对比历史**：选择两次自评 → 生成对比报告（各板块差异+明细项得分率变化+待改进方向）
 9. **自评历史**：查看所有历史自评记录，支持搜索/筛选/分页，支持任意两次自评对比
+10. **导出Excel**：按模板格式导出自评为Excel文件，包含评价标准+现状情况+自评分值+汇总行
+11. **创建人显示**：自评列表中created_by显示用户display_name而非username
 
 ### 认证与权限
 - 登录：bcrypt验证 → JWT token存入Session Cookie（浏览器关闭即失效）
