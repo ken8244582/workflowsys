@@ -85,7 +85,7 @@ export interface PlanTask {
   owner: string;
   taskType: '新增流程' | '内容修订' | '格式修订';
   description: string;
-  status: '待执行' | '进行中' | '已完成' | '已顺延';
+  status: '待执行' | '进行中' | '已完成';
   completedAt: string | null;
   carriedFromPlanId: number | null;
   carriedToPlanId: number | null;
@@ -104,7 +104,6 @@ export interface OwnerProgress {
   completed: number;
   pending: number;
   inProgress: number;
-  carriedOver: number;
   completionRate: number;
 }
 

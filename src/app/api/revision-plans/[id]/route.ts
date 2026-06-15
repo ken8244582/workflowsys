@@ -11,17 +11,16 @@ async function computeDepartmentProgress(planId: number) {
     .select('department, status')
     .eq('plan_id', planId);
 
-  const deptMap: Record<string, { total: number; completed: number; pending: number; inProgress: number; carriedOver: number }> = {};
+  const deptMap: Record<string, { total: number; completed: number; pending: number; inProgress: number }> = {};
   for (const task of tasks || []) {
     const dept = task.department || '未指定';
     if (!deptMap[dept]) {
-      deptMap[dept] = { total: 0, completed: 0, pending: 0, inProgress: 0, carriedOver: 0 };
+      deptMap[dept] = { total: 0, completed: 0, pending: 0, inProgress: 0 };
     }
     deptMap[dept].total++;
     if (task.status === '已完成') deptMap[dept].completed++;
     else if (task.status === '进行中') deptMap[dept].inProgress++;
     else if (task.status === '待执行') deptMap[dept].pending++;
-    if (task.status === '已顺延') deptMap[dept].carriedOver++;
   }
 
   return Object.entries(deptMap).map(([department, stats]) => ({

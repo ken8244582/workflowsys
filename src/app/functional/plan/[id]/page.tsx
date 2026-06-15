@@ -15,7 +15,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Forward, Trash2, Search,
+  ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Trash2, Search,
   ClipboardList, Clock, CheckCircle, TrendingUp, Download, AlertTriangle,
 } from 'lucide-react';
 import { PaginationBar } from '@/components/pagination-bar';
@@ -31,7 +31,6 @@ interface DeptProgress {
   pending: number;
   inProgress: number;
   completed: number;
-  carriedOver: number;
   completionRate: number;
 }
 
@@ -77,11 +76,11 @@ export default function PlanDetailPage() {
 
   // Dialogs
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showCarryDialog, setShowCarryDialog] = useState(false);
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
-  const [showBatchCarryDialog, setShowBatchCarryDialog] = useState(false);
+
   const [operating, setOperating] = useState(false);
 
   // Data reinitialize state
@@ -288,61 +287,7 @@ export default function PlanDetailPage() {
     }
   };
 
-  const handleCarryOver = async (targetIds?: number[]) => {
-    const ids = targetIds || Array.from(selectedIds);
-    if (ids.length === 0) return;
-    setOperating(true);
-    try {
-      const currentMonth = plan!.planMonth;
-      const [year, month] = currentMonth.split('-').map(Number);
-      const nextMonth = month === 12
-        ? `${year + 1}-01`
-        : `${year}-${String(month + 1).padStart(2, '0')}`;
 
-      let nextPlanId: number;
-      const plansRes = await fetch(`/api/revision-plans?planMonth=${nextMonth}`);
-      const plansData = await plansRes.json();
-      if (plansData.items && plansData.items.length > 0) {
-        nextPlanId = plansData.items[0].id;
-      } else {
-        const createRes = await fetch('/api/revision-plans', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            planMonth: nextMonth,
-            planName: `${nextMonth.replace('-', '年')}月流程修订计划`,
-          }),
-        });
-        const created = await createRes.json();
-        nextPlanId = created.id;
-      }
-
-      const unfinishedIds = ids.filter(id => {
-        const task = tasks.find(t => t.id === id);
-        return task && task.status !== '已完成';
-      });
-
-      await Promise.all(
-        unfinishedIds.map(id =>
-          fetch(`/api/plan-tasks/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ _action: 'carryover', targetPlanId: nextPlanId }),
-          })
-        )
-      );
-
-      setShowCarryDialog(false);
-      setShowBatchCarryDialog(false);
-      setSelectedIds(new Set());
-      fetchPlan();
-      fetchTasks();
-    } catch (err) {
-      console.error('Failed to carry over tasks:', err);
-    } finally {
-      setOperating(false);
-    }
-  };
 
   const handleDeleteTask = async (taskId: number) => {
     setOperating(true);
@@ -531,7 +476,7 @@ export default function PlanDetailPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">待执行/进行中</p>
-              <p className="text-2xl font-extrabold text-amber-600">{plan.taskCount - plan.completedCount - tasks.filter(t => t.status === '已顺延').length}</p>
+              <p className="text-2xl font-extrabold text-amber-600">{plan.taskCount - plan.completedCount}</p>
             </div>
             <Clock className="h-8 w-8 text-amber-200" />
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400/40" />
@@ -577,7 +522,6 @@ export default function PlanDetailPage() {
                     <th className="text-center py-2 px-3 font-medium">待执行</th>
                     <th className="text-center py-2 px-3 font-medium">进行中</th>
                     <th className="text-center py-2 px-3 font-medium">已完成</th>
-                    <th className="text-center py-2 px-3 font-medium">已顺延</th>
                     <th className="text-center py-2 px-3 font-medium min-w-[120px]">完成进度</th>
                     <th className="text-center py-2 px-3 font-medium">完成率</th>
                   </tr>
@@ -590,7 +534,6 @@ export default function PlanDetailPage() {
                       <td className="text-center py-2 px-3 tabular-nums text-gray-500">{dept.pending}</td>
                       <td className="text-center py-2 px-3 tabular-nums text-blue-600">{dept.inProgress}</td>
                       <td className="text-center py-2 px-3 tabular-nums text-emerald-600">{dept.completed}</td>
-                      <td className="text-center py-2 px-3 tabular-nums text-amber-600">{dept.carriedOver}</td>
                       <td className="py-2 px-3">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
@@ -649,9 +592,6 @@ export default function PlanDetailPage() {
           <Button variant="outline" size="sm" onClick={handleCompleteTasks} className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
             <CheckCircle2 className="h-3.5 w-3.5" /> 批量标记完成
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowBatchCarryDialog(true)} className="gap-1 text-amber-700 border-amber-300 hover:bg-amber-50">
-            <Forward className="h-3.5 w-3.5" /> 批量顺延至下月
-          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowBatchDeleteDialog(true)} className="gap-1 text-red-700 border-red-300 hover:bg-red-50">
             <Trash2 className="h-3.5 w-3.5" /> 批量删除
           </Button>
@@ -697,8 +637,8 @@ export default function PlanDetailPage() {
                   <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">暂无任务</TableCell></TableRow>
                 ) : (
                   tasks.map((task, idx) => {
-                    const rowBg = task.status === '已完成' ? 'bg-emerald-50/30' : task.status === '已顺延' ? 'bg-amber-50/30' : '';
-                    const stickyBg = task.status === '已完成' ? 'bg-emerald-50' : task.status === '已顺延' ? 'bg-amber-50' : 'bg-white';
+                    const rowBg = task.status === '已完成' ? 'bg-emerald-50/30' : '';
+                    const stickyBg = task.status === '已完成' ? 'bg-emerald-50' : 'bg-white';
                     return (
                     <TableRow key={task.id} className={rowBg}>
                       <TableCell className={`sticky left-0 ${stickyBg} z-10 shadow-[2px_0_0_0_rgba(0,0,0,0.04)]`}>
@@ -711,11 +651,6 @@ export default function PlanDetailPage() {
                       <TableCell className="font-mono text-xs">{task.processCode || <span className="text-muted-foreground">--</span>}</TableCell>
                       <TableCell>
                         <TruncateDiv content={task.processName || ''} maxWidth="240px" className="font-medium" />
-                        {task.carriedFromPlanId && (
-                          <div className="text-[10px] text-amber-600 flex items-center gap-0.5 mt-0.5">
-                            <Forward className="h-3 w-3" /> 顺延自上月计划
-                          </div>
-                        )}
                       </TableCell>
                       <TableCell className="text-sm"><TruncateDiv content={task.owner || ''} maxWidth="80px" /></TableCell>
                       <TableCell className="text-sm"><TruncateDiv content={task.department || ''} maxWidth="100px" /></TableCell>
@@ -776,14 +711,6 @@ export default function PlanDetailPage() {
                               }}
                             ><RotateCcw className="h-3 w-3" />撤回</Button>
                           )}
-                          {(task.status === '待执行' || task.status === '进行中') && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-amber-600"
-                              onClick={() => {
-                                setSelectedIds(new Set([task.id]));
-                                setShowCarryDialog(true);
-                              }}
-                            ><Forward className="h-3 w-3" />顺延</Button>
-                          )}
                           {isDraft && (
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500"
                               onClick={() => {
@@ -836,40 +763,6 @@ export default function PlanDetailPage() {
       </Dialog>
 
       {/* Carry Over Confirmation Dialog (single) */}
-      <Dialog open={showCarryDialog} onOpenChange={(open) => { setShowCarryDialog(open); if (!open) setSelectedIds(new Set()); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>确认顺延至下月</DialogTitle>
-            <DialogDescription>
-              该任务将顺延到下月计划中，当前任务标记为"已顺延"。确认顺延？
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCarryDialog(false)}>取消</Button>
-            <Button onClick={() => handleCarryOver()} disabled={operating} className="bg-amber-600 hover:bg-amber-700">
-              {operating ? '顺延中...' : '确认顺延'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Batch Carry Over Confirmation Dialog */}
-      <Dialog open={showBatchCarryDialog} onOpenChange={setShowBatchCarryDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>确认批量顺延至下月</DialogTitle>
-            <DialogDescription>
-              选中的 {selectedIds.size} 项未完成任务将顺延到下月计划中，当前任务标记为"已顺延"。确认顺延？
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBatchCarryDialog(false)}>取消</Button>
-            <Button onClick={() => handleCarryOver()} disabled={operating} className="bg-amber-600 hover:bg-amber-700">
-              {operating ? '顺延中...' : `确认顺延 ${selectedIds.size} 项`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Single Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={(open) => { setShowDeleteDialog(open); if (!open) { setPendingDeleteId(null); setDeleteTaskName(''); } }}>

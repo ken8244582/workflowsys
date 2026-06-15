@@ -57,18 +57,17 @@ export async function GET(
   }));
 
   // Sheet 2: 部门统计
-  const deptStats: Record<string, { total: number; completed: number; inProgress: number; pending: number; carried: number }> = {};
+  const deptStats: Record<string, { total: number; completed: number; inProgress: number; pending: number }> = {};
   (tasks || []).forEach((row: Record<string, unknown>) => {
     const dept = (row.department as string) || '未分配';
     if (!deptStats[dept]) {
-      deptStats[dept] = { total: 0, completed: 0, inProgress: 0, pending: 0, carried: 0 };
+      deptStats[dept] = { total: 0, completed: 0, inProgress: 0, pending: 0 };
     }
     deptStats[dept].total++;
     const status = row.status as string;
     if (status === '已完成') deptStats[dept].completed++;
     else if (status === '进行中') deptStats[dept].inProgress++;
     else if (status === '待执行') deptStats[dept].pending++;
-    else if (status === '已顺延') deptStats[dept].carried++;
   });
 
   const deptRows = Object.entries(deptStats).map(([dept, stats], index) => ({
@@ -78,7 +77,6 @@ export async function GET(
     '待执行': stats.pending,
     '进行中': stats.inProgress,
     '已完成': stats.completed,
-    '已顺延': stats.carried,
     '完成率': stats.total > 0 ? `${((stats.completed / stats.total) * 100).toFixed(1)}%` : '0%',
   }));
 
@@ -111,7 +109,6 @@ export async function GET(
     { wch: 10 },  // 待执行
     { wch: 10 },  // 进行中
     { wch: 10 },  // 已完成
-    { wch: 10 },  // 已顺延
     { wch: 10 },  // 完成率
   ];
   XLSX.utils.book_append_sheet(wb, ws2, '部门完成进度');
