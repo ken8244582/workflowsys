@@ -54,7 +54,7 @@ interface FlowItem {
 }
 
 export default function PlanDetailPage() {
-  const { canAdd, canPublish, canInit } = usePermission('/functional/plan');
+  const { canAdd, canEdit, canDelete, canPublish, canInit } = usePermission('/functional/plan');
   const params = useParams();
   const router = useRouter();
   const planId = params.id as string;
@@ -589,12 +589,16 @@ export default function PlanDetailPage() {
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
           <span className="text-sm text-blue-700 font-medium">已选择 {selectedIds.size} 项</span>
-          <Button variant="outline" size="sm" onClick={handleCompleteTasks} className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-            <CheckCircle2 className="h-3.5 w-3.5" /> 批量标记完成
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowBatchDeleteDialog(true)} className="gap-1 text-red-700 border-red-300 hover:bg-red-50">
-            <Trash2 className="h-3.5 w-3.5" /> 批量删除
-          </Button>
+          {canEdit() && (
+            <Button variant="outline" size="sm" onClick={handleCompleteTasks} className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+              <CheckCircle2 className="h-3.5 w-3.5" /> 批量标记完成
+            </Button>
+          )}
+          {canDelete() && (
+            <Button variant="outline" size="sm" onClick={() => setShowBatchDeleteDialog(true)} className="gap-1 text-red-700 border-red-300 hover:bg-red-50">
+              <Trash2 className="h-3.5 w-3.5" /> 批量删除
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => {
             setSelectedIds(new Set());
           }} className="gap-1">
@@ -627,14 +631,14 @@ export default function PlanDetailPage() {
                   <TableHead className="min-w-[120px]">修订要求</TableHead>
                   <TableHead className="min-w-[70px]">状态</TableHead>
                   <TableHead className="min-w-[100px]">完成时间</TableHead>
-                  <TableHead className="w-28 text-center sticky right-0 bg-gray-50 z-30">操作</TableHead>
+                  {(canEdit() || canDelete()) && <TableHead className="w-28 text-center sticky right-0 bg-gray-50 z-30">操作</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">加载中...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={canEdit() || canDelete() ? 13 : 12} className="text-center py-8 text-muted-foreground">加载中...</TableCell></TableRow>
                 ) : tasks.length === 0 ? (
-                  <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">暂无任务</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={canEdit() || canDelete() ? 13 : 12} className="text-center py-8 text-muted-foreground">暂无任务</TableCell></TableRow>
                 ) : (
                   tasks.map((task, idx) => {
                     const rowBg = task.status === '已完成' ? 'bg-emerald-50/30' : '';
@@ -671,9 +675,9 @@ export default function PlanDetailPage() {
                       <TableCell className="text-sm text-muted-foreground"><TruncateDiv content={task.description || ''} maxWidth="200px" /></TableCell>
                       <TableCell>{statusBadge(task.status)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{task.completedAt || '--'}</TableCell>
-                      <TableCell className={`sticky right-0 ${stickyBg} z-10 shadow-[-2px_0_0_0_rgba(0,0,0,0.04)]`}>
+                      {(canEdit() || canDelete()) && <TableCell className={`sticky right-0 ${stickyBg} z-10 shadow-[-2px_0_0_0_rgba(0,0,0,0.04)]`}>
                         <div className="flex items-center justify-center gap-1">
-                          {task.status === '待执行' && (
+                          {canEdit() && task.status === '待执行' && (
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-600"
                               onClick={async () => {
                                 await fetch(`/api/plan-tasks/${task.id}`, {
@@ -685,7 +689,7 @@ export default function PlanDetailPage() {
                               }}
                             >开始</Button>
                           )}
-                          {task.status === '进行中' && (
+                          {canEdit() && task.status === '进行中' && (
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-emerald-600"
                               onClick={async () => {
                                 await fetch(`/api/plan-tasks/${task.id}`, {
@@ -698,7 +702,7 @@ export default function PlanDetailPage() {
                               }}
                             >完成</Button>
                           )}
-                          {task.status === '已完成' && (
+                          {canEdit() && task.status === '已完成' && (
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500"
                               onClick={async () => {
                                 await fetch(`/api/plan-tasks/${task.id}`, {
@@ -711,7 +715,7 @@ export default function PlanDetailPage() {
                               }}
                             ><RotateCcw className="h-3 w-3" />撤回</Button>
                           )}
-                          {isDraft && (
+                          {canDelete() && isDraft && (
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500"
                               onClick={() => {
                                 setDeleteTaskName(task.processName);
@@ -721,7 +725,7 @@ export default function PlanDetailPage() {
                             ><Trash2 className="h-3 w-3" /></Button>
                           )}
                         </div>
-                      </TableCell>
+                      </TableCell>}
                     </TableRow>
                     )})
                 )}
