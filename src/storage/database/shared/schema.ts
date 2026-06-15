@@ -241,3 +241,70 @@ export type SysMenuFunction = typeof sysMenuFunctions.$inferSelect;
 export type NewSysMenuFunction = typeof sysMenuFunctions.$inferInsert;
 export type SysUserMenuFunction = typeof sysUserMenuFunctions.$inferSelect;
 export type NewSysUserMenuFunction = typeof sysUserMenuFunctions.$inferInsert;
+
+// 评价标准项表
+export const assessmentStandards = pgTable("assessment_standards", {
+  id: serial().primaryKey().notNull(),
+  rowIndex: integer("row_index").notNull(),
+  sectionType: text("section_type").default('').notNull(),
+  layer1: text("layer1").default('').notNull(),
+  layer1Score: integer("layer1_score").default(0).notNull(),
+  layer2: text("layer2").default('').notNull(),
+  layer3: text("layer3").default('').notNull(),
+  layer4: text("layer4").default('').notNull(),
+  layer5: text("layer5").default('').notNull(),
+  criteriaDesc: text("criteria_desc").default('').notNull(),
+  standardScore: integer("standard_score").default(0).notNull(),
+  isScoringRow: boolean("is_scoring_row").default(false).notNull(),
+  scoreGroupKey: text("score_group_key").default('').notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+}, (table) => [
+  index("idx_assessment_standards_section").using("btree", table.sectionType.asc().nullsLast().op("text_ops")),
+  index("idx_assessment_standards_score_group").using("btree", table.scoreGroupKey.asc().nullsLast().op("text_ops")),
+  index("idx_assessment_standards_sort").using("btree", table.sortOrder.asc().nullsLast().op("int4_ops")),
+  pgPolicy("Allow public read access on assessment_standards", { as: "permissive", for: "select", to: ["public"], using: sql`true` }),
+  pgPolicy("Allow public insert access on assessment_standards", { as: "permissive", for: "insert", to: ["public"] }),
+  pgPolicy("Allow public update access on assessment_standards", { as: "permissive", for: "update", to: ["public"] }),
+  pgPolicy("Allow public delete access on assessment_standards", { as: "permissive", for: "delete", to: ["public"], using: sql`true` }),
+]);
+
+// 自评主表
+export const assessments = pgTable("assessments", {
+  id: serial().primaryKey().notNull(),
+  name: text("name").notNull(),
+  period: text("period").notNull(),
+  status: text("status").default('草稿').notNull(),
+  totalScore: text("total_score").default('0').notNull(),
+  mechanismScore: text("mechanism_score").default('0').notNull(),
+  operationScore: text("operation_score").default('0').notNull(),
+  itScore: text("it_score").default('0').notNull(),
+  remarks: text("remarks").default(''),
+  createdBy: text("created_by").default('').notNull(),
+  createdAtTs: text("created_at_ts").default('').notNull(),
+  updatedBy: text("updated_by").default('').notNull(),
+  updatedAtTs: text("updated_at_ts").default('').notNull(),
+}, (table) => [
+  index("idx_assessments_period").using("btree", table.period.asc().nullsLast().op("text_ops")),
+  index("idx_assessments_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+  pgPolicy("Allow public read access on assessments", { as: "permissive", for: "select", to: ["public"], using: sql`true` }),
+  pgPolicy("Allow public insert access on assessments", { as: "permissive", for: "insert", to: ["public"] }),
+  pgPolicy("Allow public update access on assessments", { as: "permissive", for: "update", to: ["public"] }),
+  pgPolicy("Allow public delete access on assessments", { as: "permissive", for: "delete", to: ["public"], using: sql`true` }),
+]);
+
+// 自评明细表
+export const assessmentDetails = pgTable("assessment_details", {
+  id: serial().primaryKey().notNull(),
+  assessmentId: integer("assessment_id").notNull().references(() => assessments.id, { onDelete: "cascade" }),
+  standardId: integer("standard_id").notNull().references(() => assessmentStandards.id),
+  currentStatus: text("current_status").default('').notNull(),
+  selfScore: text("self_score").default('0').notNull(),
+  scoreGroupKey: text("score_group_key").default('').notNull(),
+}, (table) => [
+  index("idx_assessment_details_assessment").using("btree", table.assessmentId.asc().nullsLast().op("int4_ops")),
+  index("idx_assessment_details_standard").using("btree", table.standardId.asc().nullsLast().op("int4_ops")),
+  pgPolicy("Allow public read access on assessment_details", { as: "permissive", for: "select", to: ["public"], using: sql`true` }),
+  pgPolicy("Allow public insert access on assessment_details", { as: "permissive", for: "insert", to: ["public"] }),
+  pgPolicy("Allow public update access on assessment_details", { as: "permissive", for: "update", to: ["public"] }),
+  pgPolicy("Allow public delete access on assessment_details", { as: "permissive", for: "delete", to: ["public"], using: sql`true` }),
+]);

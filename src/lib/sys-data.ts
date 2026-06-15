@@ -90,7 +90,10 @@ export async function seedInitialData(): Promise<void> {
       { name: '流程概览', path: '/e2e/overview', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view"]' },
       { name: '流程管理', path: '/e2e/list', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
       { name: '梳理计划', path: '/e2e/plan', icon: null, parent_id: null, sort_order: 3, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
-      { name: '系统管理', path: null, icon: 'Settings', parent_id: null, sort_order: 4, is_visible: true, supported_actions: '[]' },
+      { name: '评价体系', path: null, icon: 'Award', parent_id: null, sort_order: 4, is_visible: true, supported_actions: '[]' },
+      { name: '成熟度自评', path: '/assessment/maturity', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
+      { name: '自评历史', path: '/assessment/history', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view"]' },
+      { name: '系统管理', path: null, icon: 'Settings', parent_id: null, sort_order: 5, is_visible: true, supported_actions: '[]' },
       { name: '用户管理', path: '/system/users', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view","add","edit","delete","reset_password"]' },
       { name: '菜单管理', path: '/system/menus', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
     ];
@@ -114,6 +117,8 @@ export async function seedInitialData(): Promise<void> {
         { name: '流程概览', parent_id: menuMap['端到端流程'] },
         { name: '流程管理', parent_id: menuMap['端到端流程'] },
         { name: '梳理计划', parent_id: menuMap['端到端流程'] },
+        { name: '成熟度自评', parent_id: menuMap['评价体系'] },
+        { name: '自评历史', parent_id: menuMap['评价体系'] },
         { name: '用户管理', parent_id: menuMap['系统管理'] },
         { name: '菜单管理', parent_id: menuMap['系统管理'] },
       ];

@@ -26,6 +26,8 @@
 | 端到端流程 | 流程概览 | `/e2e/overview` | 端到端流程统计看板 |
 | | 流程管理 | `/e2e/list` | 端到端流程CRUD |
 | | 梳理计划 | `/e2e/plan` | 梳理计划管理 |
+| 评价体系 | 成熟度自评 | `/assessment/maturity` | 自评表查看+填写+对比历史 |
+| | 自评历史 | `/assessment/history` | 历史自评记录+自评对比报告 |
 | 系统管理 | 用户管理 | `/system/users` | 用户CRUD+权限分配 |
 | | 菜单管理 | `/system/menus` | 菜单树CRUD+排序 |
 
@@ -51,6 +53,9 @@
 │   │   │   ├── overview/page.tsx      # 端到端概览 (统计图表)
 │   │   │   ├── list/page.tsx          # 端到端流程管理 (CRUD)
 │   │   │   └── plan/page.tsx          # 梳理计划管理
+│   │   ├── assessment/
+│   │   │   ├── maturity/page.tsx      # 成熟度自评 (填写+对比)
+│   │   │   └── history/page.tsx       # 自评历史与对比
 │   │   ├── system/
 │   │   │   ├── users/page.tsx         # 用户管理
 │   │   │   └── menus/page.tsx         # 菜单管理
@@ -61,6 +66,8 @@
 │   │       ├── revision-plans/        # 修订计划API (CRUD+tasks+export)
 │   │       ├── plan-tasks/[id]/       # 单任务操作API (完成/撤回/顺延)
 │   │       ├── e2e/                   # 端到端API (processes+plans)
+│   │       ├── assessment/            # 评价体系API (standards+seed)
+│   │       ├── assessments/           # 自评API (CRUD+对比+报告)
 │   │       └── sys/                   # 系统管理API (users+menus)
 │   ├── components/
 │   │   ├── auth-provider.tsx          # 认证上下文 (登录态+菜单权限+401自动跳转)
@@ -235,6 +242,48 @@
 | user_id | integer FK | 关联用户 |
 | menu_id | integer FK | 关联菜单 |
 
+### assessment_standards — 评价标准项
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | serial PK | 自增主键 |
+| row_index | integer | Excel原始行号 |
+| section_type | text | 板块类型 (mechanism/operation/it_coverage) |
+| layer1 | text | 分层1 |
+| layer1_score | numeric | 项目分值 |
+| layer2 | text | 分层2 |
+| layer3 | text | 分层3 |
+| layer4 | text | 分层4 |
+| layer5 | text | 分层5 (程度行) |
+| criteria_desc | text | 评价标准描述 |
+| standard_score | numeric | 该项标准分值 |
+| is_scoring_row | boolean | 是否为自评打分行 |
+| score_group_key | text | 打分分组键 |
+| sort_order | integer | 排序 |
+
+### assessments — 自评主表
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | serial PK | 自增主键 |
+| name | text | 自评名称 |
+| period | text | 评价周期 |
+| status | text | 状态 (草稿/已提交) |
+| total_score | text | 总得分 |
+| mechanism_score | text | 机制建设评价得分 |
+| operation_score | text | 运行效果评价得分 |
+| it_score | text | IT覆盖度和支撑度得分 |
+| remarks | text | 备注 |
+| + 审计字段 | | created_by, created_at_ts, updated_by, updated_at_ts |
+
+### assessment_details — 自评明细
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | serial PK | 自增主键 |
+| assessment_id | integer FK | 关联自评主表 |
+| standard_id | integer FK | 关联评价标准项 |
+| current_status | text | 现状情况 |
+| self_score | text | 自评分值 |
+| score_group_key | text | 打分分组键 |
+
 ## 关键业务逻辑
 
 ### 统计概览页 (两段式)
@@ -249,6 +298,17 @@
 5. **撤回任务**：已完成→待执行(清除完成时间)
 6. **顺延任务**：校验下月计划是否已存在→创建或追加+复制任务，原任务标记"已顺延"
 7. **导出Excel**：Sheet1任务明细 + Sheet2部门完成进度统计
+
+### 评价体系完整链路
+1. **自评标准初始化**：从嵌入的Excel解析数据初始化assessment_standards表（178条标准项）
+2. **创建自评**：指定名称+周期 → 生成草稿自评记录
+3. **填写自评**：按三大板块（机制建设28分/运行效果28分/IT覆盖10分，总分66分）逐项评分
+   - 机制建设板块：逐条评价标准，0/1评分（有/无）
+   - 运行效果/IT覆盖板块：按评分组选择程度1-5，每组仅选一个程度
+4. **保存与计分**：保存明细 → 自动按公式计算各板块得分 → 更新总得分
+5. **提交自评**：草稿→已提交，不可再编辑
+6. **对比历史**：选择两次自评 → 生成对比报告（各板块差异+明细项得分率变化+待改进方向）
+7. **自评历史**：查看所有历史自评记录，支持任意两次自评对比
 
 ### 认证与权限
 - 登录：bcrypt验证 → JWT token存入Session Cookie（浏览器关闭即失效）
@@ -299,6 +359,8 @@
 | requireAuth() | lib/api-auth.ts | API鉴权中间件，校验登录态并返回用户信息 |
 | getSession() | lib/auth.ts | 解析JWT token获取会话信息 |
 | createSession() | lib/auth.ts | 创建JWT token并设置Session Cookie |
+| assessment-data.ts | lib/assessment-data.ts | 自评数据访问层 (CRUD+计分+对比报告) |
+| assessment-standards-data.ts | lib/assessment-standards-data.ts | 自评标准项嵌入数据 (178条) |
 
 ## 构建与测试命令
 
