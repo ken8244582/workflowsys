@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, isSession } from '@/lib/api-auth';
-import { getAssessments, createAssessment, seedStandardsIfNeeded } from '@/lib/assessment-data';
+import { getAssessments, createAssessment, copyAssessment, seedStandardsIfNeeded } from '@/lib/assessment-data';
 
 // GET /api/assessments - List all assessments
 export async function GET() {
@@ -17,17 +17,24 @@ export async function GET() {
   }
 }
 
-// POST /api/assessments - Create a new assessment
+// POST /api/assessments - Create a new assessment (or copy from existing)
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth();
   if (!isSession(authResult)) return authResult;
 
   try {
     const body = await request.json();
-    const { name, period } = body;
+    const { name, period, copyFromId } = body;
     if (!name || !period) {
       return NextResponse.json({ error: '名称和周期不能为空' }, { status: 400 });
     }
+
+    if (copyFromId) {
+      // Copy from an existing assessment
+      const assessment = await copyAssessment(copyFromId, name, period, authResult.username);
+      return NextResponse.json(assessment);
+    }
+
     const assessment = await createAssessment(name, period, authResult.username);
     return NextResponse.json(assessment);
   } catch (e: unknown) {

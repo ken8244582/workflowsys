@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -10,7 +12,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Search, Trash2, Eye } from 'lucide-react';
+import { PaginationBar } from '@/components/pagination-bar';
+import { useRouter } from 'next/navigation';
 
 interface Assessment {
   id: number;
@@ -60,12 +75,25 @@ const SECTION_LABELS: Record<string, string> = {
   it_coverage: 'L4级流程的IT覆盖度和IT支撑度提升',
 };
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
+
 export default function AssessmentHistoryPage() {
+  const router = useRouter();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [selectedId1, setSelectedId1] = useState<string>('');
   const [selectedId2, setSelectedId2] = useState<string>('');
   const [comparisonReport, setComparisonReport] = useState<ComparisonReport | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Search & pagination
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Delete
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteName, setDeleteName] = useState('');
 
   const fetchAssessments = useCallback(async () => {
     try {
@@ -82,6 +110,32 @@ export default function AssessmentHistoryPage() {
   useEffect(() => {
     fetchAssessments();
   }, [fetchAssessments]);
+
+  // Filtered + paginated data
+  const filteredData = useMemo(() => {
+    let data = [...assessments];
+    if (statusFilter !== 'all') {
+      data = data.filter(a => a.status === statusFilter);
+    }
+    if (searchText.trim()) {
+      const s = searchText.toLowerCase();
+      data = data.filter(a =>
+        a.name.toLowerCase().includes(s) ||
+        a.period.toLowerCase().includes(s) ||
+        a.created_by.toLowerCase().includes(s)
+      );
+    }
+    return data;
+  }, [assessments, statusFilter, searchText]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const pagedData = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, page, pageSize]);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [searchText, statusFilter, pageSize]);
 
   const handleCompare = async () => {
     if (!selectedId1 || !selectedId2) return;
@@ -103,63 +157,133 @@ export default function AssessmentHistoryPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await fetch(`/api/assessments/${deleteId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setDeleteId(null);
+        setDeleteName('');
+        await fetchAssessments();
+        // If the deleted assessment was selected for comparison, reset
+        if (String(deleteId) === selectedId1) setSelectedId1('');
+        if (String(deleteId) === selectedId2) setSelectedId2('');
+      }
+    } catch (e) {
+      console.error('Failed to delete:', e);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <div className="w-1 h-6 bg-[#1e3a5f] rounded" />
-        <h1 className="text-xl font-bold text-foreground">自评历史与对比</h1>
+        <h1 className="text-xl font-bold text-foreground">自评历史</h1>
       </div>
+
+      {/* Filters - matching flow list style */}
+      <Card>
+        <CardContent className="pt-3 pb-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="状态筛选" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="草稿">草稿</SelectItem>
+                <SelectItem value="已提交">已提交</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="col-span-2 md:col-span-3 lg:col-span-6 relative">
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+              <Input placeholder="搜索自评名称/周期/创建人" value={searchText} onChange={e => setSearchText(e.target.value)} className="h-7 text-xs pl-7" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* History List */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">自评记录</CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-2 text-left font-medium">自评名称</th>
-                <th className="px-4 py-2 text-left font-medium">评价周期</th>
-                <th className="px-4 py-2 text-left font-medium">状态</th>
-                <th className="px-4 py-2 text-center font-medium">总分</th>
-                <th className="px-4 py-2 text-center font-medium">机制建设</th>
-                <th className="px-4 py-2 text-center font-medium">运行效果</th>
-                <th className="px-4 py-2 text-center font-medium">IT提升</th>
-                <th className="px-4 py-2 text-left font-medium">创建人</th>
-                <th className="px-4 py-2 text-left font-medium">创建时间</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assessments.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
-                    暂无自评记录
-                  </td>
-                </tr>
-              ) : (
-                assessments.map(a => (
-                  <tr key={a.id} className="border-b last:border-b-0 hover:bg-muted/30">
-                    <td className="px-4 py-2 font-medium">{a.name}</td>
-                    <td className="px-4 py-2">{a.period}</td>
-                    <td className="px-4 py-2">
-                      <Badge variant="outline" className={a.status === '草稿' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-600'}>
-                        {a.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-2 text-center font-mono font-semibold tabular-nums">{a.total_score}</td>
-                    <td className="px-4 py-2 text-center font-mono tabular-nums">{a.mechanism_score}</td>
-                    <td className="px-4 py-2 text-center font-mono tabular-nums">{a.operation_score}</td>
-                    <td className="px-4 py-2 text-center font-mono tabular-nums">{a.it_score}</td>
-                    <td className="px-4 py-2">{a.created_by}</td>
-                    <td className="px-4 py-2 text-muted-foreground text-xs">{a.created_at_ts}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <div className="overflow-auto max-h-[60vh]">
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow className="bg-gray-50/80">
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">自评名称</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">评价周期</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">状态</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">总分</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">机制建设</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">运行效果</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">IT提升</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">创建人</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">创建时间</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                      暂无自评记录
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pagedData.map(a => (
+                    <TableRow key={a.id} className="hover:bg-muted/30">
+                      <TableCell className="font-medium whitespace-nowrap">{a.name}</TableCell>
+                      <TableCell className="whitespace-nowrap">{a.period}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className={a.status === '草稿' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-600'}>
+                          {a.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center font-mono font-semibold tabular-nums">{a.total_score}</TableCell>
+                      <TableCell className="text-center font-mono tabular-nums">{a.mechanism_score}</TableCell>
+                      <TableCell className="text-center font-mono tabular-nums">{a.operation_score}</TableCell>
+                      <TableCell className="text-center font-mono tabular-nums">{a.it_score}</TableCell>
+                      <TableCell className="whitespace-nowrap">{a.created_by}</TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{a.created_at_ts}</TableCell>
+                      <TableCell className="text-center sticky right-0 bg-white z-10">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            title="查看详情"
+                            onClick={() => router.push('/assessment/maturity')}
+                          >
+                            <Eye className="h-3.5 w-3.5 text-gray-500" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            title="删除"
+                            onClick={() => { setDeleteId(a.id); setDeleteName(a.name); }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 0 && (
+        <PaginationBar
+          page={page} totalPages={totalPages} total={filteredData.length}
+          pageSize={pageSize} pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+        />
+      )}
 
       {/* Comparison Selector */}
       <Card>
@@ -171,7 +295,7 @@ export default function AssessmentHistoryPage() {
             <div className="space-y-2 flex-1">
               <label className="text-sm font-medium">自评 A（当前）</label>
               <Select value={selectedId1} onValueChange={setSelectedId1}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="选择第一个自评..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -187,7 +311,7 @@ export default function AssessmentHistoryPage() {
             <div className="space-y-2 flex-1">
               <label className="text-sm font-medium">自评 B（对比）</label>
               <Select value={selectedId2} onValueChange={setSelectedId2}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="选择对比的自评..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -203,6 +327,7 @@ export default function AssessmentHistoryPage() {
               onClick={handleCompare}
               disabled={!selectedId1 || !selectedId2 || loading}
               className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
+              size="sm"
             >
               {loading ? '生成中...' : '生成对比报告'}
             </Button>
@@ -337,6 +462,24 @@ export default function AssessmentHistoryPage() {
           )}
         </>
       )}
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open) { setDeleteId(null); setDeleteName(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除自评「{deleteName}」吗？此操作不可撤销，所有自评明细也将一并删除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+              确认删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

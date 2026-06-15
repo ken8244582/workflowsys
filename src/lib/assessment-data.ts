@@ -333,11 +333,66 @@ export async function submitAssessment(assessmentId: number, username: string): 
   return data as Assessment;
 }
 
-// Delete assessment
+// Delete assessment (any status allowed)
 export async function deleteAssessment(assessmentId: number): Promise<void> {
   const client = getSupabaseClient();
   const { error } = await client.from('assessments').delete().eq('id', assessmentId);
   if (error) throw new Error(`删除自评失败: ${error.message}`);
+}
+
+// Copy assessment from an existing one (creates a new draft with same details)
+export async function copyAssessment(
+  sourceId: number,
+  name: string,
+  period: string,
+  username: string
+): Promise<Assessment> {
+  const client = getSupabaseClient();
+  const now = beijingNow();
+
+  // 1. Get source assessment details
+  const source = await getAssessmentWithDetails(sourceId);
+  if (!source) throw new Error('源自评不存在');
+
+  // 2. Create new assessment as draft
+  const { data: newAssessment, error: createError } = await client
+    .from('assessments')
+    .insert({
+      name,
+      period,
+      status: '草稿',
+      total_score: 0,
+      mechanism_score: 0,
+      operation_score: 0,
+      it_score: 0,
+      remarks: '',
+      created_by: username,
+      created_at_ts: now,
+      updated_by: username,
+      updated_at_ts: now,
+    })
+    .select()
+    .single();
+
+  if (createError) throw new Error(`复制自评失败: ${createError.message}`);
+  const newId = (newAssessment as Assessment).id;
+
+  // 3. Copy details from source
+  if (source.details && source.details.length > 0) {
+    const detailRows = source.details.map((d: AssessmentDetail) => ({
+      assessment_id: newId,
+      standard_id: d.standard_id,
+      current_status: d.current_status,
+      self_score: d.self_score,
+      score_group_key: d.score_group_key,
+    }));
+    const { error: detailError } = await client.from('assessment_details').insert(detailRows);
+    if (detailError) throw new Error(`复制自评明细失败: ${detailError.message}`);
+  }
+
+  // 4. Recalculate scores
+  const saved = await saveAssessmentDetails(newId, [], username);
+  return saved;
 }
 
 // Update assessment info (name, period, remarks)

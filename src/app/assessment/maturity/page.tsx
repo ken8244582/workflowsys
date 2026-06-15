@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -31,7 +33,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Search, Plus, Trash2, Copy } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
+import { PaginationBar } from '@/components/pagination-bar';
 
 // Types
 interface Standard {
@@ -117,6 +121,8 @@ const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   '已提交': { bg: 'bg-emerald-50', text: 'text-emerald-600' },
 };
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
+
 export default function MaturityAssessmentPage() {
   const { user } = useAuth();
   const [standards, setStandards] = useState<Standard[]>([]);
@@ -127,11 +133,19 @@ export default function MaturityAssessmentPage() {
   const [comparisonReport, setComparisonReport] = useState<ComparisonReport | null>(null);
   const [showCompare, setShowCompare] = useState(false);
 
+  // Search & pagination
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // Dialogs
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPeriod, setNewPeriod] = useState('');
+  const [copyFromId, setCopyFromId] = useState<string>('');
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteName, setDeleteName] = useState('');
   const [saving, setSaving] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['mechanism', 'operation', 'it_coverage']));
   const [activeView, setActiveView] = useState<'list' | 'assess' | 'report'>('list');
@@ -167,6 +181,32 @@ export default function MaturityAssessmentPage() {
     fetchAssessments();
   }, [fetchStandards, fetchAssessments]);
 
+  // Filtered + paginated data
+  const filteredData = useMemo(() => {
+    let data = [...assessments];
+    if (statusFilter !== 'all') {
+      data = data.filter(a => a.status === statusFilter);
+    }
+    if (searchText.trim()) {
+      const s = searchText.toLowerCase();
+      data = data.filter(a =>
+        a.name.toLowerCase().includes(s) ||
+        a.period.toLowerCase().includes(s) ||
+        a.created_by.toLowerCase().includes(s)
+      );
+    }
+    return data;
+  }, [assessments, statusFilter, searchText]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const pagedData = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, page, pageSize]);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [searchText, statusFilter, pageSize]);
+
   // Load assessment with details
   const loadAssessment = async (id: number) => {
     try {
@@ -186,19 +226,27 @@ export default function MaturityAssessmentPage() {
     }
   };
 
-  // Create new assessment
+  // Create new assessment (or copy)
   const handleCreate = async () => {
     if (!newName.trim() || !newPeriod.trim()) return;
     try {
+      const body: { name: string; period: string; copyFromId?: number } = {
+        name: newName.trim(),
+        period: newPeriod.trim(),
+      };
+      if (copyFromId) {
+        body.copyFromId = parseInt(copyFromId);
+      }
       const res = await fetch('/api/assessments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), period: newPeriod.trim() }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         setShowCreate(false);
         setNewName('');
         setNewPeriod('');
+        setCopyFromId('');
         await fetchAssessments();
       }
     } catch (e) {
@@ -257,13 +305,14 @@ export default function MaturityAssessmentPage() {
     }
   };
 
-  // Delete assessment
+  // Delete assessment (any status)
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       const res = await fetch(`/api/assessments/${deleteId}`, { method: 'DELETE' });
       if (res.ok) {
         setDeleteId(null);
+        setDeleteName('');
         await fetchAssessments();
         if (currentAssessment?.id === deleteId) {
           setCurrentAssessment(null);
@@ -379,73 +428,125 @@ export default function MaturityAssessmentPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground">成熟度自评列表</h2>
-        <Button onClick={() => setShowCreate(true)} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
-          新建自评
+        <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
+          <Plus className="h-3.5 w-3.5 mr-1" />新建自评
         </Button>
       </div>
 
+      {/* Filters - matching flow list style */}
       <Card>
-        <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left font-medium">自评名称</th>
-                <th className="px-4 py-3 text-left font-medium">评价周期</th>
-                <th className="px-4 py-3 text-left font-medium">状态</th>
-                <th className="px-4 py-3 text-left font-medium">总分</th>
-                <th className="px-4 py-3 text-left font-medium">机制建设</th>
-                <th className="px-4 py-3 text-left font-medium">运行效果</th>
-                <th className="px-4 py-3 text-left font-medium">IT提升</th>
-                <th className="px-4 py-3 text-left font-medium">创建人</th>
-                <th className="px-4 py-3 text-left font-medium">创建时间</th>
-                <th className="px-4 py-3 text-center font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assessments.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
-                    暂无自评记录，点击"新建自评"开始
-                  </td>
-                </tr>
-              ) : (
-                assessments.map(a => {
-                  const badge = STATUS_BADGE[a.status] || STATUS_BADGE['草稿'];
-                  return (
-                    <tr key={a.id} className="border-b last:border-b-0 hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{a.name}</td>
-                      <td className="px-4 py-3">{a.period}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${badge.bg} ${badge.text}`}>
-                          {a.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-mono font-semibold tabular-nums">{a.total_score}</td>
-                      <td className="px-4 py-3 font-mono tabular-nums">{a.mechanism_score}</td>
-                      <td className="px-4 py-3 font-mono tabular-nums">{a.operation_score}</td>
-                      <td className="px-4 py-3 font-mono tabular-nums">{a.it_score}</td>
-                      <td className="px-4 py-3">{a.created_by}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.created_at_ts}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button size="sm" variant="outline" onClick={() => loadAssessment(a.id)}>
-                            {a.status === '草稿' ? '填写' : '查看'}
-                          </Button>
-                          {a.status === '草稿' && (
-                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(a.id)}>
-                              删除
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+        <CardContent className="pt-3 pb-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="状态筛选" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="草稿">草稿</SelectItem>
+                <SelectItem value="已提交">已提交</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="col-span-2 md:col-span-3 lg:col-span-6 relative">
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+              <Input placeholder="搜索自评名称/周期/创建人" value={searchText} onChange={e => setSearchText(e.target.value)} className="h-7 text-xs pl-7" />
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Table - matching flow list style */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-auto max-h-[70vh]">
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow className="bg-gray-50/80">
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">自评名称</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">评价周期</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">状态</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">总分</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">机制建设</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">运行效果</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">IT提升</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">创建人</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">创建时间</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                      暂无自评记录，点击"新建自评"开始
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pagedData.map(a => {
+                    const badge = STATUS_BADGE[a.status] || STATUS_BADGE['草稿'];
+                    return (
+                      <TableRow key={a.id} className="hover:bg-muted/30">
+                        <TableCell className="font-medium whitespace-nowrap">{a.name}</TableCell>
+                        <TableCell className="whitespace-nowrap">{a.period}</TableCell>
+                        <TableCell className="text-center">
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${badge.bg} ${badge.text}`}>
+                            {a.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center font-mono font-semibold tabular-nums">{a.total_score}</TableCell>
+                        <TableCell className="text-center font-mono tabular-nums">{a.mechanism_score}</TableCell>
+                        <TableCell className="text-center font-mono tabular-nums">{a.operation_score}</TableCell>
+                        <TableCell className="text-center font-mono tabular-nums">{a.it_score}</TableCell>
+                        <TableCell className="whitespace-nowrap">{a.created_by}</TableCell>
+                        <TableCell className="text-muted-foreground whitespace-nowrap">{a.created_at_ts}</TableCell>
+                        <TableCell className="text-center sticky right-0 bg-white z-10">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => loadAssessment(a.id)}>
+                              {a.status === '草稿' ? '填写' : '查看'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              title="复制为新自评"
+                              onClick={() => {
+                                setCopyFromId(String(a.id));
+                                setNewName(a.name + ' (副本)');
+                                setNewPeriod(a.period);
+                                setShowCreate(true);
+                              }}
+                            >
+                              <Copy className="h-3.5 w-3.5 text-gray-500" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              title="删除"
+                              onClick={() => { setDeleteId(a.id); setDeleteName(a.name); }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pagination */}
+      {totalPages > 0 && (
+        <PaginationBar
+          page={page} totalPages={totalPages} total={filteredData.length}
+          pageSize={pageSize} pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+        />
+      )}
     </div>
   );
 
@@ -469,17 +570,17 @@ export default function MaturityAssessmentPage() {
           </div>
           <div className="flex items-center gap-2">
             {isDraft && (
-              <Button onClick={handleSave} disabled={saving} variant="outline">
+              <Button onClick={handleSave} disabled={saving} variant="outline" size="sm">
                 {saving ? '保存中...' : '保存'}
               </Button>
             )}
             {isDraft && (
-              <Button onClick={handleSubmit} disabled={saving} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              <Button onClick={handleSubmit} disabled={saving} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90" size="sm">
                 提交
               </Button>
             )}
             {assessments.filter(a => a.id !== currentAssessment.id).length > 0 && (
-              <Button variant="outline" onClick={() => setShowCompare(true)}>
+              <Button variant="outline" onClick={() => setShowCompare(true)} size="sm">
                 对比历史
               </Button>
             )}
@@ -602,7 +703,6 @@ export default function MaturityAssessmentPage() {
                         const firstStd = groupStds[0];
                         // Separate degree rows from non-degree rows
                         const degreeRows = groupStds.filter(s => s.layer5 && s.layer5.startsWith('程度'));
-                        const headerRows = groupStds.filter(s => !s.layer5 || !s.layer5.startsWith('程度'));
                         
                         return (
                           <div key={groupKey} className="border rounded-lg p-4 space-y-2">
@@ -626,7 +726,6 @@ export default function MaturityAssessmentPage() {
                                 <Input
                                   value={detailMap.get(firstStd.id)?.current_status || ''}
                                   onChange={e => {
-                                    // Set current_status on the first standard of the group
                                     updateDetail(firstStd.id, 'current_status', e.target.value);
                                   }}
                                   placeholder="填写现状情况..."
@@ -842,13 +941,41 @@ export default function MaturityAssessmentPage() {
       {activeView === 'assess' && renderAssessView()}
       {activeView === 'report' && renderReportView()}
 
-      {/* Create Assessment Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      {/* Create Assessment Dialog (also used for copy) */}
+      <Dialog open={showCreate} onOpenChange={(open) => { setShowCreate(open); if (!open) { setCopyFromId(''); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>新建自评</DialogTitle>
+            <DialogTitle>{copyFromId ? '从历史自评复制' : '新建自评'}</DialogTitle>
+            <DialogDescription>
+              {copyFromId
+                ? '将基于选定的历史自评创建新草稿，包含所有评分明细，可在其基础上修改。'
+                : '创建一个新的空白自评草稿。'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {!copyFromId && assessments.length > 0 && (
+              <div className="space-y-2">
+                <Label>从历史自评复制（可选）</Label>
+                <Select value={copyFromId} onValueChange={setCopyFromId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="不复制，创建空白自评..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assessments.map(a => (
+                      <SelectItem key={a.id} value={String(a.id)}>
+                        {a.name} ({a.period}) - {a.total_score}分
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {copyFromId && (
+              <div className="flex items-center gap-2 p-2 bg-blue-50 rounded text-sm text-blue-700">
+                <Copy className="h-4 w-4" />
+                <span>将复制自: {assessments.find(a => String(a.id) === copyFromId)?.name}</span>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>自评名称</Label>
               <Input
@@ -867,9 +994,9 @@ export default function MaturityAssessmentPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>取消</Button>
+            <Button variant="outline" onClick={() => { setShowCreate(false); setCopyFromId(''); }}>取消</Button>
             <Button onClick={handleCreate} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90" disabled={!newName.trim() || !newPeriod.trim()}>
-              创建
+              {copyFromId ? '复制创建' : '创建'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -909,13 +1036,13 @@ export default function MaturityAssessmentPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
+      {/* Delete Confirmation - with assessment name */}
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open) { setDeleteId(null); setDeleteName(''); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除该自评吗？此操作不可撤销，所有自评明细也将一并删除。
+              确定要删除自评「{deleteName}」吗？此操作不可撤销，所有自评明细也将一并删除。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
