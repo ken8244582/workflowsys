@@ -232,9 +232,8 @@ async function calculateScores(assessmentId: number): Promise<{ mechanism: strin
       mechanismSum += parseFloat(detail.self_score) || 0;
     }
   }
-  // Mechanism score = sum / total_standard_score * layer1_score
-  const mechanismMaxScore = mechanismRows.reduce((sum, r) => sum + (r.standard_score || 0), 0);
-  const mechanismScore = mechanismMaxScore > 0 ? (mechanismSum / mechanismMaxScore) * 28 : 0;
+  // Mechanism score = sum / 28 * 1
+  const mechanismScore = mechanismSum / 28 * 1;
   
   // Section 2: Operation - for each scoring group, get the max self_score
   const operationGroups = new Map<string, number>(); // group_key -> max self_score
@@ -272,8 +271,8 @@ async function calculateScores(assessmentId: number): Promise<{ mechanism: strin
   }
   
   // For non-degree rows in operation section (like row 30-34 管理标准 has degree rows)
-  // We just use the group max approach
-  const operationScore = operationMaxSum > 0 ? (operationActualSum / operationMaxSum) * 28 : 0;
+  // Operation score = sum / 99 * 3
+  const operationScore = operationActualSum / 99 * 3;
   
   // Section 3: IT coverage
   const itGroups = new Map<string, number>();
@@ -302,7 +301,8 @@ async function calculateScores(assessmentId: number): Promise<{ mechanism: strin
     itActualSum += itGroups.get(key) || 0;
   }
   
-  const itScore = itMaxSum > 0 ? (itActualSum / itMaxSum) * 10 : 0;
+  // IT score = sum / 10 * 1
+  const itScore = itActualSum / 10 * 1;
   
   const totalScore = mechanismScore + operationScore + itScore;
   

@@ -414,13 +414,12 @@ export default function MaturityAssessmentPage() {
     const operationStds = standards.filter(s => s.section_type === 'operation');
     const itStds = standards.filter(s => s.section_type === 'it_coverage');
 
-    // Mechanism: sum of self_score for each row, then scale to 28
-    const mechTotalStandard = mechanismStds.reduce((sum, s) => sum + (s.standard_score || 0), 0);
+    // Mechanism: sum of self_score / 28 * 1
     const mechEarned = mechanismStds.reduce((sum, s) => {
       const detail = detailMap.get(s.id);
       return sum + (detail ? parseFloat(detail.self_score) || 0 : 0);
     }, 0);
-    const mechanismScore = mechTotalStandard > 0 ? (mechEarned / mechTotalStandard * 28) : 0;
+    const mechanismScore = mechEarned / 28 * 1;
 
     // Operation: for each scoring group, find the max degree score, then scale to 28
     const opGroups = new Map<string, Standard[]>();
@@ -428,24 +427,20 @@ export default function MaturityAssessmentPage() {
       if (!opGroups.has(s.score_group_key)) opGroups.set(s.score_group_key, []);
       opGroups.get(s.score_group_key)!.push(s);
     }
-    let opGroupMaxTotal = 0;
+    // Operation: sum of selected degrees / 99 * 3
     let opGroupEarnedTotal = 0;
     for (const [, groupStds] of opGroups) {
       const degreeRows = groupStds.filter(s => s.is_scoring_row);
-      const maxScore = degreeRows.length > 0 ? Math.max(...degreeRows.map(s => s.standard_score)) : 0;
-      opGroupMaxTotal += maxScore;
       // Find the selected degree
-      let earned = 0;
       for (const dr of degreeRows) {
         const detail = detailMap.get(dr.id);
         if (detail && parseFloat(detail.self_score) > 0) {
-          earned = parseFloat(detail.self_score);
+          opGroupEarnedTotal += parseFloat(detail.self_score);
           break;
         }
       }
-      opGroupEarnedTotal += earned;
     }
-    const operationScore = opGroupMaxTotal > 0 ? (opGroupEarnedTotal / opGroupMaxTotal * 28) : 0;
+    const operationScore = opGroupEarnedTotal / 99 * 3;
 
     // IT: same logic as operation, scale to 10
     const itGroups = new Map<string, Standard[]>();
@@ -453,23 +448,19 @@ export default function MaturityAssessmentPage() {
       if (!itGroups.has(s.score_group_key)) itGroups.set(s.score_group_key, []);
       itGroups.get(s.score_group_key)!.push(s);
     }
-    let itGroupMaxTotal = 0;
+    // IT: sum of selected degrees / 10 * 1
     let itGroupEarnedTotal = 0;
     for (const [, groupStds] of itGroups) {
       const degreeRows = groupStds.filter(s => s.is_scoring_row);
-      const maxScore = degreeRows.length > 0 ? Math.max(...degreeRows.map(s => s.standard_score)) : 0;
-      itGroupMaxTotal += maxScore;
-      let earned = 0;
       for (const dr of degreeRows) {
         const detail = detailMap.get(dr.id);
         if (detail && parseFloat(detail.self_score) > 0) {
-          earned = parseFloat(detail.self_score);
+          itGroupEarnedTotal += parseFloat(detail.self_score);
           break;
         }
       }
-      itGroupEarnedTotal += earned;
     }
-    const itScore = itGroupMaxTotal > 0 ? (itGroupEarnedTotal / itGroupMaxTotal * 10) : 0;
+    const itScore = itGroupEarnedTotal / 10 * 1;
 
     const totalScore = mechanismScore + operationScore + itScore;
 
@@ -716,10 +707,10 @@ export default function MaturityAssessmentPage() {
         <div className="sticky top-14 z-30 bg-[#f8fafc] pt-1 pb-3 border-b">
           <div className="grid grid-cols-4 gap-3">
             {[
-              { label: '总得分', value: liveScores.total.toFixed(1), max: '66', color: 'text-[#1e3a5f]' },
-              { label: '机制建设评价', value: liveScores.mechanism.toFixed(1), max: '28', color: 'text-blue-600' },
-              { label: '运行效果评价', value: liveScores.operation.toFixed(1), max: '28', color: 'text-emerald-600' },
-              { label: 'IT覆盖与支撑', value: liveScores.it.toFixed(1), max: '10', color: 'text-amber-600' },
+              { label: '总得分', value: liveScores.total.toFixed(1), max: '5', color: 'text-[#1e3a5f]' },
+              { label: '机制建设评价', value: liveScores.mechanism.toFixed(1), max: '1', color: 'text-blue-600' },
+              { label: '运行效果评价', value: liveScores.operation.toFixed(1), max: '3', color: 'text-emerald-600' },
+              { label: 'IT覆盖与支撑', value: liveScores.it.toFixed(1), max: '1', color: 'text-amber-600' },
             ].map(card => (
               <Card key={card.label} className="shadow-sm">
                 <CardContent className="p-3">
