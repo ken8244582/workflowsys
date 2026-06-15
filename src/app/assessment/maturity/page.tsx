@@ -403,6 +403,79 @@ export default function MaturityAssessmentPage() {
     });
   };
 
+  // Real-time score calculation based on current detailMap
+  const liveScores = useMemo(() => {
+    const mechanismStds = standards.filter(s => s.section_type === 'mechanism');
+    const operationStds = standards.filter(s => s.section_type === 'operation');
+    const itStds = standards.filter(s => s.section_type === 'it_coverage');
+
+    // Mechanism: sum of self_score for each row, then scale to 28
+    const mechTotalStandard = mechanismStds.reduce((sum, s) => sum + (s.standard_score || 0), 0);
+    const mechEarned = mechanismStds.reduce((sum, s) => {
+      const detail = detailMap.get(s.id);
+      return sum + (detail ? parseFloat(detail.self_score) || 0 : 0);
+    }, 0);
+    const mechanismScore = mechTotalStandard > 0 ? (mechEarned / mechTotalStandard * 28) : 0;
+
+    // Operation: for each scoring group, find the max degree score, then scale to 28
+    const opGroups = new Map<string, Standard[]>();
+    for (const s of operationStds) {
+      if (!opGroups.has(s.score_group_key)) opGroups.set(s.score_group_key, []);
+      opGroups.get(s.score_group_key)!.push(s);
+    }
+    let opGroupMaxTotal = 0;
+    let opGroupEarnedTotal = 0;
+    for (const [, groupStds] of opGroups) {
+      const degreeRows = groupStds.filter(s => s.is_scoring_row);
+      const maxScore = degreeRows.length > 0 ? Math.max(...degreeRows.map(s => s.standard_score)) : 0;
+      opGroupMaxTotal += maxScore;
+      // Find the selected degree
+      let earned = 0;
+      for (const dr of degreeRows) {
+        const detail = detailMap.get(dr.id);
+        if (detail && parseFloat(detail.self_score) > 0) {
+          earned = parseFloat(detail.self_score);
+          break;
+        }
+      }
+      opGroupEarnedTotal += earned;
+    }
+    const operationScore = opGroupMaxTotal > 0 ? (opGroupEarnedTotal / opGroupMaxTotal * 28) : 0;
+
+    // IT: same logic as operation, scale to 10
+    const itGroups = new Map<string, Standard[]>();
+    for (const s of itStds) {
+      if (!itGroups.has(s.score_group_key)) itGroups.set(s.score_group_key, []);
+      itGroups.get(s.score_group_key)!.push(s);
+    }
+    let itGroupMaxTotal = 0;
+    let itGroupEarnedTotal = 0;
+    for (const [, groupStds] of itGroups) {
+      const degreeRows = groupStds.filter(s => s.is_scoring_row);
+      const maxScore = degreeRows.length > 0 ? Math.max(...degreeRows.map(s => s.standard_score)) : 0;
+      itGroupMaxTotal += maxScore;
+      let earned = 0;
+      for (const dr of degreeRows) {
+        const detail = detailMap.get(dr.id);
+        if (detail && parseFloat(detail.self_score) > 0) {
+          earned = parseFloat(detail.self_score);
+          break;
+        }
+      }
+      itGroupEarnedTotal += earned;
+    }
+    const itScore = itGroupMaxTotal > 0 ? (itGroupEarnedTotal / itGroupMaxTotal * 10) : 0;
+
+    const totalScore = mechanismScore + operationScore + itScore;
+
+    return {
+      total: totalScore,
+      mechanism: mechanismScore,
+      operation: operationScore,
+      it: itScore,
+    };
+  }, [standards, detailMap]);
+
   // Get scoring groups for operation/it_coverage
   const getScoringGroups = (sectionStandards: Standard[]) => {
     const groups = new Map<string, Standard[]>();
@@ -623,24 +696,26 @@ export default function MaturityAssessmentPage() {
           </div>
         </div>
 
-        {/* Score Summary Cards */}
-        <div className="grid grid-cols-4 gap-4">
-          {[
-            { label: '总得分', value: currentAssessment.total_score, max: '66', color: 'text-[#1e3a5f]' },
-            { label: '机制建设评价', value: currentAssessment.mechanism_score, max: '28', color: 'text-blue-600' },
-            { label: '运行效果评价', value: currentAssessment.operation_score, max: '28', color: 'text-emerald-600' },
-            { label: 'IT覆盖与支撑', value: currentAssessment.it_score, max: '10', color: 'text-amber-600' },
-          ].map(card => (
-            <Card key={card.label}>
-              <CardContent className="p-4">
-                <div className="text-sm text-muted-foreground">{card.label}</div>
-                <div className={`text-2xl font-bold font-mono tabular-nums ${card.color}`}>
-                  {card.value}
-                  <span className="text-sm text-muted-foreground font-normal">/{card.max}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Score Summary Cards - Sticky at top */}
+        <div className="sticky top-14 z-30 bg-[#f8fafc] pt-1 pb-3 border-b">
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: '总得分', value: liveScores.total.toFixed(1), max: '66', color: 'text-[#1e3a5f]' },
+              { label: '机制建设评价', value: liveScores.mechanism.toFixed(1), max: '28', color: 'text-blue-600' },
+              { label: '运行效果评价', value: liveScores.operation.toFixed(1), max: '28', color: 'text-emerald-600' },
+              { label: 'IT覆盖与支撑', value: liveScores.it.toFixed(1), max: '10', color: 'text-amber-600' },
+            ].map(card => (
+              <Card key={card.label} className="shadow-sm">
+                <CardContent className="p-3">
+                  <div className="text-xs text-muted-foreground">{card.label}</div>
+                  <div className={`text-xl font-bold font-mono tabular-nums ${card.color}`}>
+                    {card.value}
+                    <span className="text-sm text-muted-foreground font-normal">/{card.max}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
 
         {/* Assessment Sections */}
@@ -695,14 +770,15 @@ export default function MaturityAssessmentPage() {
                                 <td className="px-3 py-2 text-center font-mono">{std.standard_score}</td>
                                 <td className="px-3 py-2">
                                   {isDraft ? (
-                                    <Input
+                                    <Textarea
                                       value={statusVal}
                                       onChange={e => updateDetail(std.id, 'current_status', e.target.value)}
                                       placeholder="填写现状..."
-                                      className="text-sm h-8"
+                                      className="text-sm min-h-[60px] resize-y"
+                                      rows={2}
                                     />
                                   ) : (
-                                    <span className="text-xs">{statusVal || '-'}</span>
+                                    <span className="text-xs whitespace-pre-wrap">{statusVal || '-'}</span>
                                   )}
                                 </td>
                                 <td className="px-3 py-2 text-center">
@@ -759,16 +835,17 @@ export default function MaturityAssessmentPage() {
                             <div className="flex items-start gap-2">
                               <Label className="text-xs text-muted-foreground shrink-0 pt-1.5">现状:</Label>
                               {isDraft ? (
-                                <Input
+                                <Textarea
                                   value={detailMap.get(firstStd.id)?.current_status || ''}
                                   onChange={e => {
                                     updateDetail(firstStd.id, 'current_status', e.target.value);
                                   }}
                                   placeholder="填写现状情况..."
-                                  className="text-sm h-8"
+                                  className="text-sm min-h-[60px] resize-y"
+                                  rows={2}
                                 />
                               ) : (
-                                <span className="text-sm">{detailMap.get(firstStd.id)?.current_status || '-'}</span>
+                                <span className="text-sm whitespace-pre-wrap">{detailMap.get(firstStd.id)?.current_status || '-'}</span>
                               )}
                             </div>
                             
