@@ -3,9 +3,9 @@
     {
       "type": "html",
       "options": {
-        "path": ".cozeproj/prototype/web/architecture.html"
+        "path": ".cozeproj/prototype/web/home.html"
       },
-      "title": "流程架构",
+      "title": "统计概览",
       "size": "web"
     }
   ]
