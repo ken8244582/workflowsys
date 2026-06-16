@@ -460,7 +460,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/flows?pageSize=9999').then((res) => res.json()).then((d) => d.flows || []),
+      fetch('/api/flows?pageSize=9999').then((res) => res.json()).then((d) => d.items || []),
       fetch('/api/dashboard').then((res) => res.json()).catch(() => null),
     ])
       .then(([flowData, dashData]) => {
