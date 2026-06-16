@@ -709,7 +709,7 @@ export default function PlanDetailPage() {
                                 await fetch(`/api/plan-tasks/${task.id}`, {
                                   method: 'PUT',
                                   headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ _action: 'revert' }),
+                                  body: JSON.stringify({ _action: 'withdraw' }),
                                 });
                                 fetchPlan();
                                 fetchTasks();
