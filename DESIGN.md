@@ -52,6 +52,23 @@
 - **自评对比**：选择两次自评 → 生成对比报告（各板块差异+明细项得分率变化+待改进方向）
 - **评分交互**：机制建设0/1切换，运行效果/IT覆盖按组选择程度1-5，实时显示得分变化
 
+## 页面标题规范
+
+所有菜单页面（列表页、详情页、看板页）统一使用以下标题样式：
+
+```tsx
+<div className="flex items-center gap-2">
+  <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+  <h2 className="text-xl font-semibold text-[#1e3a5f]">页面标题</h2>
+</div>
+```
+
+- **左侧竖线**：`h-8 w-1.5 rounded-full bg-[#1e3a5f]`，深靛蓝色圆角竖条，高度与文字行高协调
+- **标题文字**：`text-xl font-semibold text-[#1e3a5f]`，深靛蓝色加粗，字号 xl
+- **竖线与文字间距**：`gap-2`（8px）
+- 标题与右侧操作按钮同行：外层 `flex items-center justify-between`
+- 标题区域无底部分隔线，与下方内容自然衔接
+
 ## 操作按钮规范
 - 统一使用 lucide-react 图标，尺寸 `h-3.5 w-3.5`
 - 按钮高度统一 `h-7 text-xs`
