@@ -805,7 +805,7 @@ export default function MaturityAssessmentPage() {
                   <CardTitle className="text-base">
                     {SECTION_LABELS[sectionType]}
                     <span className="ml-2 text-sm font-normal text-muted-foreground">
-                      (满分{sectionType === 'mechanism' ? '28' : sectionType === 'operation' ? '28' : '10'}分)
+                      (满分{sectionType === 'mechanism' ? '28' : sectionType === 'operation' ? '99' : '10'}分)
                     </span>
                   </CardTitle>
                   <span className="text-muted-foreground">{isExpanded ? '▲' : '▼'}</span>
