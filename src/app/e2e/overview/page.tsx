@@ -181,7 +181,10 @@ function YearlyPlanTimeline({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{currentYear}年度梳理计划进度</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm">{currentYear}年度梳理计划进度</CardTitle>
+          <Link href="/e2e/plan" className="text-xs text-[#1e3a5f] hover:underline">梳理计划 →</Link>
+        </div>
         <CardDescription>按月查看各端到端流程的梳理计划安排，橙色为计划进度，蓝色为实际进度</CardDescription>
       </CardHeader>
       <CardContent>
