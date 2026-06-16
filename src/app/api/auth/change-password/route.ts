@@ -35,15 +35,14 @@ export async function POST(request: Request) {
     await changePassword(session.userId, newPassword);
 
     // If must_change_password was true, update the session token to reflect the change
-    const response = NextResponse.json({ success: true });
     if (session.mustChangePassword) {
       const newToken = await generateSessionToken({
         ...session,
         mustChangePassword: false,
       });
-      setSessionCookie(response, newToken);
+      await setSessionCookie(newToken);
     }
-    return response;
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[auth/change-password] Error:', error);
     return NextResponse.json({ error: '修改密码失败' }, { status: 500 });

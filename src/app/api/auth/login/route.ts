@@ -39,6 +39,9 @@ export async function POST(request: Request) {
       mustChangePassword: userRecord?.must_change_password || false,
     });
 
+    // Set session cookie via Next.js cookies() API (reliable across environments)
+    await setSessionCookie(token);
+
     const response = NextResponse.json({
       success: true,
       user: {
@@ -49,8 +52,6 @@ export async function POST(request: Request) {
         mustChangePassword: userRecord?.must_change_password || false,
       },
     });
-
-    setSessionCookie(response, token);
     return response;
   } catch (error) {
     console.error('[auth/login] Error:', error);

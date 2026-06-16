@@ -33,7 +33,7 @@ const SESSION_MAX_AGE = 3600;
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: false,
+  secure: process.env.COZE_PROJECT_ENV === 'PROD',
   sameSite: 'lax' as const,
   path: '/',
   // Session cookie: no maxAge/persistent storage — browser closes = cookie gone
@@ -53,10 +53,11 @@ export async function generateSessionToken(payload: SessionPayload): Promise<str
 
 /**
  * Create a JWT session and set it as a cookie on the response
- * This is the preferred way to create sessions in API routes
+ * Uses Next.js cookies() API for reliable cross-environment cookie handling
  */
-export function setSessionCookie(response: Response, token: string) {
-  response.headers.append('Set-Cookie', `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax`);
+export async function setSessionCookie(token: string): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, COOKIE_OPTIONS);
 }
 
 /**
