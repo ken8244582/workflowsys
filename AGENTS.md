@@ -1,7 +1,7 @@
 # 项目上下文
 
 ## 项目概述
-职能流程管理平台，提供流程架构管理、流程清单查询、修订记录跟踪、修订计划管理、端到端流程梳理等功能，配套用户认证与权限系统。
+职能流程管理平台，提供流程架构管理、流程清单查询、修订记录跟踪、修订计划管理、端到端流程梳理、评价体系成熟度自评等功能，配套用户认证与权限系统。
 
 ### 版本技术栈
 
@@ -26,8 +26,8 @@
 | 端到端流程 | 流程概览 | `/e2e/overview` | 端到端流程统计看板 |
 | | 流程管理 | `/e2e/list` | 端到端流程CRUD |
 | | 梳理计划 | `/e2e/plan` | 梳理计划管理 |
-| 评价体系 | 成熟度自评 | `/assessment/maturity` | 自评表查看+填写+对比历史 |
-| | 自评历史 | `/assessment/history` | 历史自评记录+自评对比报告 |
+| 评价体系 | 成熟度自评 | `/assessment/maturity` | 自评表查看+填写+实时计分+对比历史+导出 |
+| | 自评历史 | `/assessment/history` | 历史自评记录+自评对比报告+导出 |
 | 系统管理 | 用户管理 | `/system/users` | 用户CRUD+权限分配 |
 | | 菜单管理 | `/system/menus` | 菜单树CRUD+排序 |
 
@@ -42,7 +42,6 @@
 │   │   ├── page.tsx                # 统计概览页 (两段式：职能流程/端到端)
 │   │   ├── globals.css             # 全局样式 + @theme变量
 │   │   ├── login/page.tsx          # 登录页
-│   │   ├── monitoring/page.tsx     # 指标监控(占位页)
 │   │   ├── functional/
 │   │   │   ├── list/page.tsx          # 流程清单页 (筛选+表格+导出+树形视图架构CRUD)
 │   │   │   ├── revision/page.tsx      # 修订记录页 (筛选+表格+导出)
@@ -54,8 +53,8 @@
 │   │   │   ├── list/page.tsx          # 端到端流程管理 (CRUD)
 │   │   │   └── plan/page.tsx          # 梳理计划管理
 │   │   ├── assessment/
-│   │   │   ├── maturity/page.tsx      # 成熟度自评 (填写+对比)
-│   │   │   └── history/page.tsx       # 自评历史与对比
+│   │   │   ├── maturity/page.tsx      # 成熟度自评 (填写+实时计分+对比+导出)
+│   │   │   └── history/page.tsx       # 自评历史与对比+导出
 │   │   ├── system/
 │   │   │   ├── users/page.tsx         # 用户管理
 │   │   │   └── menus/page.tsx         # 菜单管理
@@ -85,7 +84,10 @@
 │   │   ├── api-auth.ts               # API统一鉴权(requireAuth中间件)
 │   │   ├── sys-data.ts               # 系统管理数据访问
 │   │   ├── supabase.ts               # Supabase客户端
-│   │   └── utils.ts                  # 通用工具 (cn, beijingNow, escapeIlike)
+│   │   ├── utils.ts                  # 通用工具 (cn, beijingNow, escapeIlike)
+│   │   ├── assessment-data.ts        # 自评数据访问层 (CRUD+计分+对比报告)
+│   │   ├── assessment-standards-data.ts # 自评标准项嵌入数据 (178条)
+│   │   └── assessment-template.ts    # 自评导出模板Excel (base64编码)
 │   └── storage/database/
 │       └── shared/schema.ts          # Drizzle ORM 表定义
 ├── .env.local                        # 环境变量(JWT_SECRET等)
@@ -104,7 +106,7 @@
 | updated_by | text | 最后修改人用户名 |
 | updated_at_ts | text | 最后修改时间 (北京时间) |
 
-> 含审计字段的表：`flows`、`revision_records`、`revision_plans`、`plan_tasks`、`e2e_processes`、`e2e_plans`
+> 含审计字段的表：`flows`、`revision_records`、`revision_plans`、`plan_tasks`、`e2e_processes`、`e2e_plans`、`assessments`
 
 ### flows — 流程清单
 | 字段 | 类型 | 说明 |
@@ -365,6 +367,17 @@
 | createSession() | lib/auth.ts | 创建JWT token并设置Session Cookie |
 | assessment-data.ts | lib/assessment-data.ts | 自评数据访问层 (CRUD+计分+对比报告) |
 | assessment-standards-data.ts | lib/assessment-standards-data.ts | 自评标准项嵌入数据 (178条) |
+| assessment-template.ts | lib/assessment-template.ts | 自评导出模板Excel (base64编码，导出时基于此模板填充数据) |
+
+## UI按钮规范
+
+| 功能 | 文字 | 图标 | 主按钮样式 | 次按钮样式 |
+|------|------|------|-----------|-----------|
+| 新增 | "新增XXX" | Plus h-3.5 w-3.5 | `bg-[#1e3a5f] h-7 text-xs` | - |
+| 导出 | "导出" | Download h-3.5 w-3.5 | - | `variant="outline" h-7 text-xs` |
+| 删除 | - | Trash2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50` |
+| 编辑 | - | Pencil h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted` |
+| 初始化 | "数据初始化" | RotateCcw h-3.5 w-3.5 | - | `variant="outline" h-7 text-xs text-red-600 border-red-200 hover:bg-red-50` |
 
 ## 构建与测试命令
 

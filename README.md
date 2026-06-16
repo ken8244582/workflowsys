@@ -7,13 +7,13 @@
 | 模块 | 功能 |
 |------|------|
 | 统计概览 | 职能流程/端到端流程数据看板 |
-| 流程架构 | L1-L4 树形层级展示 |
-| 流程清单 | 筛选+分页+导出Excel |
-| 修订记录 | 历史修订记录查询+导出 |
-| 修订计划 | 计划管理+任务执行+顺延+导出 |
-| 端到端流程 | 流程CRUD+梳理计划+进度跟踪 |
-| 用户管理 | 用户CRUD+权限分配 |
-| 菜单管理 | 菜单树CRUD+排序 |
+| 流程清单 | L1-L4树形层级展示 + 筛选分页 + 导出Excel + 数据初始化 |
+| 修订记录 | 历史修订记录查询 + 导出 |
+| 修订计划 | 计划管理 + 任务执行 + 顺延 + 导出 |
+| 端到端流程 | 流程CRUD + 梳理计划 + 进度跟踪 |
+| 评价体系 | 成熟度自评 + 自评历史 + 对比报告 + 导出Excel |
+| 用户管理 | 用户CRUD + 权限分配 |
+| 菜单管理 | 菜单树CRUD + 排序 |
 
 ## 快速开始
 
@@ -80,14 +80,27 @@ src/
 │   ├── page.tsx             # 首页（统计概览）
 │   ├── login/               # 登录页
 │   ├── functional/          # 职能流程模块
+│   │   ├── list/            # 流程清单
+│   │   ├── revision/        # 修订记录
+│   │   └── plan/            # 修订计划
 │   ├── e2e/                 # 端到端流程模块
+│   │   ├── overview/        # 端到端概览
+│   │   ├── list/            # 端到端流程管理
+│   │   └── plan/            # 梳理计划
+│   ├── assessment/          # 评价体系模块
+│   │   ├── maturity/        # 成熟度自评
+│   │   └── history/         # 自评历史
 │   ├── system/              # 系统管理模块
+│   │   ├── users/           # 用户管理
+│   │   └── menus/           # 菜单管理
 │   └── api/                 # API 路由
 │       ├── auth/            # 认证接口
 │       ├── flows/           # 流程清单接口
 │       ├── revisions/       # 修订记录接口
 │       ├── revision-plans/  # 修订计划接口
 │       ├── e2e/             # 端到端流程接口
+│       ├── assessment/      # 评价标准接口
+│       ├── assessments/     # 自评接口
 │       └── sys/             # 系统管理接口
 ├── components/              # React 组件目录
 │   ├── auth-provider.tsx   # 认证上下文（401自动跳转）
@@ -97,12 +110,17 @@ src/
 ├── lib/                     # 工具函数库
 │   ├── auth.ts             # JWT认证（环境变量密钥+Session Cookie）
 │   ├── api-auth.ts         # API统一鉴权中间件
+│   ├── assessment-data.ts  # 自评数据访问层
+│   ├── assessment-standards-data.ts # 自评标准嵌入数据
+│   ├── assessment-template.ts       # 自评导出模板(base64)
 │   ├── e2e-store.ts        # 端到端数据存储(Supabase)
+│   ├── flow-data.ts        # 流程数据类型+统计计算
 │   ├── sys-data.ts         # 系统管理数据访问
 │   ├── supabase.ts         # Supabase客户端
 │   └── utils.ts            # cn(), beijingNow(), escapeIlike()
 └── storage/database/
-    └── shared/schema.ts    # Drizzle ORM 表定义
+    ├── shared/schema.ts    # Drizzle ORM 表定义
+    └── supabase-client.ts  # Supabase客户端
 ```
 
 ## 相关文档
