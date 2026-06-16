@@ -26,8 +26,7 @@
 | 端到端流程 | 流程概览 | `/e2e/overview` | 端到端流程统计看板 |
 | | 流程管理 | `/e2e/list` | 端到端流程CRUD |
 | | 梳理计划 | `/e2e/plan` | 梳理计划管理 |
-| 评价体系 | 成熟度自评 | `/assessment/maturity` | 自评表查看+填写+实时计分+对比历史+导出 |
-| | 自评历史 | `/assessment/history` | 历史自评记录+自评对比报告+导出 |
+| 评价体系 | 成熟度自评 | `/assessment/maturity` | 自评表查看+填写+实时计分+对比历史+对比报告+导出 |
 | 系统管理 | 用户管理 | `/system/users` | 用户CRUD+权限分配 |
 | | 菜单管理 | `/system/menus` | 菜单树CRUD+排序 |
 
@@ -53,8 +52,7 @@
 │   │   │   ├── list/page.tsx          # 端到端流程管理 (CRUD)
 │   │   │   └── plan/page.tsx          # 梳理计划管理
 │   │   ├── assessment/
-│   │   │   ├── maturity/page.tsx      # 成熟度自评 (填写+实时计分+对比+导出)
-│   │   │   └── history/page.tsx       # 自评历史与对比+导出
+│   │   │   ├── maturity/page.tsx      # 成熟度自评 (填写+实时计分+对比+导出+列表导出)
 │   │   ├── system/
 │   │   │   ├── users/page.tsx         # 用户管理
 │   │   │   └── menus/page.tsx         # 菜单管理
@@ -65,7 +63,7 @@
 │   │       ├── revision-plans/        # 修订计划API (CRUD+tasks+export)
 │   │       ├── plan-tasks/[id]/       # 单任务操作API (完成/撤回/顺延)
 │   │       ├── e2e/                   # 端到端API (processes+plans)
-│   │       ├── assessment/            # 评价体系API (standards+seed)
+│   │       ├── assessment/            # 评价体系API (standards+seed+export-list)
 │   │       ├── assessments/           # 自评API (CRUD+对比+报告+导出)
 │   │       └── sys/                   # 系统管理API (users+menus)
 │   ├── components/
@@ -312,7 +310,7 @@
 6. **删除自评**：支持删除任何状态的自评（含已提交），均需二次确认
 7. **复制自评**：从历史自评复制为新草稿，包含所有评分明细，可直接在之前版本上修改
 8. **对比历史**：选择两次自评 → 生成对比报告（各板块差异+明细项得分率变化+待改进方向）
-9. **自评历史**：查看所有历史自评记录，支持搜索/筛选/分页，支持任意两次自评对比
+9. **自评列表导出**：导出所有自评记录为Excel，包含名称/周期/状态/各板块得分/创建人等
 10. **导出Excel**：按模板格式导出自评为Excel文件，包含评价标准+现状情况+自评分值+汇总行
 11. **创建人显示**：自评列表中created_by显示用户display_name而非username
 

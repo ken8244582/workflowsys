@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -15,13 +16,6 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,8 +79,8 @@ interface AssessmentWithDetails extends Assessment {
 }
 
 interface ComparisonReport {
-  assessment1: { id: number; name: string; period: string };
-  assessment2: { id: number; name: string; period: string };
+  assessment1: { id: number; name: string; period: string; total_score?: string };
+  assessment2: { id: number; name: string; period: string; total_score?: string };
   sections: {
     mechanism: { current: string; compare: string; diff: string };
     operation: { current: string; compare: string; diff: string };
@@ -167,6 +161,11 @@ export default function MaturityAssessmentPage() {
   const [detailEditing, setDetailEditing] = useState(false);
   const [detailEditName, setDetailEditName] = useState('');
   const [detailEditPeriod, setDetailEditPeriod] = useState('');
+  // List-level comparison
+  const [listCompareId1, setListCompareId1] = useState<string>('');
+  const [listCompareId2, setListCompareId2] = useState<string>('');
+  const [listCompareReport, setListCompareReport] = useState<ComparisonReport | null>(null);
+  const [listCompareLoading, setListCompareLoading] = useState(false);
 
   // Fetch standards
   const fetchStandards = useCallback(async () => {
@@ -443,7 +442,31 @@ export default function MaturityAssessmentPage() {
     }
   };
 
-  // Compare assessments
+  // Export assessment list as Excel
+  const handleExportList = async () => {
+    try {
+      const res = await fetch('/api/assessments/export');
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const disposition = res.headers.get('Content-Disposition');
+        let filename = '自评列表.xlsx';
+        if (disposition) {
+          const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)/i);
+          if (match) filename = decodeURIComponent(match[1].replace(/"/g, ''));
+        }
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error('Failed to export list:', e);
+    }
+  };
+
+  // Compare assessments from detail view
   const handleCompare = async () => {
     if (!currentAssessment || !compareAssessmentId) return;
     try {
@@ -460,6 +483,27 @@ export default function MaturityAssessmentPage() {
       }
     } catch (e) {
       console.error('Failed to compare:', e);
+    }
+  };
+
+  // Compare assessments from list view
+  const handleListCompare = async () => {
+    if (!listCompareId1 || !listCompareId2) return;
+    setListCompareLoading(true);
+    try {
+      const res = await fetch(`/api/assessments/${listCompareId1}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'compare', compareAssessmentId: parseInt(listCompareId2) }),
+      });
+      if (res.ok) {
+        const report = await res.json();
+        setListCompareReport(report);
+      }
+    } catch (e) {
+      console.error('Failed to compare:', e);
+    } finally {
+      setListCompareLoading(false);
     }
   };
 
@@ -813,6 +857,132 @@ export default function MaturityAssessmentPage() {
           pageSize={pageSize} pageSizeOptions={PAGE_SIZE_OPTIONS}
           onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
         />
+      )}
+
+      {/* Assessment Comparison */}
+      {assessments.length >= 2 && (
+        <Card className="mt-4">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-5 w-1 rounded-full bg-[#1e3a5f]" />
+              <h3 className="text-sm font-semibold text-[#1e3a5f]">自评对比</h3>
+            </div>
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">自评 A</label>
+                <Select value={listCompareId1} onValueChange={setListCompareId1}>
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="选择自评A" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assessments.map(a => (
+                      <SelectItem key={a.id} value={String(a.id)}>
+                        {a.name}（{a.period}）
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">自评 B</label>
+                <Select value={listCompareId2} onValueChange={setListCompareId2}>
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="选择自评B" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assessments.map(a => (
+                      <SelectItem key={a.id} value={String(a.id)}>
+                        {a.name}（{a.period}）
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleListCompare}
+                disabled={!listCompareId1 || !listCompareId2 || listCompareId1 === listCompareId2 || listCompareLoading}
+                className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs"
+              >
+                {listCompareLoading ? '对比中...' : '生成对比'}
+              </Button>
+            </div>
+
+            {/* Comparison Report */}
+            {listCompareReport && (
+              <div className="mt-4 border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold">对比报告</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => { setListCompareReport(null); setListCompareId1(''); setListCompareId2(''); }}
+                  >
+                    关闭
+                  </Button>
+                </div>
+                {/* Score Overview */}
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  {(['mechanism', 'operation', 'it_coverage'] as const).map((section) => {
+                    const s1 = listCompareReport.assessment1[`${section}_score` as keyof typeof listCompareReport.assessment1] as string;
+                    const s2 = listCompareReport.assessment2[`${section}_score` as keyof typeof listCompareReport.assessment2] as string;
+                    const diff = (parseFloat(s2) - parseFloat(s1)).toFixed(2);
+                    const isUp = parseFloat(diff) > 0;
+                    return (
+                      <div key={section} className="text-center p-3 bg-muted rounded-lg">
+                        <div className="text-xs text-muted-foreground mb-1">{SECTION_LABELS[section]}</div>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-sm font-medium">{s1}</span>
+                          <span className="text-xs text-muted-foreground">→</span>
+                          <span className="text-sm font-medium">{s2}</span>
+                          {parseFloat(diff) !== 0 && (
+                            <span className={`text-xs font-medium ${isUp ? 'text-red-600' : 'text-green-600'}`}>
+                              {isUp ? '+' : ''}{diff}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Total Score */}
+                <div className="text-center p-3 bg-[#1e3a5f]/5 rounded-lg mb-4">
+                  <div className="text-xs text-muted-foreground mb-1">总得分</div>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-lg font-semibold">{listCompareReport.assessment1.total_score ?? listCompareReport.sections.total.current}</span>
+                    <span className="text-sm text-muted-foreground">→</span>
+                    <span className="text-lg font-semibold">{listCompareReport.assessment2.total_score ?? listCompareReport.sections.total.compare}</span>
+                    {(() => {
+                      const s1 = parseFloat(listCompareReport.assessment1.total_score ?? listCompareReport.sections.total.current);
+                      const s2 = parseFloat(listCompareReport.assessment2.total_score ?? listCompareReport.sections.total.compare);
+                      const d = (s2 - s1).toFixed(2);
+                      const isUp = parseFloat(d) > 0;
+                      return parseFloat(d) !== 0 ? (
+                        <span className={`text-sm font-medium ${isUp ? 'text-red-600' : 'text-green-600'}`}>
+                          {isUp ? '+' : ''}{d}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+                {/* Improvement Areas */}
+                {listCompareReport.improvementAreas && listCompareReport.improvementAreas.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-medium mb-2">待改进方向</h5>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      {listCompareReport.improvementAreas.map((imp: string, i: number) => (
+                        <li key={i} className="flex items-start gap-1">
+                          <span className="text-red-400 mt-0.5">•</span>
+                          {imp}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
     </>
   );
@@ -1512,11 +1682,16 @@ export default function MaturityAssessmentPage() {
             <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
             <h1 className="text-xl font-semibold text-[#1e3a5f]">成熟度自评</h1>
           </div>
-          {canAdd && (
-          <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
-            <Plus className="h-3.5 w-3.5 mr-1" />新增自评
-          </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExportList} className="h-7 text-xs">
+              <Download className="h-3.5 w-3.5 mr-1" />导出列表
+            </Button>
+            {canAdd && (
+            <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
+              <Plus className="h-3.5 w-3.5 mr-1" />新增自评
+            </Button>
+            )}
+          </div>
         </div>
       )}
       {activeView !== 'list' && (
