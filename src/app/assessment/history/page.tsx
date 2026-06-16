@@ -380,6 +380,40 @@ export default function AssessmentHistoryPage() {
       {/* Comparison Report */}
       {comparisonReport && (
         <>
+          <div className="flex items-center justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                if (!comparisonReport) return;
+                try {
+                  const res = await fetch('/api/assessments/compare-export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      assessmentId1: comparisonReport.assessment1.id,
+                      assessmentId2: comparisonReport.assessment2.id,
+                    }),
+                  });
+                  if (!res.ok) throw new Error('导出失败');
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `自评对比报告_${comparisonReport.assessment1.name}_vs_${comparisonReport.assessment2.name}.xlsx`;
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                } catch (e) {
+                  console.error('Export comparison error:', e);
+                  alert('导出对比报告失败');
+                }
+              }}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              导出Excel
+            </Button>
+          </div>
+
           {/* Overview */}
           <Card>
             <CardHeader className="pb-3">

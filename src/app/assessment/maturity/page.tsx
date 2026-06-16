@@ -154,6 +154,8 @@ export default function MaturityAssessmentPage() {
   const [saving, setSaving] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['mechanism', 'operation', 'it_coverage']));
   const [activeView, setActiveView] = useState<'list' | 'assess' | 'report'>('list');
+  const [refAssessmentId, setRefAssessmentId] = useState<string>('');
+  const [refDetailMap, setRefDetailMap] = useState<Map<number, Detail>>(new Map());
 
   // Fetch standards
   const fetchStandards = useCallback(async () => {
@@ -185,6 +187,9 @@ export default function MaturityAssessmentPage() {
     fetchStandards();
     fetchAssessments();
   }, [fetchStandards, fetchAssessments]);
+
+  // Fetch reference assessment details when ref selection changes
+  // fetchRefDetails effect moved after function definition
 
   // Filtered + paginated data
   const filteredData = useMemo(() => {
@@ -373,6 +378,32 @@ export default function MaturityAssessmentPage() {
     }
   };
 
+  // Fetch reference assessment details for side-by-side comparison
+  const fetchRefDetails = useCallback(async (assessmentId: number) => {
+    try {
+      const res = await fetch(`/api/assessments/${assessmentId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const map = new Map<number, Detail>();
+        (data.details || []).forEach((d: Detail) => {
+          map.set(d.standard_id, d);
+        });
+        setRefDetailMap(map);
+      }
+    } catch (e) {
+      console.error('Failed to fetch reference details:', e);
+    }
+  }, []);
+
+  // Fetch reference assessment details when selection changes
+  useEffect(() => {
+    if (refAssessmentId && activeView === 'assess') {
+      fetchRefDetails(parseInt(refAssessmentId));
+    } else {
+      setRefDetailMap(new Map());
+    }
+  }, [refAssessmentId, activeView, fetchRefDetails]);
+
   // Update detail value
   const updateDetail = (standardId: number, field: 'current_status' | 'self_score', value: string) => {
     setDetailMap(prev => {
@@ -489,6 +520,17 @@ export default function MaturityAssessmentPage() {
     for (const std of groupStds) {
       const detail = detailMap.get(std.id);
       if (detail && parseFloat(detail.self_score) > 0) {
+        return std.id;
+      }
+    }
+    return 0;
+  };
+
+  const getRefGroupSelectedScore = (groupKey: string): number => {
+    const groupStds = standards.filter(s => s.score_group_key === groupKey && s.is_scoring_row);
+    for (const std of groupStds) {
+      const refDetail = refDetailMap.get(std.id);
+      if (refDetail && parseFloat(refDetail.self_score) > 0) {
         return std.id;
       }
     }
@@ -703,6 +745,31 @@ export default function MaturityAssessmentPage() {
           </div>
         </div>
 
+        {/* Reference Assessment Selector */}
+        {assessments.filter(a => a.id !== currentAssessment.id).length > 0 && (
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-sm text-muted-foreground">参照历史自评：</span>
+            <select
+              className="text-sm border rounded-md px-2 py-1 bg-white"
+              value={refAssessmentId}
+              onChange={e => setRefAssessmentId(e.target.value)}
+            >
+              <option value="">不参照</option>
+              {assessments
+                .filter(a => a.id !== currentAssessment.id)
+                .sort((a, b) => b.id - a.id)
+                .map(a => (
+                  <option key={a.id} value={a.id}>{a.name}（{a.period}）{a.status}</option>
+                ))}
+            </select>
+            {refAssessmentId && (
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+                参照列显示历史评分
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Score Summary Cards - Sticky at top */}
         <div className="sticky top-14 z-30 bg-[#f8fafc] pt-1 pb-3 border-b">
           <div className="grid grid-cols-4 gap-3">
@@ -760,6 +827,9 @@ export default function MaturityAssessmentPage() {
                             <th className="px-3 py-2 text-center font-medium w-16">标准分</th>
                             <th className="px-3 py-2 text-left font-medium min-w-[200px]">现状情况</th>
                             <th className="px-3 py-2 text-center font-medium w-20">自评分</th>
+                            {refDetailMap.size > 0 && (
+                              <th className="px-3 py-2 text-center font-medium w-20 text-amber-600">参照分</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -767,6 +837,7 @@ export default function MaturityAssessmentPage() {
                             const detail = detailMap.get(std.id);
                             const statusVal = detail?.current_status || '';
                             const scoreVal = detail?.self_score || '0';
+                            const refScore = refDetailMap.get(std.id)?.self_score || '';
                             return (
                               <tr key={std.id} className="border-b last:border-b-0 hover:bg-muted/20">
                                 <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
@@ -808,6 +879,17 @@ export default function MaturityAssessmentPage() {
                                     </span>
                                   )}
                                 </td>
+                                {refDetailMap.size > 0 && (
+                                  <td className="px-3 py-2 text-center">
+                                    {refScore ? (
+                                      <span className={`font-mono font-semibold ${parseFloat(refScore) > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                        {refScore}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-300">-</span>
+                                    )}
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
@@ -836,6 +918,18 @@ export default function MaturityAssessmentPage() {
                                   已选择程度{standards.find(s => s.id === selectedId)?.layer5?.replace('程度', '') || ''}
                                 </Badge>
                               )}
+                              {refDetailMap.size > 0 && (() => {
+                                const refSelectedId = getRefGroupSelectedScore(groupKey);
+                                if (refSelectedId > 0) {
+                                  const refStd = standards.find(s => s.id === refSelectedId);
+                                  return (
+                                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
+                                      参照: 程度{refStd?.layer5?.replace('程度', '') || ''} ({refStd?.standard_score}分)
+                                    </Badge>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                             
                             {/* Current Status */}
@@ -855,25 +949,36 @@ export default function MaturityAssessmentPage() {
                                 <span className="text-sm whitespace-pre-wrap">{detailMap.get(firstStd.id)?.current_status || '-'}</span>
                               )}
                             </div>
+                            {refDetailMap.size > 0 && refDetailMap.get(firstStd.id)?.current_status && (
+                              <div className="flex items-start gap-2">
+                                <Label className="text-xs text-amber-500 shrink-0 pt-1.5">参照:</Label>
+                                <span className="text-xs whitespace-pre-wrap text-amber-700 bg-amber-50 rounded px-2 py-1">
+                                  {refDetailMap.get(firstStd.id)?.current_status}
+                                </span>
+                              </div>
+                            )}
                             
                             {/* Degree Options */}
                             <div className="space-y-1">
                               <Label className="text-xs text-muted-foreground">评分标准:</Label>
                               {degreeRows.map(std => {
                                 const isSelected = selectedId === std.id;
+                                const isRefSelected = refDetailMap.size > 0 && refDetailMap.get(std.id) && parseFloat(refDetailMap.get(std.id)!.self_score) > 0;
                                 return (
                                   <div
                                     key={std.id}
                                     className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
                                       isSelected
                                         ? 'bg-blue-50 border border-blue-200'
+                                        : isRefSelected
+                                        ? 'bg-amber-50 border border-amber-200'
                                         : canEditThis
                                         ? 'hover:bg-muted/50 border border-transparent'
                                         : 'border border-transparent'
                                     }`}
                                     onClick={() => canEditThis && selectDegree(groupKey, std.id)}
                                   >
-                                    <span className={`text-xs font-mono w-12 ${isSelected ? 'text-blue-600 font-semibold' : 'text-muted-foreground'}`}>
+                                    <span className={`text-xs font-mono w-12 ${isSelected ? 'text-blue-600 font-semibold' : isRefSelected ? 'text-amber-600 font-semibold' : 'text-muted-foreground'}`}>
                                       {std.layer5}:
                                     </span>
                                     <span className={`text-xs flex-1 ${isSelected ? 'text-blue-700' : 'text-muted-foreground'}`}>
@@ -884,6 +989,9 @@ export default function MaturityAssessmentPage() {
                                     </span>
                                     {isSelected && (
                                       <span className="text-blue-600 text-sm">✓</span>
+                                    )}
+                                    {isRefSelected && !isSelected && (
+                                      <span className="text-amber-500 text-xs">● 参照</span>
                                     )}
                                   </div>
                                 );
@@ -916,6 +1024,38 @@ export default function MaturityAssessmentPage() {
             ← 返回自评
           </Button>
           <h2 className="text-lg font-semibold">自评对比报告</h2>
+          <div className="flex-1" />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              if (!comparisonReport) return;
+              try {
+                const res = await fetch('/api/assessments/compare-export', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    assessmentId1: comparisonReport.assessment1.id,
+                    assessmentId2: comparisonReport.assessment2.id,
+                  }),
+                });
+                if (!res.ok) throw new Error('导出失败');
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `自评对比报告_${comparisonReport.assessment1.name}_vs_${comparisonReport.assessment2.name}.xlsx`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+              } catch (e) {
+                console.error('Export comparison error:', e);
+                alert('导出对比报告失败');
+              }
+            }}
+          >
+            <Download className="h-4 w-4 mr-1" />
+            导出Excel
+          </Button>
         </div>
 
         {/* Overview comparison */}

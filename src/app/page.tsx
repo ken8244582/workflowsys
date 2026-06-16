@@ -582,7 +582,7 @@ export default function DashboardPage() {
 
       {/* Footer */}
       <div className="border-t pt-4 text-xs text-muted-foreground">
-        <span>数据来源：L1-L4流程文件清单 / 修订计划管理 / 端到端流程管理</span>
+        <span>数据统计截止时间：{new Date().toLocaleDateString('zh-CN')}，数据来源：流程清单 / 修订计划 / 端到端流程 / 梳理计划</span>
       </div>
     </div>
   );
