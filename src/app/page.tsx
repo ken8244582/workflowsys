@@ -22,11 +22,16 @@ const CHART_COLORS = ['#1e3a5f', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#e
 // =============================================
 // Section Title
 // =============================================
-function SectionTitle({ number, title }: { number: string; title: string }) {
+function SectionTitle({ number, title, linkHref, linkText }: { number: string; title: string; linkHref?: string; linkText?: string }) {
   return (
-    <div className="flex items-center gap-3 pb-1">
-      <div className="w-1 self-stretch rounded-full bg-[#1e3a5f]" />
-      <h2 className="text-lg font-semibold text-foreground">{number}{title}</h2>
+    <div className="flex items-center justify-between gap-3 pb-1">
+      <div className="flex items-center gap-3">
+        <div className="w-1 self-stretch rounded-full bg-[#1e3a5f]" />
+        <h2 className="text-lg font-semibold text-foreground">{number}{title}</h2>
+      </div>
+      {linkHref && linkText && (
+        <Link href={linkHref} className="text-sm text-[#1e3a5f] hover:underline">{linkText} →</Link>
+      )}
     </div>
   );
 }
@@ -501,7 +506,7 @@ export default function DashboardPage() {
       {/* ============================================ */}
       {/* Section 1: 职能流程工作情况 */}
       {/* ============================================ */}
-      <SectionTitle number="一、" title="职能流程工作情况" />
+      <SectionTitle number="一、" title="职能流程工作情况" linkHref="/functional/list" linkText="查看完整流程清单" />
 
       {/* 6指标卡 */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
@@ -541,7 +546,7 @@ export default function DashboardPage() {
       {/* Section 2: 端到端流程工作情况 */}
       {/* ============================================ */}
       <div className="pt-4">
-        <SectionTitle number="二、" title="端到端流程工作情况" />
+        <SectionTitle number="二、" title="端到端流程工作情况" linkHref="/e2e/overview" linkText="端到端流程概览" />
       </div>
 
       {/* 6指标卡 */}
@@ -576,12 +581,8 @@ export default function DashboardPage() {
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t pt-4 text-xs text-muted-foreground">
+      <div className="border-t pt-4 text-xs text-muted-foreground">
         <span>数据来源：L1-L4流程文件清单 / 修订计划管理 / 端到端流程管理</span>
-        <div className="flex items-center gap-4">
-          <Link href="/functional/list" className="text-[#1e3a5f] hover:underline">查看完整流程清单 →</Link>
-          <Link href="/e2e/overview" className="text-[#1e3a5f] hover:underline">端到端流程概览 →</Link>
-        </div>
       </div>
     </div>
   );
