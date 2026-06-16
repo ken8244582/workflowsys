@@ -199,9 +199,13 @@ export async function saveAssessmentDetails(
         score_group_key: d.score_group_key,
       }));
       const { error } = await client.from('assessment_details').insert(batch);
-      if (error) throw new Error(`保存自评明细失败: ${error.message}`);
+      if (error) {
+        console.error('[saveAssessmentDetails] Insert error:', error.message, 'Batch size:', batch.length);
+        throw new Error(`保存自评明细失败: ${error.message}`);
+      }
     }
   }
+  
   
   // Calculate scores
   const scores = await calculateScores(assessmentId);
@@ -325,17 +329,17 @@ async function calculateScores(assessmentId: number): Promise<{ mechanism: strin
     itMaxSum += maxScore;
     itActualSum += itGroups.get(key) || 0;
   }
-  
-  // IT score = sum / 10 * 1
-  const itScore = itActualSum / 10 * 1;
+  const itScore = itMaxSum > 0 ? itActualSum / itMaxSum * 1 : 0;
   
   const totalScore = mechanismScore + operationScore + itScore;
   
+  // Round to 2 decimal places first to avoid floating point issues, then to 1 decimal
+  const round1 = (n: number) => (Math.round(n * 10 + Number.EPSILON) / 10).toFixed(1);
   return {
-    mechanism: mechanismScore.toFixed(1),
-    operation: operationScore.toFixed(1),
-    it: itScore.toFixed(1),
-    total: totalScore.toFixed(1),
+    mechanism: round1(mechanismScore),
+    operation: round1(operationScore),
+    it: round1(itScore),
+    total: round1(totalScore),
   };
 }
 

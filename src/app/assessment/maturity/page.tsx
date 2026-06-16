@@ -916,13 +916,167 @@ export default function MaturityAssessmentPage() {
                         </tbody>
                       </table>
                     </div>
-                  ) : (
-                    // Operation/IT sections: degree-based scoring with group selection
+                  ) : sectionType === 'it_coverage' ? (
+                    // IT coverage section: degree-based reference + decimal score input
                     <div className="space-y-4">
                       {Array.from(getScoringGroups(sectionStds)).map(([groupKey, groupStds]) => {
                         const selectedId = getGroupSelectedScore(groupKey);
                         const firstStd = groupStds[0];
-                        // Separate degree rows from non-degree rows
+                        const degreeRows = groupStds.filter(s => s.layer5 && s.layer5.startsWith('程度'));
+                        // Get current score - find the std with score > 0
+                        const scoredStd = groupStds.find(s => {
+                          const d = detailMap.get(s.id);
+                          return d && parseFloat(d.self_score) > 0;
+                        });
+                        const currentScore = scoredStd ? String(detailMap.get(scoredStd.id)?.self_score ?? '0') : '0';
+                        // Check if the score exactly matches a degree's standard_score (integer selection via click)
+                        const matchedDegreeRow = scoredStd ? degreeRows.find(dr => dr.id === scoredStd.id && parseFloat(String(dr.standard_score)) === parseFloat(currentScore)) : null;
+                        const isIntegerSelection = !!matchedDegreeRow;
+                        const refScore = (() => {
+                          if (refDetailMap.size === 0) return null;
+                          const refScoredStd = groupStds.find(s => {
+                            const d = refDetailMap.get(s.id);
+                            return d && parseFloat(d.self_score) > 0;
+                          });
+                          return refScoredStd ? String(refDetailMap.get(refScoredStd.id)?.self_score ?? null) : null;
+                        })();
+
+                        const handleDecimalScoreChange = (value: string) => {
+                          const num = parseFloat(value);
+                          if (isNaN(num) || num < 0) return;
+                          // Clear all degree rows first, then set the score on the first degree row
+                          for (const gs of groupStds) {
+                            const existing = detailMap.get(gs.id);
+                            if (existing) {
+                              updateDetail(gs.id, 'self_score', '0');
+                            }
+                          }
+                          if (num > 0) {
+                            updateDetail(firstStd.id, 'self_score', String(num));
+                          }
+                        };
+
+                        return (
+                          <div key={groupKey} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-sm font-medium">{firstStd.layer3}</span>
+                                <span className="mx-1 text-muted-foreground">&gt;</span>
+                                <span className="text-sm font-medium">{firstStd.layer4}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {parseFloat(currentScore) > 0 && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-600">
+                                    {isIntegerSelection
+                                      ? `已选择程度${matchedDegreeRow?.layer5?.replace('程度', '') || ''}（${currentScore}分）`
+                                      : `自定义评分：${currentScore}分`}
+                                  </Badge>
+                                )}
+                                {refScore !== null && refScore !== '0' && (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
+                                    参照: {refScore}分
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Current Status */}
+                            <div className="flex items-start gap-2">
+                              <Label className="text-xs text-muted-foreground shrink-0 pt-1.5">现状:</Label>
+                              {canEditThis ? (
+                                <Textarea
+                                  value={detailMap.get(firstStd.id)?.current_status || ''}
+                                  onChange={e => {
+                                    updateDetail(firstStd.id, 'current_status', e.target.value);
+                                  }}
+                                  placeholder="填写现状情况..."
+                                  className="text-sm min-h-[60px] resize-y"
+                                  rows={2}
+                                />
+                              ) : (
+                                <span className="text-sm whitespace-pre-wrap">{detailMap.get(firstStd.id)?.current_status || '-'}</span>
+                              )}
+                            </div>
+                            {refDetailMap.size > 0 && refDetailMap.get(firstStd.id)?.current_status && (
+                              <div className="flex items-start gap-2">
+                                <Label className="text-xs text-amber-500 shrink-0 pt-1.5">参照:</Label>
+                                <span className="text-xs whitespace-pre-wrap text-amber-700 bg-amber-50 rounded px-2 py-1">
+                                  {refDetailMap.get(firstStd.id)?.current_status}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Degree Options as reference - click to quick select integer score */}
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">评分标准（点击可快速选分）:</Label>
+                              {degreeRows.map(std => {
+                                const isSelected = isIntegerSelection && selectedId === std.id;
+                                const isRefSelected = refDetailMap.size > 0 && refDetailMap.get(std.id) && parseFloat(refDetailMap.get(std.id)!.self_score) > 0;
+                                return (
+                                  <div
+                                    key={std.id}
+                                    className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
+                                      isSelected
+                                        ? 'bg-blue-50 border border-blue-200'
+                                        : isRefSelected
+                                        ? 'bg-amber-50 border border-amber-200'
+                                        : canEditThis
+                                        ? 'hover:bg-muted/50 border border-transparent'
+                                        : 'border border-transparent'
+                                    }`}
+                                    onClick={() => canEditThis && selectDegree(groupKey, std.id)}
+                                  >
+                                    <span className={`text-xs font-mono w-12 ${isSelected ? 'text-blue-600 font-semibold' : isRefSelected ? 'text-amber-600 font-semibold' : 'text-muted-foreground'}`}>
+                                      {std.layer5}:
+                                    </span>
+                                    <span className={`text-xs flex-1 ${isSelected ? 'text-blue-700' : 'text-muted-foreground'}`}>
+                                      {std.criteria_desc}
+                                    </span>
+                                    <span className={`text-xs font-mono ${isSelected ? 'text-blue-600 font-semibold' : 'text-muted-foreground'}`}>
+                                      {std.standard_score}分
+                                    </span>
+                                    {isSelected && (
+                                      <span className="text-blue-600 text-sm">✓</span>
+                                    )}
+                                    {isRefSelected && !isSelected && (
+                                      <span className="text-amber-500 text-xs">● 参照</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Decimal Score Input */}
+                            <div className="flex items-center gap-3 pt-1">
+                              <Label className="text-sm font-medium shrink-0">自评分值:</Label>
+                              {canEditThis ? (
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  max="5"
+                                  value={parseFloat(currentScore) > 0 ? currentScore : ''}
+                                  onChange={e => handleDecimalScoreChange(e.target.value)}
+                                  placeholder="输入分值，支持小数（如3.5）"
+                                  className="w-48 text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-mono font-semibold text-blue-600">
+                                  {parseFloat(currentScore) > 0 ? currentScore : '-'}
+                                </span>
+                              )}
+                              <span className="text-xs text-muted-foreground">支持小数分，如3.5分</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    // Operation section: degree-based scoring with group selection
+                    <div className="space-y-4">
+                      {Array.from(getScoringGroups(sectionStds)).map(([groupKey, groupStds]) => {
+                        const selectedId = getGroupSelectedScore(groupKey);
+                        const firstStd = groupStds[0];
                         const degreeRows = groupStds.filter(s => s.layer5 && s.layer5.startsWith('程度'));
                         
                         return (
