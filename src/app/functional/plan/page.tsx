@@ -243,6 +243,17 @@ export default function RevisionPlanPage() {
           )}
         </CardHeader>
         <CardContent>
+          {plans.length > 0 && (
+            <PaginationBar
+              page={planPage}
+              totalPages={Math.max(1, Math.ceil(plans.length / planPageSize))}
+              total={plans.length}
+              pageSize={planPageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              onPageChange={setPlanPage}
+              onPageSizeChange={(s) => { setPlanPageSize(s); setPlanPage(1); }}
+            />
+          )}
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">加载中...</div>
           ) : plans.length === 0 ? (

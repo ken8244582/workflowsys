@@ -716,6 +716,15 @@ export default function MaturityAssessmentPage() {
         </CardContent>
       </Card>
 
+      {/* Top Pagination */}
+      {totalPages > 0 && (
+        <PaginationBar
+          page={page} totalPages={totalPages} total={filteredData.length}
+          pageSize={pageSize} pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+        />
+      )}
+
       {/* Table - matching flow list style */}
       <Card>
         <CardContent className="p-0">

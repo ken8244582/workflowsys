@@ -608,6 +608,19 @@ export default function PlanDetailPage() {
         </div>
       )}
 
+      {/* Top Pagination */}
+      {total > 0 && (
+        <PaginationBar
+          page={page}
+          totalPages={Math.max(1, Math.ceil(total / pageSize))}
+          total={total}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onPageChange={setPage}
+          onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+        />
+      )}
+
       {/* Task Table */}
       <Card>
         <CardContent className="p-0">

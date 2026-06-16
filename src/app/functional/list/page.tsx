@@ -630,6 +630,15 @@ export default function FunctionalListPage() {
         </CardContent>
       </Card>
 
+      {/* Top Pagination */}
+      {viewMode === 'table' && totalPages > 0 && (
+        <PaginationBar
+          page={page} totalPages={totalPages} total={filteredData.length}
+          pageSize={pageSize} pageSizeOptions={pageSizeOptions}
+          onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+        />
+      )}
+
       {/* Table View */}
       {viewMode === 'table' && (
         <Card>

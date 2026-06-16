@@ -50,7 +50,7 @@ export function PaginationBar({
         <div className="flex items-center gap-1.5">
           <span className="text-sm text-gray-500">每页</span>
           <Select value={String(pageSize)} onValueChange={v => onPageSizeChange(Number(v))}>
-            <SelectTrigger className="h-7 w-[72px] text-xs">
+            <SelectTrigger className="h-7 w-[88px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

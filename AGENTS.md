@@ -400,7 +400,9 @@
 - 操作列：sticky `right-0 bg-white z-10`，图标按钮组 `gap-0.5`
 
 ### 分页组件
-- 统一使用 `<PaginationBar>`，按钮/输入框 `h-7 text-xs`，当前页 `bg-[#1e3a5f]`
+- 统一使用 `<PaginationBar>`，**表格上下各放一个**
+- 按钮/输入框 `h-7 text-xs`，当前页 `bg-[#1e3a5f]`
+- 每页条数选择器宽度 `w-[88px]`
 
 ### 通用规则
 - 所有输入控件：`h-7 text-xs`；所有图标：`h-3.5 w-3.5`
