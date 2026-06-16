@@ -581,14 +581,6 @@ export default function MaturityAssessmentPage() {
   // Render the assessment list view
   const renderListView = () => (
     <>
-      <div className="flex items-center justify-end">
-        {canAdd && (
-        <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
-          <Plus className="h-3.5 w-3.5 mr-1" />新增自评
-        </Button>
-        )}
-      </div>
-
       {/* Filters - matching flow list style */}
       <Card>
         <CardContent className="pt-3 pb-3">
@@ -1369,10 +1361,25 @@ export default function MaturityAssessmentPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
-        <h1 className="text-xl font-semibold text-[#1e3a5f]">成熟度自评</h1>
-      </div>
+      {activeView === 'list' && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+            <h1 className="text-xl font-semibold text-[#1e3a5f]">成熟度自评</h1>
+          </div>
+          {canAdd && (
+          <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
+            <Plus className="h-3.5 w-3.5 mr-1" />新增自评
+          </Button>
+          )}
+        </div>
+      )}
+      {activeView !== 'list' && (
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+          <h1 className="text-xl font-semibold text-[#1e3a5f]">成熟度自评</h1>
+        </div>
+      )}
 
       {activeView === 'list' && renderListView()}
       {activeView === 'assess' && renderAssessView()}
