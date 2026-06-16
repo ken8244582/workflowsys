@@ -960,6 +960,8 @@ export default function MaturityAssessmentPage() {
                           <div key={groupKey} className="border rounded-lg p-4 space-y-3">
                             <div className="flex items-center justify-between">
                               <div>
+                                <span className="text-sm font-medium">{firstStd.layer2}</span>
+                                <span className="mx-1 text-muted-foreground">&gt;</span>
                                 <span className="text-sm font-medium">{firstStd.layer3}</span>
                                 <span className="mx-1 text-muted-foreground">&gt;</span>
                                 <span className="text-sm font-medium">{firstStd.layer4}</span>
@@ -1083,6 +1085,8 @@ export default function MaturityAssessmentPage() {
                           <div key={groupKey} className="border rounded-lg p-4 space-y-2">
                             <div className="flex items-center justify-between">
                               <div>
+                                <span className="text-sm font-medium">{firstStd.layer2}</span>
+                                <span className="mx-1 text-muted-foreground">&gt;</span>
                                 <span className="text-sm font-medium">{firstStd.layer3}</span>
                                 <span className="mx-1 text-muted-foreground">&gt;</span>
                                 <span className="text-sm font-medium">{firstStd.layer4}</span>
