@@ -121,19 +121,6 @@ export default function RevisionPlanPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
-          <h2 className="text-xl font-semibold text-[#1e3a5f]">修订计划</h2>
-        </div>
-        {canAdd() && (
-          <Button size="sm" onClick={() => setShowCreateDialog(true)} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
-            <Plus className="h-3.5 w-3.5 mr-1" /> 新增计划
-          </Button>
-        )}
-      </div>
-
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="relative overflow-hidden">
@@ -243,6 +230,11 @@ export default function RevisionPlanPage() {
             <Calendar className="h-4 w-4 text-[#1e3a5f]" />
             修订计划列表
           </CardTitle>
+          {canAdd() && (
+            <Button size="sm" onClick={() => setShowCreateDialog(true)} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              <Plus className="h-3.5 w-3.5 mr-1" /> 新增计划
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
