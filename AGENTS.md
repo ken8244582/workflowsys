@@ -367,15 +367,40 @@
 | assessment-standards-data.ts | lib/assessment-standards-data.ts | 自评标准项嵌入数据 (178条) |
 | assessment-template.ts | lib/assessment-template.ts | 自评导出模板Excel (base64编码，导出时基于此模板填充数据) |
 
-## UI按钮规范
+## 列表页标准样式（基准页：流程清单 `/functional/list`）
 
+详细设计规范见 `DESIGN.md` →「列表页标准样式规范」章节。以下为快速参考：
+
+### 工具栏按钮
 | 功能 | 文字 | 图标 | 主按钮样式 | 次按钮样式 |
 |------|------|------|-----------|-----------|
-| 新增 | "新增XXX" | Plus h-3.5 w-3.5 | `bg-[#1e3a5f] h-7 text-xs` | - |
+| 新增 | "新增XXX" | Plus h-3.5 w-3.5 | `bg-[#1e3a5f] hover:bg-[#2d4f7a] h-7 text-xs` | - |
 | 导出 | "导出" | Download h-3.5 w-3.5 | - | `variant="outline" h-7 text-xs` |
 | 删除 | - | Trash2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50` |
 | 编辑 | - | Pencil h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted` |
+| 恢复 | - | Undo2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50` |
 | 初始化 | "数据初始化" | RotateCcw h-3.5 w-3.5 | - | `variant="outline" h-7 text-xs text-red-600 border-red-200 hover:bg-red-50` |
+
+### 筛选栏
+- 容器：`<Card><CardContent className="pt-3 pb-3">`
+- 布局：`grid grid-cols-2 md:grid-cols-4 lg:grid-cols-N gap-2`
+- 下拉/搜索框统一：`h-7 text-xs`
+- 搜索框：`<Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />` + `<Input className="h-7 text-xs pl-7" />`
+
+### 数据表格
+- 容器：`<Card><CardContent className="p-0">`
+- 滚动：`overflow-auto max-h-[70vh]`
+- 表头：`bg-gray-50/80`，单元格 `text-xs font-medium text-gray-600 whitespace-nowrap`
+- 表体：`text-xs`，行 hover `hover:bg-blue-50/50`
+- 操作列：sticky `right-0 bg-white z-10`，图标按钮组 `gap-0.5`
+
+### 分页组件
+- 统一使用 `<PaginationBar>`，按钮/输入框 `h-7 text-xs`，当前页 `bg-[#1e3a5f]`
+
+### 通用规则
+- 所有输入控件：`h-7 text-xs`；所有图标：`h-3.5 w-3.5`
+- 主操作实底深靛蓝，次操作 outline 描边，危险操作红色系
+- 行内操作按钮 `variant="ghost"` 仅图标无边框
 
 ## 构建与测试命令
 

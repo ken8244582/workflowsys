@@ -61,6 +61,151 @@
 - 编辑：Pencil + `text-muted-foreground hover:text-[#1e3a5f]`
 - 初始化：RotateCcw + `text-red-600 border-red-200`
 
+## 列表页标准样式规范
+
+以流程清单页（`/functional/list`）为基准，所有列表页统一遵循以下标准。
+
+### 1. 页面布局结构
+
+列表页由上至下固定三层结构：
+
+```
+┌─────────────────────────────────────────────┐
+│  工具栏（标题 + 操作按钮）                     │
+├─────────────────────────────────────────────┤
+│  筛选栏（Card 容器，内含筛选项 + 搜索框）       │
+├─────────────────────────────────────────────┤
+│  数据表格（Card 容器，p-0 去内边距）           │
+├─────────────────────────────────────────────┤
+│  分页组件（PaginationBar）                    │
+└─────────────────────────────────────────────┘
+```
+
+- 工具栏：`flex items-center justify-between`，左侧标题/Tab切换 + 总条数，右侧操作按钮组
+- 筛选栏与表格各用独立 `<Card>` 包裹
+
+### 2. 工具栏按钮规范
+
+| 功能 | 文字 | 图标 | 主按钮样式 | 次按钮样式 |
+|------|------|------|-----------|-----------|
+| 新增 | "新增XXX" | Plus h-3.5 w-3.5 | `bg-[#1e3a5f] hover:bg-[#2d4f7a] h-7 text-xs` | - |
+| 导出 | "导出" | Download h-3.5 w-3.5 | - | `variant="outline" h-7 text-xs` |
+| 删除 | - | Trash2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50` |
+| 编辑 | - | Pencil h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted` |
+| 恢复 | - | Undo2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50` |
+| 初始化 | "数据初始化" | RotateCcw h-3.5 w-3.5 | - | `variant="outline" h-7 text-xs text-red-600 border-red-200 hover:bg-red-50` |
+
+**规则**：
+- 按钮高度统一 `h-7`，字号统一 `text-xs`
+- 图标统一 `h-3.5 w-3.5`，图标与文字间距 `mr-1`
+- 主按钮（新增类）使用深靛蓝实底 `bg-[#1e3a5f]`
+- 次按钮（导出/初始化）使用 `variant="outline"` 描边样式
+- 行内操作按钮（编辑/删除/恢复）使用 `variant="ghost"` 无边框，尺寸 `h-7 w-7 p-0`
+- 危险操作使用红色系：文字按钮 `text-red-600`，行内删除 `text-red-500`
+
+### 3. 筛选栏规范
+
+```tsx
+<Card>
+  <CardContent className="pt-3 pb-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+      {/* MultiSelectFilter / Select / 搜索框 */}
+    </div>
+  </CardContent>
+</Card>
+```
+
+- 外层 `<Card>` + `<CardContent className="pt-3 pb-3">`（左右 padding 保持默认）
+- 内部 `grid` 响应式布局：`grid-cols-2 md:grid-cols-4 lg:grid-cols-N`（N 根据筛选项数量调整）
+- 间距统一 `gap-2`
+
+#### MultiSelectFilter 组件样式
+
+- 触发按钮：`h-7 px-2 text-xs rounded border`，宽度 `min-w-[100px] max-w-[160px]`
+- 已选状态：`border-blue-400 bg-blue-50 text-blue-700`
+- 未选状态：`border-slate-300 bg-white text-slate-600`
+- 下拉面板：`z-50`，内含搜索框 + 全选 + 列表 + 清除按钮
+
+#### 搜索框样式
+
+```tsx
+<div className="relative">
+  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+  <Input placeholder="搜索..." className="h-7 text-xs pl-7" />
+</div>
+```
+
+- 高度 `h-7`，字号 `text-xs`，左侧图标留白 `pl-7`
+- Search 图标定位 `absolute left-2 top-2`，尺寸 `h-3.5 w-3.5`
+
+#### Select 下拉框样式
+
+```tsx
+<Select>
+  <SelectTrigger className="h-7 text-xs">
+    <SelectValue />
+  </SelectTrigger>
+</Select>
+```
+
+- 高度 `h-7`，字号 `text-xs`
+
+### 4. 数据表格规范
+
+```tsx
+<Card>
+  <CardContent className="p-0">
+    <div className="overflow-auto max-h-[70vh]">
+      <Table className="text-xs">
+        <TableHeader>
+          <TableRow className="bg-gray-50/80">
+            <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap ...">
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {/* 数据行 */}
+        </TableBody>
+      </Table>
+    </div>
+  </CardContent>
+</Card>
+```
+
+- 外层 `<Card>` + `<CardContent className="p-0">`（去掉内边距，表格顶满）
+- 滚动容器：`overflow-auto max-h-[70vh]`
+- 表格字号：`text-xs`（全局）
+- 表头行：`bg-gray-50/80`
+- 表头单元格：`text-xs font-medium text-gray-600 whitespace-nowrap`，需要 sticky 时加 `sticky top-0 bg-gray-50 z-10`
+- 数据行：`hover:bg-blue-50/50`
+- 空状态：`<TableCell colSpan={N} className="text-center py-12 text-gray-400">暂无数据</TableCell>`
+- 序号列：`text-gray-400 text-center`
+- 居中列：`text-center`
+- 长文本截断：使用 `<TruncateDiv>` 组件，指定 `maxWidth`
+- 操作列：sticky 定位 `sticky right-0 bg-white z-10`，内含图标按钮组 `flex items-center justify-center gap-0.5`
+
+### 5. 分页组件规范
+
+使用统一 `<PaginationBar>` 组件，位于表格下方，无 Card 包裹：
+
+- 高度：按钮 `h-7`，输入框 `h-7`，字号 `text-xs`
+- 当前页按钮：`bg-[#1e3a5f]`（variant="default"）
+- 其他页按钮：`variant="outline" h-7 w-7 p-0 text-xs`
+- 页码跳转输入框：`h-7 w-12 text-xs text-center`
+- 每页条数选择器：`h-7 w-[72px] text-xs`
+- 布局：`flex items-center justify-between py-1`
+- 左侧：总条数 + 每页条数选择
+- 右侧：翻页按钮 + 页码 + 跳转输入
+
+### 6. 通用规则
+
+- 所有输入控件统一高度 `h-7`、字号 `text-xs`
+- 所有图标统一尺寸 `h-3.5 w-3.5`（lucide-react）
+- 筛选区垂直内边距 `pt-3 pb-3`，间距 `gap-2`
+- 表格去内边距 `p-0`，表格自身处理间距
+- 行内操作按钮无边框 `variant="ghost"`，仅图标无文字
+- 新增/主操作用实底深靛蓝，导出/次要操作用 outline 描边
+- 危险操作统一红色系（边框 `border-red-200`、文字 `text-red-600`、行内 `text-red-500`）
+
 ## 交互与状态
 - 会话超时：Cookie为Session模式（浏览器关闭失效），JWT 1小时过期后自动跳转登录页
 - 401处理：前端全局拦截401响应，清除本地登录态并重定向至登录页
