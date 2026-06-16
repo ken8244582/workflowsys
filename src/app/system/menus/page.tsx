@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Fragment } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -273,50 +273,51 @@ export default function MenusPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
-        <h1 className="text-xl font-semibold text-[#1e3a5f]">菜单管理</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+          <h1 className="text-xl font-semibold text-[#1e3a5f]">菜单管理</h1>
+        </div>
+        <Button
+          onClick={() => {
+            resetForm();
+            setShowAddDialog(true);
+          }}
+          className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          新增菜单
+        </Button>
       </div>
 
-      {/* Menu List Card */}
+      {/* Table */}
       <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">菜单列表</CardTitle>
-            <Button
-              onClick={() => {
-                resetForm();
-                setShowAddDialog(true);
-              }}
-              className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              新增菜单
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-10 text-muted-foreground">加载中...</div>
-          ) : (
-            <Table>
+        <CardContent className="p-0">
+          <div className="overflow-auto max-h-[70vh]">
+            <Table className="text-xs">
               <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead className="w-[25%]">菜单名称</TableHead>
-                  <TableHead className="w-[20%]">路径</TableHead>
-                  <TableHead className="w-[12%]">图标</TableHead>
-                  <TableHead className="w-[8%]">排序</TableHead>
-                  <TableHead className="w-[8%]">可见</TableHead>
-                  <TableHead className="w-[25%]">操作</TableHead>
+                <TableRow className="bg-gray-50/80">
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">菜单名称</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">路径</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">图标</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">排序</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">可见</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {topMenus.length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                      暂无数据
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      加载中...
+                    </TableCell>
+                  </TableRow>
+                ) : topMenus.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      暂无菜单数据
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -326,31 +327,31 @@ export default function MenusPage() {
 
                     return (
                       <Fragment key={top.id}>
-                        <TableRow className="hover:bg-muted/10">
+                        <TableRow className="hover:bg-muted/30">
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {subMenus.length > 0 ? (
                                 <button onClick={() => toggleExpand(top.id)} className="text-muted-foreground hover:text-foreground">
-                                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                  {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                                 </button>
                               ) : (
-                                <span className="w-4 inline-block" />
+                                <span className="w-3.5 inline-block" />
                               )}
-                              <span className="font-medium">{top.name}</span>
+                              <span className="font-medium whitespace-nowrap">{top.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{top.path || '-'}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{top.icon || '-'}</TableCell>
-                          <TableCell className="text-muted-foreground">{top.sort_order}</TableCell>
-                          <TableCell>
+                          <TableCell className="font-mono text-muted-foreground whitespace-nowrap">{top.path || '-'}</TableCell>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">{top.icon || '-'}</TableCell>
+                          <TableCell className="text-center text-muted-foreground">{top.sort_order}</TableCell>
+                          <TableCell className="text-center">
                             {top.is_visible ? (
                               <Badge variant="outline" className="text-green-600 border-green-600">是</Badge>
                             ) : (
                               <Badge variant="outline" className="text-red-500 border-red-500">否</Badge>
                             )}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
+                          <TableCell className="text-center sticky right-0 bg-white z-10">
+                            <div className="flex items-center justify-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -397,25 +398,25 @@ export default function MenusPage() {
                         </TableRow>
 
                         {isExpanded && subMenus.map(sub => (
-                          <TableRow key={sub.id} className="bg-muted/5 hover:bg-muted/10">
+                          <TableRow key={sub.id} className="bg-muted/5 hover:bg-muted/30">
                             <TableCell>
                               <div className="flex items-center gap-2 pl-6">
-                                <span className="w-4 inline-block" />
-                                <span>{sub.name}</span>
+                                <span className="w-3.5 inline-block" />
+                                <span className="whitespace-nowrap">{sub.name}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="font-mono text-xs text-muted-foreground">{sub.path || '-'}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{sub.icon || '-'}</TableCell>
-                            <TableCell className="text-muted-foreground">{sub.sort_order}</TableCell>
-                            <TableCell>
+                            <TableCell className="font-mono text-muted-foreground whitespace-nowrap">{sub.path || '-'}</TableCell>
+                            <TableCell className="text-muted-foreground whitespace-nowrap">{sub.icon || '-'}</TableCell>
+                            <TableCell className="text-center text-muted-foreground">{sub.sort_order}</TableCell>
+                            <TableCell className="text-center">
                               {sub.is_visible ? (
                                 <Badge variant="outline" className="text-green-600 border-green-600">是</Badge>
                               ) : (
                                 <Badge variant="outline" className="text-red-500 border-red-500">否</Badge>
                               )}
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
+                            <TableCell className="text-center sticky right-0 bg-white z-10">
+                              <div className="flex items-center justify-center gap-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -465,7 +466,7 @@ export default function MenusPage() {
                 )}
               </TableBody>
             </Table>
-          )}
+          </div>
         </CardContent>
       </Card>
 
