@@ -71,14 +71,9 @@ export async function createSession(payload: SessionPayload): Promise<void> {
 }
 
 /**
- * Get and verify the current session from cookies
- * Returns null if no session or session expired
+ * Verify a JWT token and return the session payload, or null if invalid
  */
-export async function getSession(): Promise<SessionPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-
+async function verifyToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
     return {
@@ -89,14 +84,36 @@ export async function getSession(): Promise<SessionPayload | null> {
       mustChangePassword: payload.mustChangePassword as boolean | undefined,
     };
   } catch {
-    // Token expired or invalid — clear the cookie
-    try {
-      cookieStore.delete(COOKIE_NAME);
-    } catch {
-      // Ignore delete errors
-    }
     return null;
   }
+}
+
+/**
+ * Get and verify the current session.
+ * Checks Authorization header first (Bearer token for iframe/preview), then falls back to cookie.
+ * Returns null if no session or session expired
+ */
+export async function getSession(): Promise<SessionPayload | null> {
+  // 1. Try Authorization header (for iframe preview where third-party cookies are blocked)
+  const { headers } = await import('next/headers');
+  const authHeader = (await headers()).get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    const payload = await verifyToken(token);
+    if (payload) return payload;
+  }
+
+  // 2. Fall back to cookie
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+
+  const payload = await verifyToken(token);
+  if (!payload) {
+    // Token expired or invalid — clear the cookie
+    try { cookieStore.delete(COOKIE_NAME); } catch { /* ignore */ }
+  }
+  return payload;
 }
 
 /**

@@ -28,6 +28,8 @@ export interface PathPermission {
   supported_actions: string[];
 }
 
+const TOKEN_KEY = 'auth_token';
+
 interface AuthContextType {
   user: UserInfo | null;
   menus: MenuItem[];
@@ -53,7 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshSession = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/session');
+      const token = localStorage.getItem(TOKEN_KEY);
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch('/api/auth/session', { headers });
       const data = await res.json();
       if (data.authenticated) {
         setUser({
@@ -71,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setMenus([]);
         setPermissions({});
         setAuthenticated(false);
+        localStorage.removeItem(TOKEN_KEY);
       }
     } catch {
       setUser(null);
@@ -82,11 +90,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Global 401 handler: if any API returns 401, redirect to login
+  // Global 401 handler + inject Authorization header for API requests
   useEffect(() => {
-    // Monkey-patch fetch to detect 401 responses globally
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
+      // Inject Authorization header for API requests
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (token) {
+        const url = typeof args[0] === 'string' ? args[0] : args[0] instanceof Request ? args[0].url : '';
+        if (url.startsWith('/api/')) {
+          if (args[1] && typeof args[1] === 'object') {
+            const existingHeaders = (args[1] as RequestInit).headers;
+            if (existingHeaders instanceof Headers) {
+              if (!existingHeaders.has('Authorization')) {
+                existingHeaders.set('Authorization', `Bearer ${token}`);
+              }
+            } else if (Array.isArray(existingHeaders)) {
+              const hasAuth = existingHeaders.some(([k]) => k.toLowerCase() === 'authorization');
+              if (!hasAuth) {
+                (args[1] as RequestInit).headers = [...existingHeaders, ['Authorization', `Bearer ${token}`]];
+              }
+            } else if (typeof existingHeaders === 'object' && existingHeaders !== null) {
+              const eh = existingHeaders as Record<string, string>;
+              if (!Object.keys(eh).some(k => k.toLowerCase() === 'authorization')) {
+                (args[1] as RequestInit).headers = { ...eh, Authorization: `Bearer ${token}` };
+              }
+            } else {
+              (args[1] as RequestInit).headers = { Authorization: `Bearer ${token}` };
+            }
+          } else {
+            args[1] = { headers: { Authorization: `Bearer ${token}` } };
+          }
+        }
+      }
+
       const response = await originalFetch(...args);
       // Skip 401 handling for login endpoint (it returns 401 for wrong credentials)
       const url = typeof args[0] === 'string' ? args[0] : args[0] instanceof Request ? args[0].url : '';
@@ -96,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setMenus([]);
         setPermissions({});
         setAuthenticated(false);
+        localStorage.removeItem(TOKEN_KEY);
         router.push('/login');
       }
       return response;
@@ -119,6 +157,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
+        // Store token in localStorage for iframe/preview where cookies may be blocked
+        if (data.token) {
+          localStorage.setItem(TOKEN_KEY, data.token);
+        }
         setUser(data.user);
         setAuthenticated(true);
         await refreshSession();
@@ -131,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    localStorage.removeItem(TOKEN_KEY);
     await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
     setMenus([]);
