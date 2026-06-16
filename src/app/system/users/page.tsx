@@ -447,9 +447,9 @@ export default function UsersPage() {
             <CardTitle className="text-lg">用户列表</CardTitle>
             <Button
               onClick={() => { setShowAddDialog(true); setError(''); }}
-              className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
+              className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="h-3.5 w-3.5 mr-1" />
               新增用户
             </Button>
           </div>

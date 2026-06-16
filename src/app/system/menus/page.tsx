@@ -290,10 +290,10 @@ export default function MenusPage() {
                 resetForm();
                 setShowAddDialog(true);
               }}
-              className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
+              className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
             >
-              <Plus className="h-4 w-4 mr-1" />
-              添加菜单
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              新增菜单
             </Button>
           </div>
         </CardHeader>
@@ -380,8 +380,8 @@ export default function MenusPage() {
                                   setShowAddDialog(true);
                                 }}
                               >
-                                <Plus className="h-3 w-3 mr-1" />
-                                添加子菜单
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                新增子菜单
                               </Button>
                               <Button
                                 variant="ghost"
@@ -473,7 +473,7 @@ export default function MenusPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>添加菜单</DialogTitle>
+            <DialogTitle>新增菜单</DialogTitle>
           </DialogHeader>
           {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
           <div className="space-y-4 py-4">

@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -376,9 +377,7 @@ export default function E2EPlanPage() {
                       )}
                     </div>
                     <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleAddPlan(period)}>
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                      </svg>
+                      <Plus className="h-3.5 w-3.5" />
                     </Button>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-2 pb-3">

@@ -231,8 +231,8 @@ export default function RevisionPlanPage() {
             修订计划列表
           </CardTitle>
           {canAdd() && (
-            <Button size="sm" onClick={() => setShowCreateDialog(true)} className="gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
-              <Plus className="h-4 w-4" /> 创建月度计划
+            <Button size="sm" onClick={() => setShowCreateDialog(true)} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              <Plus className="h-3.5 w-3.5 mr-1" /> 新增计划
             </Button>
           )}
         </CardHeader>

@@ -220,7 +220,7 @@ export default function FunctionalRevisionPage() {
         <div className="flex items-center gap-2">
           {canExport() && (
             <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
-              <Download className="h-3.5 w-3.5 mr-1" /> 批量导出
+              <Download className="h-3.5 w-3.5 mr-1" /> 导出
             </Button>
           )}
         </div>

@@ -585,7 +585,7 @@ export default function MaturityAssessmentPage() {
         <h2 className="text-lg font-semibold text-foreground">成熟度自评列表</h2>
         {canAdd && (
         <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
-          <Plus className="h-3.5 w-3.5 mr-1" />新建自评
+          <Plus className="h-3.5 w-3.5 mr-1" />新增自评
         </Button>
         )}
       </div>
@@ -635,7 +635,7 @@ export default function MaturityAssessmentPage() {
                 {pagedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
-                      暂无自评记录，点击"新建自评"开始
+                      暂无自评记录，点击"新增自评"开始
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -682,7 +682,7 @@ export default function MaturityAssessmentPage() {
                               size="sm"
                               variant="ghost"
                               className="h-6 w-6 p-0"
-                              title="导出Excel"
+                              title="导出"
                               onClick={() => handleExport(a.id)}
                             >
                               <Download className="h-3.5 w-3.5 text-gray-500" />
@@ -753,8 +753,8 @@ export default function MaturityAssessmentPage() {
               </Button>
             )}
             {canExport && (
-            <Button variant="outline" onClick={() => handleExport(currentAssessment.id)} size="sm">
-              <Download className="h-4 w-4 mr-1" />导出
+            <Button variant="outline" onClick={() => handleExport(currentAssessment.id)} className="h-7 text-xs">
+              <Download className="h-3.5 w-3.5 mr-1" />导出
             </Button>
             )}
             {assessments.filter(a => a.id !== currentAssessment.id).length > 0 && (
@@ -1204,7 +1204,7 @@ export default function MaturityAssessmentPage() {
           <h2 className="text-lg font-semibold">自评对比报告</h2>
           <div className="flex-1" />
           <Button
-            size="sm"
+            className="h-7 text-xs"
             variant="outline"
             onClick={async () => {
               if (!comparisonReport) return;
@@ -1231,8 +1231,8 @@ export default function MaturityAssessmentPage() {
               }
             }}
           >
-            <Download className="h-4 w-4 mr-1" />
-            导出Excel
+            <Download className="h-3.5 w-3.5 mr-1" />
+            导出
           </Button>
         </div>
 
@@ -1383,7 +1383,7 @@ export default function MaturityAssessmentPage() {
       <Dialog open={showCreate} onOpenChange={(open) => { setShowCreate(open); if (!open) { setCopyFromId(''); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{copyFromId ? '从历史自评复制' : '新建自评'}</DialogTitle>
+            <DialogTitle>{copyFromId ? '从历史自评复制' : '新增自评'}</DialogTitle>
             <DialogDescription>
               {copyFromId
                 ? '将基于选定的历史自评创建新草稿，包含所有评分明细，可在其基础上修改。'

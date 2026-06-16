@@ -290,7 +290,7 @@ export default function AssessmentHistoryPage() {
                             size="sm"
                             variant="ghost"
                             className="h-6 w-6 p-0"
-                            title="导出Excel"
+                            title="导出"
                             onClick={() => handleExport(a.id)}
                           >
                             <Download className="h-3.5 w-3.5 text-gray-500" />
@@ -382,7 +382,7 @@ export default function AssessmentHistoryPage() {
         <>
           <div className="flex items-center justify-end">
             <Button
-              size="sm"
+              className="h-7 text-xs"
               variant="outline"
               onClick={async () => {
                 if (!comparisonReport) return;
@@ -409,8 +409,8 @@ export default function AssessmentHistoryPage() {
                 }
               }}
             >
-              <Download className="h-4 w-4 mr-1" />
-              导出Excel
+              <Download className="h-3.5 w-3.5 mr-1" />
+              导出
             </Button>
           </div>
 

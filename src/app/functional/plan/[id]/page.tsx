@@ -421,24 +421,24 @@ export default function PlanDetailPage() {
           }`}>{plan.status}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5">
-            <Download className="h-4 w-4" /> 导出
+          <Button variant="outline" onClick={handleExport} className="h-7 text-xs">
+            <Download className="h-3.5 w-3.5 mr-1" /> 导出
           </Button>
           {isDraft && (
             <>
               {canInit() && (
-                <Button variant="outline" size="sm" onClick={() => setShowReinitDialog(true)} className="gap-1.5 text-red-600 border-red-300 hover:bg-red-50">
-                  <RotateCcw className="h-4 w-4" /> 数据初始化
+                <Button variant="outline" onClick={() => setShowReinitDialog(true)} className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" /> 数据初始化
                 </Button>
               )}
               {canAdd() && (
-                <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> 添加任务
+                <Button onClick={handleOpenAddDialog} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+                  <Plus className="h-3.5 w-3.5 mr-1" /> 新增任务
                 </Button>
               )}
               {canPublish() && (
-                <Button size="sm" onClick={() => setShowPublishDialog(true)} className="gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
-                  <Send className="h-4 w-4" /> 下发计划
+                <Button onClick={() => setShowPublishDialog(true)} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+                  <Send className="h-3.5 w-3.5 mr-1" /> 下发计划
                 </Button>
               )}
             </>
@@ -446,13 +446,13 @@ export default function PlanDetailPage() {
           {isPublished && (
             <>
               {canAdd() && (
-                <Button variant="outline" size="sm" onClick={handleOpenAddDialog} className="gap-1.5">
-                  <Plus className="h-4 w-4" /> 添加任务
+                <Button onClick={handleOpenAddDialog} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+                  <Plus className="h-3.5 w-3.5 mr-1" /> 新增任务
                 </Button>
               )}
               {canPublish() && (
-                <Button variant="outline" size="sm" onClick={handleWithdraw} className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50">
-                  <RotateCcw className="h-4 w-4" /> 撤回草稿
+                <Button variant="outline" onClick={handleWithdraw} className="h-7 text-xs text-amber-600 border-amber-200 hover:bg-amber-50">
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" /> 撤回草稿
                 </Button>
               )}
             </>
@@ -713,7 +713,7 @@ export default function PlanDetailPage() {
                                 fetchPlan();
                                 fetchTasks();
                               }}
-                            ><RotateCcw className="h-3 w-3" />撤回</Button>
+                            ><RotateCcw className="h-3.5 w-3.5 mr-0.5" />撤回</Button>
                           )}
                           {canDelete() && isDraft && (
                             <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500"
