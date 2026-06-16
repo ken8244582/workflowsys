@@ -275,9 +275,9 @@ export default function MenusPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
         <h1 className="text-xl font-semibold text-[#1e3a5f]">菜单管理</h1>
-        <p className="mt-1 text-sm text-muted-foreground">管理系统的菜单结构和功能配置</p>
       </div>
 
       {/* Menu List Card */}

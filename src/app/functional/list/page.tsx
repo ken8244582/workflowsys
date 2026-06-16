@@ -568,6 +568,12 @@ export default function FunctionalListPage() {
   return (
     <TooltipProvider>
     <div className="space-y-4">
+      {/* 页面标题 */}
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+        <h2 className="text-xl font-semibold text-[#1e3a5f]">流程清单</h2>
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

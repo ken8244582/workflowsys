@@ -26,8 +26,8 @@ function SectionTitle({ number, title, links }: { number: string; title: string;
   return (
     <div className="flex items-center justify-between gap-3 pb-1">
       <div className="flex items-center gap-3">
-        <div className="w-1 self-stretch rounded-full bg-[#1e3a5f]" />
-        <h2 className="text-lg font-semibold text-foreground">{number}{title}</h2>
+        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+        <h2 className="text-xl font-semibold text-[#1e3a5f]">{number}{title}</h2>
       </div>
       {links && links.length > 0 && (
         <div className="flex items-center gap-4">

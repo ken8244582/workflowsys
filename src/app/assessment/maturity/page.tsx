@@ -1371,8 +1371,8 @@ export default function MaturityAssessmentPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
-        <div className="w-1 h-6 bg-[#1e3a5f] rounded" />
-        <h1 className="text-xl font-bold text-foreground">成熟度自评</h1>
+        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+        <h1 className="text-xl font-semibold text-[#1e3a5f]">成熟度自评</h1>
       </div>
 
       {activeView === 'list' && renderListView()}

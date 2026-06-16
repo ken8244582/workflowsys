@@ -413,7 +413,8 @@ export default function PlanDetailPage() {
           <Link href="/functional/plan" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-xl font-bold">{plan.planName}</h1>
+          <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+          <h1 className="text-xl font-semibold text-[#1e3a5f]">{plan.planName}</h1>
           <Badge className={`text-xs px-2 py-0.5 ${
             plan.status === '草稿' ? 'bg-gray-100 text-gray-700' :
             plan.status === '已下发' ? 'bg-blue-100 text-blue-700' :
