@@ -234,8 +234,8 @@ export default function FunctionalRevisionPage() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-4 pb-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <CardContent className="pt-3 pb-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
             <MultiSelectFilter
               label="修订类型"
               options={typeOptions}
@@ -248,9 +248,9 @@ export default function FunctionalRevisionPage() {
               selected={selectedDomains}
               onChange={setSelectedDomains}
             />
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-              <Input placeholder="搜索流程名/编码/修订内容" value={searchText} onChange={e => setSearchText(e.target.value)} className="pl-8" />
+            <div className="col-span-2 md:col-span-3 lg:col-span-5 relative">
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+              <Input placeholder="搜索流程名/编码/修订内容" value={searchText} onChange={e => setSearchText(e.target.value)} className="h-7 text-xs pl-7" />
             </div>
           </div>
         </CardContent>

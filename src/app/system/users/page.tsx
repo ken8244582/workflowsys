@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronRight, ChevronDown, Plus, Pencil, Trash2, Key, Settings, Check } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Pencil, Trash2, Key, Settings, Check, Search } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 
 interface MenuFunction {
@@ -454,11 +454,12 @@ export default function UsersPage() {
         <CardContent className="pt-3 pb-3">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
             <div className="col-span-2 md:col-span-3 lg:col-span-7 relative">
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
               <Input
                 placeholder="搜索用户名或显示名..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="h-7 text-xs"
+                className="h-7 text-xs pl-7"
               />
             </div>
           </div>

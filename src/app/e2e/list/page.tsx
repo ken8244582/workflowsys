@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Plus, Pencil, Trash2, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Search } from 'lucide-react';
 
 const STATUS_OPTIONS: { value: E2EProcess['status']; label: string }[] = [
   { value: 'not_started', label: '未开始' },
@@ -241,35 +241,40 @@ export default function E2EListPage() {
 
       {/* 筛选栏 */}
       <Card>
-        <CardContent className="flex flex-wrap items-center gap-3 p-3">
-          <Select value={filterDept} onValueChange={setFilterDept}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="责任部门" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部部门</SelectItem>
-              {departments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterOwner} onValueChange={setFilterOwner}>
-            <SelectTrigger className="w-[140px]"><SelectValue placeholder="流程所有者" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部所有者</SelectItem>
-              {owners.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[120px]"><SelectValue placeholder="状态" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部状态</SelectItem>
-              {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Input
-            placeholder="搜索流程名称/责任人/部门"
-            className="w-[220px]"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-          <span className="ml-auto text-xs text-muted-foreground">共 {filtered.length} 条</span>
+        <CardContent className="pt-3 pb-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+            <Select value={filterDept} onValueChange={setFilterDept}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="责任部门" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部部门</SelectItem>
+                {departments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterOwner} onValueChange={setFilterOwner}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="流程所有者" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部所有者</SelectItem>
+                {owners.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="状态" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <div className="col-span-2 md:col-span-3 lg:col-span-3 relative">
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+              <Input
+                placeholder="搜索流程名称/责任人/部门"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="h-7 text-xs pl-7"
+              />
+            </div>
+            <span className="flex items-center text-xs text-muted-foreground lg:col-span-1">共 {filtered.length} 条</span>
+          </div>
         </CardContent>
       </Card>
 
