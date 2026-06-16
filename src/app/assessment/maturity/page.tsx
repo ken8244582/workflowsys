@@ -580,7 +580,7 @@ export default function MaturityAssessmentPage() {
 
   // Render the assessment list view
   const renderListView = () => (
-    <div className="space-y-4">
+    <>
       <div className="flex items-center justify-end">
         {canAdd && (
         <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
@@ -718,7 +718,7 @@ export default function MaturityAssessmentPage() {
           onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
         />
       )}
-    </div>
+    </>
   );
 
   // Render the assessment form view
@@ -728,7 +728,7 @@ export default function MaturityAssessmentPage() {
     const canEditThis = isDraft && canEdit;
 
     return (
-      <div className="space-y-4">
+      <>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1184,7 +1184,7 @@ export default function MaturityAssessmentPage() {
             </Card>
           );
         })}
-      </div>
+      </>
     );
   };
 
@@ -1195,7 +1195,7 @@ export default function MaturityAssessmentPage() {
     const { assessment1, assessment2, sections, items, improvementAreas } = comparisonReport;
 
     return (
-      <div className="space-y-4">
+      <>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => { setComparisonReport(null); setActiveView('assess'); }}>
             ← 返回自评
@@ -1363,7 +1363,7 @@ export default function MaturityAssessmentPage() {
             </CardContent>
           </Card>
         )}
-      </div>
+      </>
     );
   };
 
