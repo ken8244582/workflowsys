@@ -236,9 +236,13 @@ export default function MaturityAssessmentPage() {
             score_group_key: std.score_group_key || '',
           });
         }
-        // Then overlay with existing details from DB
+        // Then overlay with existing details from DB (normalize self_score to string)
         for (const d of data.details) {
-          map.set(d.standard_id, d);
+          map.set(d.standard_id, {
+            ...d,
+            self_score: String(d.self_score ?? '0'),
+            current_status: d.current_status || '',
+          });
         }
         setDetailMap(map);
         setActiveView('assess');
@@ -398,7 +402,11 @@ export default function MaturityAssessmentPage() {
         const data = await res.json();
         const map = new Map<number, Detail>();
         (data.details || []).forEach((d: Detail) => {
-          map.set(d.standard_id, d);
+          map.set(d.standard_id, {
+            ...d,
+            self_score: String(d.self_score ?? '0'),
+            current_status: d.current_status || '',
+          });
         });
         setRefDetailMap(map);
       }
@@ -427,7 +435,7 @@ export default function MaturityAssessmentPage() {
         assessment_id: currentAssessment?.id || 0,
         standard_id: standardId,
         current_status: field === 'current_status' ? value : (existing?.current_status || ''),
-        self_score: field === 'self_score' ? value : (existing?.self_score || '0'),
+        self_score: field === 'self_score' ? value : String(existing?.self_score ?? '0'),
         score_group_key: existing?.score_group_key || std?.score_group_key || '',
       });
       return newMap;
@@ -848,8 +856,8 @@ export default function MaturityAssessmentPage() {
                           {sectionStds.map((std, idx) => {
                             const detail = detailMap.get(std.id);
                             const statusVal = detail?.current_status || '';
-                            const scoreVal = detail?.self_score || '0';
-                            const refScore = refDetailMap.get(std.id)?.self_score || '';
+                            const scoreVal = String(detail?.self_score ?? '0');
+                            const refScore = String(refDetailMap.get(std.id)?.self_score ?? '');
                             return (
                               <tr key={std.id} className="border-b last:border-b-0 hover:bg-muted/20">
                                 <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
