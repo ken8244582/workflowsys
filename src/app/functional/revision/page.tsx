@@ -214,9 +214,12 @@ export default function FunctionalRevisionPage() {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
+      {/* 页面标题 */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500">共 {filteredData.length} 条修订记录</div>
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+          <h2 className="text-xl font-semibold text-[#1e3a5f]">修订记录</h2>
+        </div>
         <div className="flex items-center gap-2">
           {canExport() && (
             <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
@@ -229,6 +232,9 @@ export default function FunctionalRevisionPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-4 pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm text-gray-500">共 {filteredData.length} 条修订记录</div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
             <MultiSelectFilter
               label="修订类型"
