@@ -909,79 +909,185 @@ export default function MaturityAssessmentPage() {
             </div>
 
             {/* Comparison Report */}
-            {listCompareReport && (
-              <div className="mt-4 border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold">对比报告</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs"
-                    onClick={() => { setListCompareReport(null); setListCompareId1(''); setListCompareId2(''); }}
-                  >
-                    关闭
-                  </Button>
-                </div>
-                {/* Score Overview */}
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  {(['mechanism', 'operation', 'it_coverage'] as const).map((section) => {
-                    const s1 = listCompareReport.assessment1[`${section}_score` as keyof typeof listCompareReport.assessment1] as string;
-                    const s2 = listCompareReport.assessment2[`${section}_score` as keyof typeof listCompareReport.assessment2] as string;
-                    const diff = (parseFloat(s2) - parseFloat(s1)).toFixed(2);
-                    const isUp = parseFloat(diff) > 0;
+            {listCompareReport && (() => {
+              const { sections, items, improvementAreas } = listCompareReport;
+              return (
+                <div className="mt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">对比报告</h4>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        className="h-7 text-xs"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/assessments/compare-export', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                assessmentId1: listCompareReport.assessment1.id,
+                                assessmentId2: listCompareReport.assessment2.id,
+                              }),
+                            });
+                            if (!res.ok) throw new Error('导出失败');
+                            const blob = await res.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `自评对比报告_${listCompareReport.assessment1.name}_vs_${listCompareReport.assessment2.name}.xlsx`;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                          } catch (e) {
+                            console.error('Export comparison error:', e);
+                            alert('导出对比报告失败');
+                          }
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1" />
+                        导出
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => { setListCompareReport(null); setListCompareId1(''); setListCompareId2(''); }}
+                      >
+                        关闭
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Overview comparison table */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">总览对比</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="px-4 py-2 text-left font-medium">评价维度</th>
+                            <th className="px-4 py-2 text-center font-medium">
+                              {listCompareReport.assessment1.name}
+                              <span className="block text-xs text-muted-foreground">{listCompareReport.assessment1.period}</span>
+                            </th>
+                            <th className="px-4 py-2 text-center font-medium">
+                              {listCompareReport.assessment2.name}
+                              <span className="block text-xs text-muted-foreground">{listCompareReport.assessment2.period}</span>
+                            </th>
+                            <th className="px-4 py-2 text-center font-medium">差异</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            { label: '总得分', ...sections.total },
+                            { label: '机制建设评价', ...sections.mechanism },
+                            { label: '运行效果评价', ...sections.operation },
+                            { label: 'IT覆盖与支撑', ...sections.it },
+                          ].map(row => {
+                            const diff = parseFloat(row.diff);
+                            return (
+                              <tr key={row.label} className="border-b last:border-b-0">
+                                <td className="px-4 py-2 font-medium">{row.label}</td>
+                                <td className="px-4 py-2 text-center font-mono tabular-nums font-semibold">{row.current}</td>
+                                <td className="px-4 py-2 text-center font-mono tabular-nums">{row.compare}</td>
+                                <td className={`px-4 py-2 text-center font-mono tabular-nums font-semibold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                  {diff > 0 ? '+' : ''}{row.diff}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
+
+                  {/* Detail comparison by section */}
+                  {['mechanism', 'operation', 'it_coverage'].map(sectionType => {
+                    const sectionItems = items.filter((i: { section_type: string }) => i.section_type === sectionType);
+                    if (sectionItems.length === 0) return null;
                     return (
-                      <div key={section} className="text-center p-3 bg-muted rounded-lg">
-                        <div className="text-xs text-muted-foreground mb-1">{SECTION_LABELS[section]}</div>
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="text-sm font-medium">{s1}</span>
-                          <span className="text-xs text-muted-foreground">→</span>
-                          <span className="text-sm font-medium">{s2}</span>
-                          {parseFloat(diff) !== 0 && (
-                            <span className={`text-xs font-medium ${isUp ? 'text-red-600' : 'text-green-600'}`}>
-                              {isUp ? '+' : ''}{diff}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <Card key={sectionType}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base">{SECTION_LABELS[sectionType]} - 明细对比</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b bg-muted/50">
+                                <th className="px-4 py-2 text-left font-medium">评价项</th>
+                                <th className="px-4 py-2 text-center font-medium">本次得分</th>
+                                <th className="px-4 py-2 text-center font-medium">对比得分</th>
+                                <th className="px-4 py-2 text-center font-medium">差异</th>
+                                <th className="px-4 py-2 text-center font-medium">得分率</th>
+                                <th className="px-4 py-2 text-center font-medium">状态</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sectionItems.map((item, idx) => {
+                                const diff = item.diff;
+                                return (
+                                  <tr key={idx} className={`border-b last:border-b-0 ${item.improvement_needed ? 'bg-red-50/50' : ''}`}>
+                                    <td className="px-4 py-2">
+                                      <span className="text-xs text-muted-foreground">{item.layer3} &gt;</span>
+                                      <span className="ml-1">{item.layer4}</span>
+                                    </td>
+                                    <td className="px-4 py-2 text-center font-mono tabular-nums">{item.current_score}</td>
+                                    <td className="px-4 py-2 text-center font-mono tabular-nums">{item.compare_score}</td>
+                                    <td className={`px-4 py-2 text-center font-mono tabular-nums font-semibold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                      {diff > 0 ? '+' : ''}{diff}
+                                    </td>
+                                    <td className="px-4 py-2 text-center">
+                                      <div className="flex items-center justify-center gap-1">
+                                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                                          <div
+                                            className="h-full bg-[#1e3a5f] rounded-full"
+                                            style={{ width: `${Math.min(item.current_rate * 100, 100)}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">{(item.current_rate * 100).toFixed(0)}%</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-2 text-center">
+                                      {item.improvement_needed ? (
+                                        <Badge variant="outline" className="bg-red-50 text-red-600 text-xs">↓ 下降</Badge>
+                                      ) : diff > 0 ? (
+                                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 text-xs">↑ 提升</Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="bg-slate-50 text-slate-500 text-xs">→ 持平</Badge>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </CardContent>
+                      </Card>
                     );
                   })}
+
+                  {/* Improvement Areas */}
+                  {improvementAreas.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base text-amber-600">待改进方向</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2">
+                          {improvementAreas.map((area: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm">
+                              <span className="text-amber-500 mt-0.5">●</span>
+                              <span>{area}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
-                {/* Total Score */}
-                <div className="text-center p-3 bg-[#1e3a5f]/5 rounded-lg mb-4">
-                  <div className="text-xs text-muted-foreground mb-1">总得分</div>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-lg font-semibold">{listCompareReport.assessment1.total_score ?? listCompareReport.sections.total.current}</span>
-                    <span className="text-sm text-muted-foreground">→</span>
-                    <span className="text-lg font-semibold">{listCompareReport.assessment2.total_score ?? listCompareReport.sections.total.compare}</span>
-                    {(() => {
-                      const s1 = parseFloat(listCompareReport.assessment1.total_score ?? listCompareReport.sections.total.current);
-                      const s2 = parseFloat(listCompareReport.assessment2.total_score ?? listCompareReport.sections.total.compare);
-                      const d = (s2 - s1).toFixed(2);
-                      const isUp = parseFloat(d) > 0;
-                      return parseFloat(d) !== 0 ? (
-                        <span className={`text-sm font-medium ${isUp ? 'text-red-600' : 'text-green-600'}`}>
-                          {isUp ? '+' : ''}{d}
-                        </span>
-                      ) : null;
-                    })()}
-                  </div>
-                </div>
-                {/* Improvement Areas */}
-                {listCompareReport.improvementAreas && listCompareReport.improvementAreas.length > 0 && (
-                  <div>
-                    <h5 className="text-sm font-medium mb-2">待改进方向</h5>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {listCompareReport.improvementAreas.map((imp: string, i: number) => (
-                        <li key={i} className="flex items-start gap-1">
-                          <span className="text-red-400 mt-0.5">•</span>
-                          {imp}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
+              );
+            })()}
           </CardContent>
         </Card>
         </div>
