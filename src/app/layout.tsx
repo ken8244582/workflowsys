@@ -4,8 +4,8 @@ import { AuthProvider } from '@/components/auth-provider';
 import { AppShell } from '@/components/app-shell';
 
 export const metadata: Metadata = {
-  title: '流程管理平台',
-  description: 'L1-L4职能流程文件清单统计分析平台',
+  title: '株齿流程管理平台',
+  description: '株齿流程管理平台',
 };
 
 export default function RootLayout({

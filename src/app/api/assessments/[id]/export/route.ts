@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, isSession } from '@/lib/api-auth';
 import { getAssessmentWithDetails } from '@/lib/assessment-data';
 import * as XLSX from 'xlsx';
+import { ASSESSMENT_TEMPLATE_BASE64 } from '@/lib/assessment-template';
 
-// GET /api/assessments/[id]/export - Export assessment as Excel (matching template format)
+// GET /api/assessments/[id]/export - Export assessment as Excel (based on template)
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -34,199 +35,113 @@ export async function GET(
       });
     }
 
-    // Build the Excel from the assessment standards data
-    // Structure matches the template: A-H columns + I (现状情况) + J (自评分值)
-    const wb = XLSX.utils.book_new();
+    // Load template Excel
+    const templateBuffer = Buffer.from(ASSESSMENT_TEMPLATE_BASE64, 'base64');
+    const wb = XLSX.read(templateBuffer, { type: 'buffer' });
+    const wsName = wb.SheetNames[0];
+    const ws = wb.Sheets[wsName];
 
-    // Header row (row 1)
-    const headerRow = [
-      '分层1', '项目分值', '分层2', '分层3', '分层4',
-      '分层5', '评价标准描述', '该项标准分值', '现状情况',
-      `${assessment.period || '自评'}实际值`,
-    ];
-
-    // Use STANDARDS_DATA to rebuild the structure
-    const { STANDARDS_DATA } = await import('@/lib/assessment-standards-data');
-
-    // Build data rows (rows 2-179)
-    const dataRows: (string | number)[][] = [];
-    let currentLayer1 = '';
-    let currentLayer1Score: number | string = '';
-    let currentLayer2 = '';
-    let currentLayer3 = '';
-    let currentLayer4 = '';
-
-    for (let idx = 0; idx < STANDARDS_DATA.length; idx++) {
-      const std = STANDARDS_DATA[idx];
-      // standard_id in DB = idx + 1 (since STANDARDS_DATA is seeded in order)
-      const dbId = idx + 1;
-
-      // Track hierarchical changes for merged cells display
-      const layer1 = std.layer1 !== currentLayer1 ? std.layer1 : '';
-      const layer1Score = std.layer1 !== currentLayer1 ? std.layer1_score : '';
-      if (std.layer1) currentLayer1 = std.layer1;
-      if (std.layer1_score) currentLayer1Score = std.layer1_score;
-
-      const layer2 = std.layer2 !== currentLayer2 ? std.layer2 : '';
-      if (std.layer2) currentLayer2 = std.layer2;
-
-      const layer3 = std.layer3 !== currentLayer3 ? std.layer3 : '';
-      if (std.layer3) currentLayer3 = std.layer3;
-
-      const layer4 = std.layer4 !== currentLayer4 ? std.layer4 : '';
-      if (std.layer4) currentLayer4 = std.layer4;
-
-      // Get detail data for this standard by DB id
-      const detail = detailMap.get(dbId);
-
-      let currentStatus = '';
-      let selfScore: string | number = '';
-
-      if (detail) {
-        currentStatus = detail.currentStatus;
-        selfScore = detail.selfScore;
-      }
-
-      dataRows.push([
-        layer1,
-        layer1Score as string | number,
-        layer2,
-        layer3,
-        layer4,
-        std.layer5,
-        std.criteria_desc,
-        std.standard_score,
-        currentStatus,
-        selfScore,
-      ]);
+    // Update J1 header with assessment period
+    const j1Cell = ws['J1'];
+    if (j1Cell) {
+      j1Cell.v = `${assessment.period || '自评'}实际值`;
     }
 
-    // Summary rows (180-183)
+    // Clear all I and J data cells (rows 2-179) first
+    for (let R = 2; R <= 179; R++) {
+      const iAddr = 'I' + R;
+      const jAddr = 'J' + R;
+      const iCell = ws[iAddr];
+      const jCell = ws[jAddr];
+      if (iCell) { iCell.v = ''; iCell.t = 's'; }
+      if (jCell) { jCell.v = ''; jCell.t = 's'; }
+    }
+
+    // Mechanism section (rows 2-29): no I/J merges, each row has its own I and J
+    // DB id = row - 1 (row 2 -> id 1, row 3 -> id 2, etc.)
+    for (let R = 2; R <= 29; R++) {
+      const dbId = R - 1;
+      const detail = detailMap.get(dbId);
+
+      if (detail && detail.currentStatus) {
+        const addr = 'I' + R;
+        if (ws[addr]) { ws[addr].v = detail.currentStatus; ws[addr].t = 's'; }
+        else { ws[addr] = { t: 's', v: detail.currentStatus }; }
+      }
+
+      if (detail && detail.selfScore > 0) {
+        const addr = 'J' + R;
+        if (ws[addr]) { ws[addr].v = detail.selfScore; ws[addr].t = 'n'; }
+        else { ws[addr] = { t: 'n', v: detail.selfScore }; }
+      }
+    }
+
+    // Operation/IT section (rows 30-179): I and J are merged in groups of 5 rows
+    // For each merged group, we need to:
+    // 1. Find the current_status from the first standard in the group (程度1)
+    // 2. Find the self_score from whichever standard in the group has score > 0
+    // Both values go into the first cell of the merged region
+
+    const merges = ws['!merges'] || [];
+
+    // I column merges in operation/IT section (col I = 8 in 0-indexed)
+    const iMerges = merges.filter((m: XLSX.Range) => m.s.c === 8 && m.s.r >= 29 && m.s.r <= 178);
+    // J column merges in operation/IT section (col J = 9 in 0-indexed)
+    const jMerges = merges.filter((m: XLSX.Range) => m.s.c === 9 && m.s.r >= 29 && m.s.r <= 178);
+
+    // For I column (current_status): get from the first standard in the group
+    for (const merge of iMerges) {
+      const firstRow = merge.s.r + 1; // 1-indexed Excel row
+      const lastRow = merge.e.r + 1;
+      const firstDbId = firstRow - 1; // DB id for first row in group
+
+      // Get current_status from first standard (程度1)
+      const detail = detailMap.get(firstDbId);
+
+      if (detail && detail.currentStatus) {
+        const addr = 'I' + firstRow;
+        if (ws[addr]) { ws[addr].v = detail.currentStatus; ws[addr].t = 's'; }
+        else { ws[addr] = { t: 's', v: detail.currentStatus }; }
+      }
+    }
+
+    // For J column (self_score): find the standard in the group with score > 0
+    for (const merge of jMerges) {
+      const firstRow = merge.s.r + 1; // 1-indexed Excel row
+      const lastRow = merge.e.r + 1;
+
+      // Search all rows in this merge group for a non-zero score
+      let scoreValue = 0;
+      for (let R = firstRow; R <= lastRow; R++) {
+        const dbId = R - 1;
+        const detail = detailMap.get(dbId);
+        if (detail && detail.selfScore > 0) {
+          scoreValue = detail.selfScore;
+          break;
+        }
+      }
+
+      if (scoreValue > 0) {
+        const addr = 'J' + firstRow;
+        if (ws[addr]) { ws[addr].v = scoreValue; ws[addr].t = 'n'; }
+        else { ws[addr] = { t: 'n', v: scoreValue }; }
+      }
+    }
+
+    // Update summary rows (180-183)
     const totalScore = parseFloat(String(assessment.total_score)) || 0;
     const mechanismScore = parseFloat(String(assessment.mechanism_score)) || 0;
     const operationScore = parseFloat(String(assessment.operation_score)) || 0;
     const itScore = parseFloat(String(assessment.it_score)) || 0;
 
-    dataRows.push(['', '', '', '', '', '', '流程管理机制建设评价', '/', mechanismScore]);
-    dataRows.push(['', '', '备注：程度描述按本项分数在不同程度之间平均分配，程度达到最高程度描述即为本项满分，结果保留1位小数', '', '', '', '流程运行实际效果评价', '', operationScore]);
-    dataRows.push(['', '', '', '', '', '', 'L4级流程的IT覆盖度和IT支撑度提升', '', itScore]);
-    dataRows.push(['', '', '', '', '', '', '合计', '', totalScore]);
-
-    // Build the sheet
-    const aoaData = [headerRow, ...dataRows];
-    const ws = XLSX.utils.aoa_to_sheet(aoaData);
-
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 22 },  // A: 分层1
-      { wch: 8 },   // B: 项目分值
-      { wch: 14 },  // C: 分层2
-      { wch: 14 },  // D: 分层3
-      { wch: 22 },  // E: 分层4
-      { wch: 6 },   // F: 分层5
-      { wch: 60 },  // G: 评价标准描述
-      { wch: 12 },  // H: 该项标准分值
-      { wch: 60 },  // I: 现状情况
-      { wch: 14 },  // J: 自评分值
-    ];
-
-    // Build merges matching the template structure
-    const merges: XLSX.Range[] = [];
-
-    // A column: A2-A29 (mechanism), A30-A169 (operation), A170-A179 (IT)
-    merges.push({ s: { r: 1, c: 0 }, e: { r: 28, c: 0 } });
-    merges.push({ s: { r: 29, c: 0 }, e: { r: 168, c: 0 } });
-    merges.push({ s: { r: 169, c: 0 }, e: { r: 178, c: 0 } });
-
-    // B column: same as A
-    merges.push({ s: { r: 1, c: 1 }, e: { r: 28, c: 1 } });
-    merges.push({ s: { r: 29, c: 1 }, e: { r: 168, c: 1 } });
-    merges.push({ s: { r: 169, c: 1 }, e: { r: 178, c: 1 } });
-
-    // C column (layer2) - merge by group
-    const cGroups = [
-      [1, 4], [5, 13], [14, 22], [23, 28],  // mechanism section
-      [29, 48], [49, 93], [94, 138], [139, 168],  // operation section
-      [169, 178],  // IT section
-    ];
-    for (const [start, end] of cGroups) {
-      if (end > start) merges.push({ s: { r: start, c: 2 }, e: { r: end, c: 2 } });
-    }
-
-    // D column (layer3) - merge groups based on actual data
-    const dGroups: [number, number][] = [];
-    let dStart = 1;
-    for (let i = 2; i <= 178; i++) {
-      const currentD = STANDARDS_DATA[i - 1]?.layer3 || '';
-      const prevD = STANDARDS_DATA[i - 2]?.layer3 || '';
-      if (currentD !== prevD || i === 178) {
-        if (i - 1 > dStart) {
-          dGroups.push([dStart, i === 178 ? 178 : i - 1]);
-        }
-        dStart = i;
-      }
-    }
-    // Use simpler approach: merge D by same layer3 contiguous groups
-    let dGroupStart = 1;
-    for (let i = 2; i <= 179; i++) {
-      const currVal = i <= 178 ? (STANDARDS_DATA[i - 1]?.layer3 || '') : '__END__';
-      const prevVal = STANDARDS_DATA[i - 2]?.layer3 || '';
-      if (currVal !== prevVal) {
-        if (i - 1 > dGroupStart) {
-          merges.push({ s: { r: dGroupStart, c: 3 }, e: { r: i - 2, c: 3 } });
-        }
-        dGroupStart = i - 1;
-      }
-    }
-
-    // E column (layer4) - merge groups for operation/IT sections
-    let eGroupStart = 29; // Start from operation section
-    for (let i = 30; i <= 179; i++) {
-      const currVal = i <= 178 ? (STANDARDS_DATA[i - 1]?.layer4 || '') : '__END__';
-      const prevVal = STANDARDS_DATA[i - 2]?.layer4 || '';
-      if (currVal !== prevVal) {
-        if (i - 1 > eGroupStart) {
-          merges.push({ s: { r: eGroupStart, c: 4 }, e: { r: i - 2, c: 4 } });
-        }
-        eGroupStart = i - 1;
-      }
-    }
-
-    // F column: merge for mechanism (F2-F29)
-    merges.push({ s: { r: 1, c: 5 }, e: { r: 28, c: 5 } });
-
-    // I column: merge for operation/IT sections (same layer4 groups)
-    let iGroupStart = 29;
-    for (let i = 30; i <= 179; i++) {
-      const currVal = i <= 178 ? (STANDARDS_DATA[i - 1]?.layer4 || '') : '__END__';
-      const prevVal = STANDARDS_DATA[i - 2]?.layer4 || '';
-      if (currVal !== prevVal) {
-        if (i - 1 > iGroupStart) {
-          merges.push({ s: { r: iGroupStart, c: 8 }, e: { r: i - 2, c: 8 } });
-        }
-        iGroupStart = i - 1;
-      }
-    }
-
-    // J column: merge for operation/IT sections (same as I)
-    let jGroupStart = 29;
-    for (let i = 30; i <= 179; i++) {
-      const currVal = i <= 178 ? (STANDARDS_DATA[i - 1]?.layer4 || '') : '__END__';
-      const prevVal = STANDARDS_DATA[i - 2]?.layer4 || '';
-      if (currVal !== prevVal) {
-        if (i - 1 > jGroupStart) {
-          merges.push({ s: { r: jGroupStart, c: 9 }, e: { r: i - 2, c: 9 } });
-        }
-        jGroupStart = i - 1;
-      }
-    }
-
-    // Summary row merges
-    merges.push({ s: { r: 181, c: 3 }, e: { r: 181, c: 4 } }); // D182-E182 备注
-
-    ws['!merges'] = merges;
-
-    XLSX.utils.book_append_sheet(wb, ws, '流程管理评价标准');
+    const j180 = ws['J180'];
+    if (j180) { j180.v = mechanismScore; j180.t = 'n'; }
+    const j181 = ws['J181'];
+    if (j181) { j181.v = operationScore; j181.t = 'n'; }
+    const j182 = ws['J182'];
+    if (j182) { j182.v = itScore; j182.t = 'n'; }
+    const j183 = ws['J183'];
+    if (j183) { j183.v = totalScore; j183.t = 'n'; }
 
     // Generate Excel buffer
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
