@@ -390,9 +390,23 @@ export async function copyAssessment(
     if (detailError) throw new Error(`复制自评明细失败: ${detailError.message}`);
   }
 
-  // 4. Recalculate scores
-  const saved = await saveAssessmentDetails(newId, [], username);
-  return saved;
+  // 4. Calculate and update scores based on copied details
+  const scores = await calculateScores(newId);
+  const { data: updated, error: updateError } = await client
+    .from('assessments')
+    .update({
+      total_score: scores.total,
+      mechanism_score: scores.mechanism,
+      operation_score: scores.operation,
+      it_score: scores.it,
+      updated_by: username,
+      updated_at_ts: now,
+    })
+    .eq('id', newId)
+    .select()
+    .single();
+  if (updateError) throw new Error(`更新自评得分失败: ${updateError.message}`);
+  return updated as Assessment;
 }
 
 // Update assessment info (name, period, remarks)
