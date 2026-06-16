@@ -644,7 +644,7 @@ export default function FunctionalListPage() {
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">分类</TableHead>
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">IT覆盖</TableHead>
                     <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-10">IT支撑分</TableHead>
-                    <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-[80px] top-0 bg-gray-50 z-20">状态</TableHead>
+                    <TableHead className={`text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky top-0 bg-gray-50 z-20 ${editMode && can('edit_toggle') ? 'right-[80px]' : 'right-0'}`}>状态</TableHead>
                     {editMode && can('edit_toggle') && (
                       <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
                     )}
@@ -653,7 +653,7 @@ export default function FunctionalListPage() {
                 <TableBody>
                   {pagedData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center py-12 text-gray-400">暂无数据</TableCell>
+                      <TableCell colSpan={editMode && can('edit_toggle') ? 14 : 13} className="text-center py-12 text-gray-400">暂无数据</TableCell>
                     </TableRow>
                   ) : (
                     pagedData.map((item, idx) => (
@@ -670,26 +670,26 @@ export default function FunctionalListPage() {
                             <TableCell className="text-center">{categoryBadge(item.category)}</TableCell>
                             <TableCell className="text-center">{itBadge(item.itCoverage)}</TableCell>
                             <TableCell className="text-center">{itScoreDisplay(item.itScore, item.itCoverage)}</TableCell>
-                            <TableCell className="text-center sticky right-[80px] bg-white z-10">{statusBadge(item.status)}</TableCell>
+                            <TableCell className={`text-center sticky bg-white z-10 ${editMode && can('edit_toggle') ? 'right-[80px]' : 'right-0'}`}>{statusBadge(item.status)}</TableCell>
+                            {editMode && can('edit_toggle') && (
                             <TableCell className="text-center sticky right-0 bg-white z-10">
                               <div className="flex items-center justify-center gap-0.5" onClick={e => e.stopPropagation()}>
-                                {editMode && can('edit_toggle') && item.status === '已废止' && (
+                                {item.status === '已废止' && (
                                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
                                     <Undo2 className="h-3.5 w-3.5" />
                                   </Button>
                                 )}
-                                {editMode && can('edit_toggle') && item.status !== '已废止' && (
+                                {item.status !== '已废止' && (
                                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
                                     <Pencil className="h-3.5 w-3.5 text-gray-500" />
                                   </Button>
                                 )}
-                                {editMode && can('edit_toggle') && (
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
-                                    <Trash2 className="h-3.5 w-3.5 text-gray-400" />
-                                  </Button>
-                                )}
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
+                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                                </Button>
                               </div>
                             </TableCell>
+                            )}
                           </TableRow>
                     ))
                   )}
