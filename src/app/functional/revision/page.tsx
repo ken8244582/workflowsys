@@ -297,10 +297,10 @@ export default function FunctionalRevisionPage() {
                       {canDelete() && (
                         <button
                           onClick={() => { setDeleteId(item.id); setDeleteConfirmOpen(true); }}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors"
                           title="删除此记录"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </TableCell>

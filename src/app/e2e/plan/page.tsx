@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -376,7 +376,7 @@ export default function E2EPlanPage() {
                         <span className="rounded bg-[#1e3a5f] px-1 py-0.5 text-[9px] font-medium text-white">对比中</span>
                       )}
                     </div>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleAddPlan(period)}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleAddPlan(period)}>
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
                   </CardHeader>
@@ -400,11 +400,11 @@ export default function E2EPlanPage() {
                               <div className="flex items-center gap-1">
                                 <span className={`shrink-0 text-[10px] ${dot.color}`}>{dot.symbol}</span>
                                 <button
-                                  className="shrink-0 rounded p-0.5 text-[#dc2626] opacity-0 transition-opacity hover:bg-red-50 group-hover:opacity-100"
+                                  className="shrink-0 rounded p-0.5 text-red-500 hover:text-red-600 hover:bg-red-50 opacity-0 transition-opacity group-hover:opacity-100"
                                   onClick={(e) => { e.stopPropagation(); setDeleteId(plan.id); }}
                                   title="删除"
                                 >
-                                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
                             </div>
@@ -517,11 +517,11 @@ export default function E2EPlanPage() {
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-xs">
                             <div className="flex items-center gap-2">
-                              <button className="text-muted-foreground hover:text-[#1e3a5f] transition-colors" title="编辑" onClick={() => handleEditPlan(plan)}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                              <button className="text-muted-foreground hover:text-[#1e3a5f] transition-colors p-0.5 rounded" title="编辑" onClick={() => handleEditPlan(plan)}>
+                                <Pencil className="h-3.5 w-3.5" />
                               </button>
-                              <button className="text-muted-foreground hover:text-[#dc2626] transition-colors" title="删除" onClick={() => setDeleteId(plan.id)}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                              <button className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors p-0.5 rounded" title="删除" onClick={() => setDeleteId(plan.id)}>
+                                <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           </td>

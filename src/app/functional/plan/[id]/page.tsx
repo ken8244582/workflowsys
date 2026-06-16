@@ -595,7 +595,7 @@ export default function PlanDetailPage() {
             </Button>
           )}
           {canDelete() && (
-            <Button variant="outline" size="sm" onClick={() => setShowBatchDeleteDialog(true)} className="gap-1 text-red-700 border-red-300 hover:bg-red-50">
+            <Button variant="outline" onClick={() => setShowBatchDeleteDialog(true)} className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50">
               <Trash2 className="h-3.5 w-3.5" /> 批量删除
             </Button>
           )}
@@ -716,13 +716,13 @@ export default function PlanDetailPage() {
                             ><RotateCcw className="h-3.5 w-3.5 mr-0.5" />撤回</Button>
                           )}
                           {canDelete() && isDraft && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500"
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
                               onClick={() => {
                                 setDeleteTaskName(task.processName);
                                 setPendingDeleteId(task.id);
                                 setShowDeleteDialog(true);
                               }}
-                            ><Trash2 className="h-3 w-3" /></Button>
+                            ><Trash2 className="h-3.5 w-3.5" /></Button>
                           )}
                         </div>
                       </TableCell>}

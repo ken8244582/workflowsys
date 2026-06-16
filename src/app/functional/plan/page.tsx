@@ -269,7 +269,7 @@ export default function RevisionPlanPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();

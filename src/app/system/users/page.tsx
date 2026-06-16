@@ -524,7 +524,7 @@ export default function UsersPage() {
                             setShowEditDialog(true);
                           }}
                         >
-                          <Pencil className="h-3 w-3 mr-1" />
+                          <Pencil className="h-3.5 w-3.5 mr-1" />
                           编辑
                         </Button>
                         <Button
@@ -549,11 +549,11 @@ export default function UsersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                          className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
                           onClick={() => handleDeleteUser(user.id, user.username, user.is_super_admin)}
                           disabled={user.is_super_admin}
                         >
-                          <Trash2 className="h-3 w-3 mr-1" />
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
                           删除
                         </Button>
                       </div>

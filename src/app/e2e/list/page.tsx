@@ -372,11 +372,11 @@ export default function E2EListPage() {
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 text-xs">
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(p)}>
-                              <Pencil className="h-3 w-3" />
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="编辑" onClick={() => handleEdit(p)}>
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="删除" onClick={() => setDeleteId(p.id)}>
-                              <Trash2 className="h-3 w-3" />
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="删除" onClick={() => setDeleteId(p.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </td>

@@ -367,7 +367,7 @@ export default function MenusPage() {
                                   setShowEditDialog(true);
                                 }}
                               >
-                                <Pencil className="h-3 w-3 mr-1" />
+                                <Pencil className="h-3.5 w-3.5 mr-1" />
                                 编辑
                               </Button>
                               <Button
@@ -386,10 +386,10 @@ export default function MenusPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 px-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                                className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
                                 onClick={() => handleDeleteMenu(top.id, subMenus.length > 0)}
                               >
-                                <Trash2 className="h-3 w-3 mr-1" />
+                                <Trash2 className="h-3.5 w-3.5 mr-1" />
                                 删除
                               </Button>
                             </div>
@@ -432,7 +432,7 @@ export default function MenusPage() {
                                     setShowEditDialog(true);
                                   }}
                                 >
-                                  <Pencil className="h-3 w-3 mr-1" />
+                                  <Pencil className="h-3.5 w-3.5 mr-1" />
                                   编辑
                                 </Button>
                                 {sub.path && (
@@ -449,10 +449,10 @@ export default function MenusPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-7 px-2 text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                                  className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
                                   onClick={() => handleDeleteMenu(sub.id, false)}
                                 >
-                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" />
                                   删除
                                 </Button>
                               </div>

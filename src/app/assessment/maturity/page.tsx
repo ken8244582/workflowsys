@@ -665,7 +665,7 @@ export default function MaturityAssessmentPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0"
+                              className="h-7 w-7 p-0"
                               title="复制为新自评"
                               onClick={() => {
                                 setCopyFromId(String(a.id));
@@ -681,7 +681,7 @@ export default function MaturityAssessmentPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0"
+                              className="h-7 w-7 p-0"
                               title="导出"
                               onClick={() => handleExport(a.id)}
                             >
@@ -692,11 +692,11 @@ export default function MaturityAssessmentPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0"
+                              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                               title="删除"
                               onClick={() => { setDeleteId(a.id); setDeleteName(a.name); }}
                             >
-                              <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                             )}
                           </div>

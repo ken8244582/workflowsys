@@ -518,12 +518,12 @@ export default function FunctionalListPage() {
           <span className={`ml-auto shrink-0 text-xs px-2 py-0.5 rounded-full ${cfg.bgColor} ${cfg.color} font-medium`}>{count}</span>
           {editMode && can('edit_toggle') && (
             <button onClick={e => { e.stopPropagation(); handleArchEdit(node.level, node.name, node.owner, l1Name, l2Name); }} className="p-0.5 rounded hover:bg-gray-200/50 text-gray-400 hover:text-[#1e3a5f] shrink-0">
-              <Pencil className="h-3 w-3" />
+              <Pencil className="h-3.5 w-3.5" />
             </button>
           )}
           {editMode && can('edit_toggle') && (
-            <button onClick={e => { e.stopPropagation(); handleArchDeleteClick(node.level, node.name, l1Name, l2Name, count); }} className="p-0.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 shrink-0">
-              <Trash2 className="h-3 w-3" />
+            <button onClick={e => { e.stopPropagation(); handleArchDeleteClick(node.level, node.name, l1Name, l2Name, count); }} className="p-0.5 rounded text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0">
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
@@ -675,17 +675,17 @@ export default function FunctionalListPage() {
                             <TableCell className="text-center sticky right-0 bg-white z-10">
                               <div className="flex items-center justify-center gap-0.5" onClick={e => e.stopPropagation()}>
                                 {item.status === '已废止' && (
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="恢复运行" onClick={() => handleRestore(item)}>
                                     <Undo2 className="h-3.5 w-3.5" />
                                   </Button>
                                 )}
                                 {item.status !== '已废止' && (
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="编辑" onClick={() => handleEdit(item)}>
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="编辑" onClick={() => handleEdit(item)}>
                                     <Pencil className="h-3.5 w-3.5 text-gray-500" />
                                   </Button>
                                 )}
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="删除" onClick={() => handleDelete(item)}>
-                                  <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="删除" onClick={() => handleDelete(item)}>
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
                             </TableCell>
