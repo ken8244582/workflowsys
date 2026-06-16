@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Search, Trash2, Eye, Download } from 'lucide-react';
+import { Search, Trash2, Eye, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { PaginationBar } from '@/components/pagination-bar';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
@@ -101,6 +101,27 @@ export default function AssessmentHistoryPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState('');
 
+  // Sort
+  const [sortField, setSortField] = useState<'period' | 'created_at_ts' | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const toggleSort = (field: 'period' | 'created_at_ts') => {
+    if (sortField === field) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else { setSortField(null); setSortDir('desc'); }
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: 'period' | 'created_at_ts' }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === 'asc'
+      ? <ArrowUp className="h-3 w-3 ml-1 text-[#1e3a5f]" />
+      : <ArrowDown className="h-3 w-3 ml-1 text-[#1e3a5f]" />;
+  };
+
   const fetchAssessments = useCallback(async () => {
     try {
       const res = await fetch('/api/assessments');
@@ -131,8 +152,16 @@ export default function AssessmentHistoryPage() {
         a.created_by.toLowerCase().includes(s)
       );
     }
+    if (sortField) {
+      data.sort((a, b) => {
+        const va = a[sortField] || '';
+        const vb = b[sortField] || '';
+        const cmp = va.localeCompare(vb, 'zh-CN');
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
     return data;
-  }, [assessments, statusFilter, searchText]);
+  }, [assessments, statusFilter, searchText, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
   const pagedData = useMemo(() => {
@@ -240,14 +269,18 @@ export default function AssessmentHistoryPage() {
               <TableHeader>
                 <TableRow className="bg-gray-50/80">
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">自评名称</TableHead>
-                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">评价周期</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap cursor-pointer select-none" onClick={() => toggleSort('period')}>
+                    <span className="inline-flex items-center">评价周期<SortIcon field="period" /></span>
+                  </TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">状态</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">总分</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">机制建设</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">运行效果</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">IT提升</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">创建人</TableHead>
-                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">创建时间</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap cursor-pointer select-none" onClick={() => toggleSort('created_at_ts')}>
+                    <span className="inline-flex items-center">创建时间<SortIcon field="created_at_ts" /></span>
+                  </TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
                 </TableRow>
               </TableHeader>

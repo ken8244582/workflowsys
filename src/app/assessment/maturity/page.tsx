@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Trash2, Copy, Download } from 'lucide-react';
+import { Search, Plus, Trash2, Copy, Download, ArrowUpDown, ArrowUp, ArrowDown, Pencil, Check, X } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { PaginationBar } from '@/components/pagination-bar';
 
@@ -156,6 +156,17 @@ export default function MaturityAssessmentPage() {
   const [activeView, setActiveView] = useState<'list' | 'assess' | 'report'>('list');
   const [refAssessmentId, setRefAssessmentId] = useState<string>('');
   const [refDetailMap, setRefDetailMap] = useState<Map<number, Detail>>(new Map());
+  // Sort
+  const [sortField, setSortField] = useState<'period' | 'created_at_ts' | ''>('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  // Inline edit
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPeriod, setEditPeriod] = useState('');
+  // Detail view inline edit
+  const [detailEditing, setDetailEditing] = useState(false);
+  const [detailEditName, setDetailEditName] = useState('');
+  const [detailEditPeriod, setDetailEditPeriod] = useState('');
 
   // Fetch standards
   const fetchStandards = useCallback(async () => {
@@ -188,6 +199,55 @@ export default function MaturityAssessmentPage() {
     fetchAssessments();
   }, [fetchStandards, fetchAssessments]);
 
+  // Sort toggle
+  const toggleSort = (field: 'period' | 'created_at_ts') => {
+    if (sortField === field) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else { setSortField(''); setSortDir('desc'); }
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: 'period' | 'created_at_ts' }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 text-gray-400" />;
+    return sortDir === 'asc'
+      ? <ArrowUp className="h-3 w-3 ml-1 text-[#1e3a5f]" />
+      : <ArrowDown className="h-3 w-3 ml-1 text-[#1e3a5f]" />;
+  };
+
+  // Inline edit name/period
+  const startEdit = (a: Assessment) => {
+    setEditingId(a.id);
+    setEditName(a.name);
+    setEditPeriod(a.period);
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName('');
+    setEditPeriod('');
+  };
+  const saveEdit = async (id: number) => {
+    if (!editName.trim() || !editPeriod.trim()) return;
+    try {
+      const res = await fetch(`/api/assessments/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update', name: editName.trim(), period: editPeriod.trim() }),
+      });
+      if (res.ok) {
+        setEditingId(null);
+        await fetchAssessments();
+        if (currentAssessment?.id === id) {
+          setCurrentAssessment(prev => prev ? { ...prev, name: editName.trim(), period: editPeriod.trim() } : null);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update assessment:', e);
+    }
+  };
+
   // Fetch reference assessment details when ref selection changes
   // fetchRefDetails effect moved after function definition
 
@@ -205,8 +265,17 @@ export default function MaturityAssessmentPage() {
         a.created_by.toLowerCase().includes(s)
       );
     }
+    // Sort
+    if (sortField) {
+      data.sort((a, b) => {
+        const va = a[sortField] || '';
+        const vb = b[sortField] || '';
+        const cmp = va.localeCompare(vb, 'zh-CN');
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
     return data;
-  }, [assessments, statusFilter, searchText]);
+  }, [assessments, statusFilter, searchText, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
   const pagedData = useMemo(() => {
@@ -611,14 +680,18 @@ export default function MaturityAssessmentPage() {
               <TableHeader>
                 <TableRow className="bg-gray-50/80">
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">自评名称</TableHead>
-                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">评价周期</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap cursor-pointer select-none" onClick={() => toggleSort('period')}>
+                    <span className="inline-flex items-center">评价周期<SortIcon field="period" /></span>
+                  </TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">状态</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">总分</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">机制建设</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">运行效果</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">IT提升</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">创建人</TableHead>
-                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">创建时间</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap cursor-pointer select-none" onClick={() => toggleSort('created_at_ts')}>
+                    <span className="inline-flex items-center">创建时间<SortIcon field="created_at_ts" /></span>
+                  </TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 top-0 bg-gray-50 z-20">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -632,10 +705,23 @@ export default function MaturityAssessmentPage() {
                 ) : (
                   pagedData.map(a => {
                     const badge = STATUS_BADGE[a.status] || STATUS_BADGE['草稿'];
+                    const isEditing = editingId === a.id;
                     return (
                       <TableRow key={a.id} className="hover:bg-muted/30">
-                        <TableCell className="font-medium whitespace-nowrap">{a.name}</TableCell>
-                        <TableCell className="whitespace-nowrap">{a.period}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {isEditing ? (
+                            <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-6 text-xs w-40" onKeyDown={e => { if (e.key === 'Enter') saveEdit(a.id); if (e.key === 'Escape') cancelEdit(); }} />
+                          ) : (
+                            <span>{a.name}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {isEditing ? (
+                            <Input value={editPeriod} onChange={e => setEditPeriod(e.target.value)} className="h-6 text-xs w-28" onKeyDown={e => { if (e.key === 'Enter') saveEdit(a.id); if (e.key === 'Escape') cancelEdit(); }} />
+                          ) : (
+                            <span>{a.period}</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-center">
                           <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${badge.bg} ${badge.text}`}>
                             {a.status}
@@ -649,46 +735,64 @@ export default function MaturityAssessmentPage() {
                         <TableCell className="text-muted-foreground whitespace-nowrap">{a.created_at_ts}</TableCell>
                         <TableCell className="text-center sticky right-0 bg-white z-10">
                           <div className="flex items-center justify-center gap-1">
-                            <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => loadAssessment(a.id)}>
-                              {a.status === '草稿' ? '填写' : '查看'}
-                            </Button>
-                            {canAdd && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              title="复制为新自评"
-                              onClick={() => {
-                                setCopyFromId(String(a.id));
-                                setNewName(a.name + ' (副本)');
-                                setNewPeriod(a.period);
-                                setShowCreate(true);
-                              }}
-                            >
-                              <Copy className="h-3.5 w-3.5 text-gray-500" />
-                            </Button>
-                            )}
-                            {canExport && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              title="导出"
-                              onClick={() => handleExport(a.id)}
-                            >
-                              <Download className="h-3.5 w-3.5 text-gray-500" />
-                            </Button>
-                            )}
-                            {canDelete && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              title="删除"
-                              onClick={() => { setDeleteId(a.id); setDeleteName(a.name); }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            {isEditing ? (
+                              <>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" title="保存" onClick={() => saveEdit(a.id)}>
+                                  <Check className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-500 hover:text-gray-600 hover:bg-gray-50" title="取消" onClick={cancelEdit}>
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => loadAssessment(a.id)}>
+                                  {a.status === '草稿' ? '填写' : '查看'}
+                                </Button>
+                                {canEdit && (
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted" title="编辑名称/周期" onClick={() => startEdit(a)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                )}
+                                {canAdd && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  title="复制为新自评"
+                                  onClick={() => {
+                                    setCopyFromId(String(a.id));
+                                    setNewName(a.name + ' (副本)');
+                                    setNewPeriod(a.period);
+                                    setShowCreate(true);
+                                  }}
+                                >
+                                  <Copy className="h-3.5 w-3.5 text-gray-500" />
+                                </Button>
+                                )}
+                                {canExport && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  title="导出"
+                                  onClick={() => handleExport(a.id)}
+                                >
+                                  <Download className="h-3.5 w-3.5 text-gray-500" />
+                                </Button>
+                                )}
+                                {canDelete && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  title="删除"
+                                  onClick={() => { setDeleteId(a.id); setDeleteName(a.name); }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                                )}
+                              </>
                             )}
                           </div>
                         </TableCell>
@@ -719,15 +823,56 @@ export default function MaturityAssessmentPage() {
     const isDraft = currentAssessment.status === '草稿';
     const canEditThis = isDraft && canEdit;
 
+    const saveDetailEdit = async () => {
+      if (!detailEditName.trim() || !detailEditPeriod.trim()) return;
+      try {
+        const res = await fetch(`/api/assessments/${currentAssessment.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update', name: detailEditName.trim(), period: detailEditPeriod.trim() }),
+        });
+        if (res.ok) {
+          setCurrentAssessment(prev => prev ? { ...prev, name: detailEditName.trim(), period: detailEditPeriod.trim() } : null);
+          setDetailEditing(false);
+          await fetchAssessments();
+        }
+      } catch (e) {
+        console.error('Failed to update assessment info:', e);
+      }
+    };
+
+    const startDetailEdit = () => {
+      setDetailEditName(currentAssessment.name);
+      setDetailEditPeriod(currentAssessment.period);
+      setDetailEditing(true);
+    };
+
     return (
       <>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => { setCurrentAssessment(null); setActiveView('list'); }}>
+            <Button variant="ghost" size="sm" onClick={() => { setCurrentAssessment(null); setActiveView('list'); setDetailEditing(false); }}>
               ← 返回列表
             </Button>
-            <h2 className="text-lg font-semibold text-foreground">{currentAssessment.name}</h2>
+            {detailEditing ? (
+              <div className="flex items-center gap-2">
+                <Input value={detailEditName} onChange={e => setDetailEditName(e.target.value)} className="h-7 text-sm w-48" onKeyDown={e => { if (e.key === 'Enter') saveDetailEdit(); if (e.key === 'Escape') setDetailEditing(false); }} />
+                <Input value={detailEditPeriod} onChange={e => setDetailEditPeriod(e.target.value)} className="h-7 text-sm w-32" onKeyDown={e => { if (e.key === 'Enter') saveDetailEdit(); if (e.key === 'Escape') setDetailEditing(false); }} />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700" onClick={saveDetailEdit}><Check className="h-3.5 w-3.5" /></Button>
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-500" onClick={() => setDetailEditing(false)}><X className="h-3.5 w-3.5" /></Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-foreground">{currentAssessment.name}</h2>
+                <span className="text-sm text-muted-foreground">（{currentAssessment.period}）</span>
+                {canEdit && (
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted" title="编辑名称/周期" onClick={startDetailEdit}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            )}
             <Badge variant="outline" className={currentAssessment.status === '草稿' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-600'}>
               {currentAssessment.status}
             </Badge>
