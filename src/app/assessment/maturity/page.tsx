@@ -225,6 +225,18 @@ export default function MaturityAssessmentPage() {
         const data: AssessmentWithDetails = await res.json();
         setCurrentAssessment(data);
         const map = new Map<number, Detail>();
+        // Initialize ALL standard rows with defaults first
+        for (const std of standards) {
+          map.set(std.id, {
+            id: 0,
+            assessment_id: id,
+            standard_id: std.id,
+            current_status: '',
+            self_score: '0',
+            score_group_key: std.score_group_key || '',
+          });
+        }
+        // Then overlay with existing details from DB
         for (const d of data.details) {
           map.set(d.standard_id, d);
         }

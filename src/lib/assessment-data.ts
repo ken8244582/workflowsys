@@ -147,6 +147,31 @@ export async function createAssessment(
     .single();
   if (error) throw new Error(`创建自评失败: ${error.message}`);
   
+  const newId = (data as Assessment).id;
+
+  // Initialize detail rows for ALL standards
+  const { data: allStandards, error: stdError } = await client
+    .from('assessment_standards')
+    .select('id, score_group_key')
+    .order('sort_order');
+  if (stdError) throw new Error(`查询评价标准失败: ${stdError.message}`);
+
+  if (allStandards && allStandards.length > 0) {
+    const detailRows = allStandards.map((std: { id: number; score_group_key: string | null }) => ({
+      assessment_id: newId,
+      standard_id: std.id,
+      current_status: '',
+      self_score: '0',
+      score_group_key: std.score_group_key || '',
+    }));
+    const batchSize = 50;
+    for (let i = 0; i < detailRows.length; i += batchSize) {
+      const batch = detailRows.slice(i, i + batchSize);
+      const { error: detailError } = await client.from('assessment_details').insert(batch);
+      if (detailError) throw new Error(`初始化自评明细失败: ${detailError.message}`);
+    }
+  }
+
   return data as Assessment;
 }
 
@@ -377,16 +402,36 @@ export async function copyAssessment(
   if (createError) throw new Error(`复制自评失败: ${createError.message}`);
   const newId = (newAssessment as Assessment).id;
 
-  // 3. Copy details from source
-  if (source.details && source.details.length > 0) {
-    const detailRows = source.details.map((d: AssessmentDetail) => ({
+  // 3. Copy details from source, ensuring ALL standards have detail rows
+  const sourceDetailMap = new Map<number, AssessmentDetail>();
+  if (source.details) {
+    for (const d of source.details) {
+      sourceDetailMap.set(d.standard_id, d);
+    }
+  }
+
+  // Get all standards to ensure complete coverage
+  const { data: allStandards, error: stdError } = await client
+    .from('assessment_standards')
+    .select('id, score_group_key')
+    .order('sort_order');
+  if (stdError) throw new Error(`查询评价标准失败: ${stdError.message}`);
+
+  const detailRows = (allStandards || []).map((std: { id: number; score_group_key: string | null }) => {
+    const existing = sourceDetailMap.get(std.id);
+    return {
       assessment_id: newId,
-      standard_id: d.standard_id,
-      current_status: d.current_status,
-      self_score: d.self_score,
-      score_group_key: d.score_group_key,
-    }));
-    const { error: detailError } = await client.from('assessment_details').insert(detailRows);
+      standard_id: std.id,
+      current_status: existing?.current_status || '',
+      self_score: existing?.self_score || '0',
+      score_group_key: existing?.score_group_key || std.score_group_key || '',
+    };
+  });
+
+  const batchSize = 50;
+  for (let i = 0; i < detailRows.length; i += batchSize) {
+    const batch = detailRows.slice(i, i + batchSize);
+    const { error: detailError } = await client.from('assessment_details').insert(batch);
     if (detailError) throw new Error(`复制自评明细失败: ${detailError.message}`);
   }
 
