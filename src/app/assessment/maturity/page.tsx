@@ -861,12 +861,13 @@ export default function MaturityAssessmentPage() {
 
       {/* Assessment Comparison */}
       {assessments.length >= 2 && (
-        <Card className="mt-4">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-5 w-1 rounded-full bg-[#1e3a5f]" />
-              <h3 className="text-sm font-semibold text-[#1e3a5f]">自评对比</h3>
-            </div>
+        <div className="mt-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+            <h1 className="text-xl font-semibold text-[#1e3a5f]">自评对比</h1>
+          </div>
+          <Card>
+            <CardContent className="pt-4 pb-4">
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <label className="text-xs text-muted-foreground mb-1 block">自评 A</label>
@@ -983,6 +984,7 @@ export default function MaturityAssessmentPage() {
             )}
           </CardContent>
         </Card>
+        </div>
       )}
     </>
   );
@@ -1684,7 +1686,7 @@ export default function MaturityAssessmentPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleExportList} className="h-7 text-xs">
-              <Download className="h-3.5 w-3.5 mr-1" />导出列表
+              <Download className="h-3.5 w-3.5 mr-1" />导出
             </Button>
             {canAdd && (
             <Button onClick={() => { setCopyFromId(''); setShowCreate(true); }} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 h-7 text-xs">
