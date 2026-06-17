@@ -15,7 +15,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Trash2, Search,
+  ArrowLeft, Plus, Send, CheckCircle2, RotateCcw, Trash2, Search, Play,
   ClipboardList, Clock, CheckCircle, TrendingUp, Download, AlertTriangle,
 } from 'lucide-react';
 import { PaginationBar } from '@/components/pagination-bar';
@@ -706,9 +706,9 @@ export default function PlanDetailPage() {
                       <TableCell>{statusBadge(task.status)}</TableCell>
                       <TableCell className="text-muted-foreground">{task.completedAt || '--'}</TableCell>
                       {(canEdit() || canDelete()) && <TableCell className={`sticky right-0 ${stickyBg} z-10 shadow-[-2px_0_0_0_rgba(0,0,0,0.04)]`}>
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-0.5">
                           {canEdit() && task.status === '待执行' && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-blue-600"
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="开始"
                               onClick={async () => {
                                 await fetch(`/api/plan-tasks/${task.id}`, {
                                   method: 'PUT',
@@ -717,10 +717,10 @@ export default function PlanDetailPage() {
                                 });
                                 fetchTasks();
                               }}
-                            >开始</Button>
+                            ><Play className="h-3.5 w-3.5" /></Button>
                           )}
                           {canEdit() && task.status === '进行中' && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-emerald-600"
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" title="完成"
                               onClick={async () => {
                                 await fetch(`/api/plan-tasks/${task.id}`, {
                                   method: 'PUT',
@@ -730,10 +730,10 @@ export default function PlanDetailPage() {
                                 fetchPlan();
                                 fetchTasks();
                               }}
-                            >完成</Button>
+                            ><CheckCircle2 className="h-3.5 w-3.5" /></Button>
                           )}
                           {canEdit() && task.status === '已完成' && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500"
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-50" title="撤回"
                               onClick={async () => {
                                 await fetch(`/api/plan-tasks/${task.id}`, {
                                   method: 'PUT',
@@ -743,10 +743,10 @@ export default function PlanDetailPage() {
                                 fetchPlan();
                                 fetchTasks();
                               }}
-                            ><RotateCcw className="h-3.5 w-3.5 mr-0.5" />撤回</Button>
+                            ><RotateCcw className="h-3.5 w-3.5" /></Button>
                           )}
                           {canDelete() && isDraft && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50" title="删除"
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="删除"
                               onClick={() => {
                                 setDeleteTaskName(task.processName);
                                 setPendingDeleteId(task.id);
