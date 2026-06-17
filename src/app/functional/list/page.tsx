@@ -575,12 +575,6 @@ export default function FunctionalListPage() {
           <h2 className="text-xl font-semibold text-[#1e3a5f]">流程清单</h2>
         </div>
         <div className="flex items-center gap-3">
-          <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'table' | 'tree')}>
-            <TabsList className="h-8">
-              <TabsTrigger value="table" className="text-xs px-3 h-6">表格视图</TabsTrigger>
-              <TabsTrigger value="tree" className="text-xs px-3 h-6">树形视图</TabsTrigger>
-            </TabsList>
-          </Tabs>
           <div className="flex items-center gap-2">
             {/* 编辑开关 */}
             {can('edit_toggle') && (
@@ -606,6 +600,12 @@ export default function FunctionalListPage() {
               </Button>
             )}
           </div>
+          <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'table' | 'tree')}>
+            <TabsList className="h-8">
+              <TabsTrigger value="table" className="text-xs px-3 h-6">表格视图</TabsTrigger>
+              <TabsTrigger value="tree" className="text-xs px-3 h-6">树形视图</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
