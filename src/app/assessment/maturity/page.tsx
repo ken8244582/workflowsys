@@ -780,10 +780,10 @@ export default function MaturityAssessmentPage() {
                             {a.status}
                           </span>
                         </TableCell>
-                        <TableCell className="text-center font-mono font-semibold tabular-nums">{a.total_score}</TableCell>
-                        <TableCell className="text-center font-mono tabular-nums">{a.mechanism_score}</TableCell>
-                        <TableCell className="text-center font-mono tabular-nums">{a.operation_score}</TableCell>
-                        <TableCell className="text-center font-mono tabular-nums">{a.it_score}</TableCell>
+                        <TableCell className="text-center font-mono font-semibold tabular-nums">{parseFloat(String(a.total_score || '0')).toFixed(2)}</TableCell>
+                        <TableCell className="text-center font-mono tabular-nums">{parseFloat(String(a.mechanism_score || '0')).toFixed(2)}</TableCell>
+                        <TableCell className="text-center font-mono tabular-nums">{parseFloat(String(a.operation_score || '0')).toFixed(2)}</TableCell>
+                        <TableCell className="text-center font-mono tabular-nums">{parseFloat(String(a.it_score || '0')).toFixed(2)}</TableCell>
                         <TableCell className="whitespace-nowrap">{a.created_by}</TableCell>
                         <TableCell className="text-muted-foreground whitespace-nowrap">{a.created_at_ts}</TableCell>
                         <TableCell className="text-center sticky right-0 bg-white z-10">
@@ -998,10 +998,10 @@ export default function MaturityAssessmentPage() {
                             return (
                               <tr key={row.label} className="border-b last:border-b-0">
                                 <td className="px-4 py-2 font-medium">{row.label}</td>
-                                <td className="px-4 py-2 text-center font-mono tabular-nums font-semibold">{row.current}</td>
-                                <td className="px-4 py-2 text-center font-mono tabular-nums">{row.compare}</td>
+                                <td className="px-4 py-2 text-center font-mono tabular-nums font-semibold">{parseFloat(row.current).toFixed(2)}</td>
+                                <td className="px-4 py-2 text-center font-mono tabular-nums">{parseFloat(row.compare).toFixed(2)}</td>
                                 <td className={`px-4 py-2 text-center font-mono tabular-nums font-semibold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                                  {diff > 0 ? '+' : ''}{row.diff}
+                                  {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                                 </td>
                               </tr>
                             );
@@ -1041,10 +1041,10 @@ export default function MaturityAssessmentPage() {
                                       <span className="text-xs text-muted-foreground">{item.layer3} &gt;</span>
                                       <span className="ml-1">{item.layer4}</span>
                                     </td>
-                                    <td className="px-4 py-2 text-center font-mono tabular-nums">{item.current_score}</td>
-                                    <td className="px-4 py-2 text-center font-mono tabular-nums">{item.compare_score}</td>
+                                    <td className="px-4 py-2 text-center font-mono tabular-nums">{Number(item.current_score).toFixed(2)}</td>
+                                    <td className="px-4 py-2 text-center font-mono tabular-nums">{Number(item.compare_score).toFixed(2)}</td>
                                     <td className={`px-4 py-2 text-center font-mono tabular-nums font-semibold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                                      {diff > 0 ? '+' : ''}{diff}
+                                      {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                                     </td>
                                     <td className="px-4 py-2 text-center">
                                       <div className="flex items-center justify-center gap-1">
@@ -1217,10 +1217,10 @@ export default function MaturityAssessmentPage() {
         <div className="sticky top-14 z-30 bg-[#f8fafc] pt-1 pb-3 border-b">
           <div className="grid grid-cols-4 gap-3">
             {[
-              { label: '总得分', value: liveScores.total.toFixed(1), max: '5', color: 'text-[#1e3a5f]' },
-              { label: '机制建设评价', value: liveScores.mechanism.toFixed(1), max: '1', color: 'text-blue-600' },
-              { label: '运行效果评价', value: liveScores.operation.toFixed(1), max: '3', color: 'text-emerald-600' },
-              { label: 'IT覆盖与支撑', value: liveScores.it.toFixed(1), max: '1', color: 'text-amber-600' },
+              { label: '总得分', value: liveScores.total.toFixed(2), max: '5', color: 'text-[#1e3a5f]' },
+              { label: '机制建设评价', value: liveScores.mechanism.toFixed(2), max: '1', color: 'text-blue-600' },
+              { label: '运行效果评价', value: liveScores.operation.toFixed(2), max: '3', color: 'text-emerald-600' },
+              { label: 'IT覆盖与支撑', value: liveScores.it.toFixed(2), max: '1', color: 'text-amber-600' },
             ].map(card => (
               <Card key={card.label} className="shadow-sm">
                 <CardContent className="p-3">
@@ -1691,10 +1691,10 @@ export default function MaturityAssessmentPage() {
                   return (
                     <tr key={row.label} className="border-b last:border-b-0">
                       <td className="px-4 py-2 font-medium">{row.label}</td>
-                      <td className="px-4 py-2 text-center font-mono tabular-nums font-semibold">{row.current}</td>
-                      <td className="px-4 py-2 text-center font-mono tabular-nums">{row.compare}</td>
+                      <td className="px-4 py-2 text-center font-mono tabular-nums font-semibold">{parseFloat(row.current).toFixed(2)}</td>
+                      <td className="px-4 py-2 text-center font-mono tabular-nums">{parseFloat(row.compare).toFixed(2)}</td>
                       <td className={`px-4 py-2 text-center font-mono tabular-nums font-semibold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                        {diff > 0 ? '+' : ''}{row.diff}
+                        {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                       </td>
                     </tr>
                   );
@@ -1734,10 +1734,10 @@ export default function MaturityAssessmentPage() {
                             <span className="text-xs text-muted-foreground">{item.layer3} &gt;</span>
                             <span className="ml-1">{item.layer4}</span>
                           </td>
-                          <td className="px-4 py-2 text-center font-mono tabular-nums">{item.current_score}</td>
-                          <td className="px-4 py-2 text-center font-mono tabular-nums">{item.compare_score}</td>
+                          <td className="px-4 py-2 text-center font-mono tabular-nums">{parseFloat(String(item.current_score)).toFixed(2)}</td>
+                          <td className="px-4 py-2 text-center font-mono tabular-nums">{parseFloat(String(item.compare_score)).toFixed(2)}</td>
                           <td className={`px-4 py-2 text-center font-mono tabular-nums font-semibold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                            {diff > 0 ? '+' : ''}{diff}
+                            {diff > 0 ? '+' : ''}{parseFloat(String(diff)).toFixed(2)}
                           </td>
                           <td className="px-4 py-2 text-center">
                             <div className="flex items-center justify-center gap-1">
