@@ -1,82 +1,200 @@
 # 本地部署指南
 
-## 环境要求
+## 1. 环境准备
 
-| 依赖 | 最低版本 | 推荐版本 |
-|------|---------|---------|
-| Node.js | 20.x | 24.x |
-| pnpm | 9.x | 10.x |
-| PostgreSQL | 14.x | 16.x+ |
-| Supabase CLI | 最新 | 最新（可选，用于本地 Supabase） |
+### 1.1 操作系统
 
-## 1. 获取源码
+支持以下操作系统：
+- **Windows 10/11**（推荐使用 WSL2）
+- **macOS 12+**
+- **Linux**（Ubuntu 20.04+、CentOS 8+ 等）
 
-```bash
-git clone <仓库地址>
-cd <项目目录>
-```
+### 1.2 安装 Node.js
 
-## 2. 安装依赖
+本项目要求 **Node.js 20.x 及以上**，推荐 **24.x**。
+
+#### macOS
 
 ```bash
-pnpm install
+# 方式一：使用 Homebrew（推荐）
+brew install node@24
+
+# 方式二：使用 nvm（Node 版本管理器，支持多版本切换）
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.zshrc   # 或 source ~/.bashrc
+nvm install 24
+nvm use 24
 ```
 
-## 3. 准备数据库
+#### Windows
 
-本项目使用 Supabase PostgreSQL 数据库，有两种方式：
+```bash
+# 方式一：使用官方安装包
+# 前往 https://nodejs.org/ 下载 LTS 版本安装包，双击安装即可
 
-### 方式 A：使用 Supabase 云服务（推荐）
+# 方式二：使用 Winget
+winget install OpenJS.NodeJS.LTS
 
-1. 前往 [Supabase](https://supabase.com/) 注册并创建项目
-2. 记录项目的 **Project URL** 和 **anon public key**（在 Settings → API 中）
-3. 在 SQL Editor 中执行建表 SQL（见下方「数据库初始化 SQL」）
+# 方式三：使用 nvm-windows（推荐，支持多版本切换）
+# 前往 https://github.com/coreybutler/nvm-windows/releases 下载安装
+nvm install 24
+nvm use 24
+```
 
-### 方式 B：使用本地 Supabase
+#### Linux（Ubuntu/Debian）
+
+```bash
+# 方式一：使用 NodeSource 仓库
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 方式二：使用 nvm（推荐）
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+source ~/.bashrc
+nvm install 24
+nvm use 24
+```
+
+#### 验证安装
+
+```bash
+node -v    # 应输出 v24.x.x
+npm -v     # 应输出 10.x.x 或更高
+```
+
+### 1.3 安装 pnpm
+
+本项目使用 **pnpm** 作为包管理器，**禁止使用 npm 或 yarn**。
+
+```bash
+# 使用 corepack 启用（Node.js 16.13+ 自带）
+corepack enable
+corepack prepare pnpm@latest --activate
+
+# 或者使用 npm 全局安装
+npm install -g pnpm
+```
+
+#### 验证安装
+
+```bash
+pnpm -v    # 应输出 9.x.x 或更高
+```
+
+#### 配置 pnpm（可选，国内用户推荐）
+
+```bash
+# 设置 npm 镜像源，加速依赖下载
+pnpm config set registry https://registry.npmmirror.com
+```
+
+### 1.4 安装 Git
+
+```bash
+# macOS
+brew install git
+
+# Windows
+# 前往 https://git-scm.com/ 下载安装，或使用 winget install Git.Git
+
+# Linux（Ubuntu/Debian）
+sudo apt-get install git
+```
+
+#### 验证安装
+
+```bash
+git --version
+```
+
+### 1.5 准备 Supabase 数据库
+
+本项目使用 Supabase 提供的 PostgreSQL 数据库服务。有两种方式：
+
+#### 方式 A：使用 Supabase 云服务（推荐，开箱即用）
+
+1. 前往 [Supabase 官网](https://supabase.com/) 注册账号
+2. 点击 **New Project** 创建新项目
+   - 填写项目名称（如 `flow-management`）
+   - 设置数据库密码（请妥善保存）
+   - 选择离你最近的区域（如 Northeast Asia → Tokyo）
+3. 等待项目初始化完成（约 1-2 分钟）
+4. 进入项目后，记录以下信息（在 **Settings → API** 中）：
+   - **Project URL**：形如 `https://xxxxx.supabase.co`
+   - **anon public key**：形如 `eyJhbGciOiJIUzI1NiIs...`
+5. 在 **SQL Editor** 中执行建表 SQL（见下方「3. 数据库初始化」章节）
+
+#### 方式 B：使用本地 Supabase（适合离线/内网部署）
+
+需要先安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)：
 
 ```bash
 # 安装 Supabase CLI
-npx supabase init
-npx supabase start
+npm install -g supabase
 
-# 启动后会输出本地 URL 和 Key
+# 在项目根目录初始化
+supabase init
+
+# 启动本地 Supabase（需要 Docker）
+supabase start
+
+# 启动成功后会输出连接信息：
 # API URL: http://localhost:54321
 # anon key: eyJ...（自动生成）
+# DB URL: postgresql://postgres:postgres@localhost:54322/postgres
 ```
 
-## 4. 配置环境变量
+> **注意**：本地 Supabase 依赖 Docker，请确保 Docker Desktop 已启动并正常运行。
 
-复制示例文件并填写：
+#### 方式 C：自建 PostgreSQL（高级）
+
+如果不想使用 Supabase 服务，可以自行搭建兼容的 PostgreSQL 数据库：
+
+1. 安装 PostgreSQL 14+ 并创建数据库
+2. 使用 [PostgREST](https://postgrest.org/) 提供 REST API（兼容 Supabase 客户端）
+3. 此方式配置较复杂，需要自行处理认证和 API 兼容层，仅推荐有经验的运维人员使用
+
+### 1.6 环境准备检查清单
+
+部署前请确认以下项目已就绪：
+
+| 检查项 | 验证命令 | 预期结果 |
+|--------|---------|---------|
+| Node.js 已安装 | `node -v` | v20.x+ |
+| pnpm 已安装 | `pnpm -v` | 9.x+ |
+| Git 已安装 | `git --version` | git version 2.x |
+| Supabase 已创建 | 访问 Supabase Dashboard | 项目可见且状态为 Active |
+| 数据库表已创建 | 在 SQL Editor 中查询 `SELECT tablename FROM pg_tables WHERE schemaname='public'` | 返回 12 张表名 |
+
+---
+
+## 2. 获取源码与安装依赖
 
 ```bash
-cp .env.example .env.local
+# 克隆代码仓库
+git clone <仓库地址>
+cd <项目目录>
+
+# 安装项目依赖
+pnpm install
 ```
 
-编辑 `.env.local`，填入以下必填项：
+如果下载依赖较慢，可先配置镜像源：
 
-```env
-# JWT 签名密钥（必填，缺失时服务拒绝启动）
-# 生成方式：openssl rand -base64 32
-JWT_SECRET=your_jwt_secret_here
-
-# Supabase 配置（必填）
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+```bash
+pnpm config set registry https://registry.npmmirror.com
+pnpm install
 ```
 
-### 环境变量说明
+---
 
-| 变量名 | 必需 | 说明 |
-|--------|------|------|
-| `JWT_SECRET` | 是 | JWT 签名密钥，用于用户认证。可用 `openssl rand -base64 32` 生成 |
-| `NEXT_PUBLIC_SUPABASE_URL` | 是 | Supabase 项目 URL（如 `https://xxx.supabase.co`） |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 是 | Supabase 匿名 Key（在 Supabase Dashboard → Settings → API 获取） |
+## 3. 数据库初始化
 
-## 5. 数据库初始化
+> 在执行以下步骤前，请确保 Supabase 项目已创建并处于 Active 状态。
 
 ### 建表 SQL
 
-在 Supabase 的 SQL Editor 中依次执行以下 SQL：
+进入 Supabase Dashboard → **SQL Editor**，点击 **New Query**，粘贴以下 SQL 并点击 **Run** 执行：
 
 <details>
 <summary>点击展开完整建表 SQL</summary>
@@ -346,7 +464,65 @@ END $$;
 
 **无需手动插入用户和菜单数据。**
 
-## 6. 启动项目
+---
+
+## 4. 配置环境变量
+
+在项目根目录创建 `.env.local` 文件：
+
+```bash
+# 方式一：从示例文件复制（如果存在）
+cp .env.example .env.local
+
+# 方式二：直接创建
+touch .env.local
+```
+
+编辑 `.env.local`，填入以下必填项：
+
+```env
+# ===== JWT 签名密钥（必填，缺失时服务拒绝启动）=====
+# 生成方式：在终端执行 openssl rand -base64 32
+JWT_SECRET=your_jwt_secret_here
+
+# ===== Supabase 配置（必填）=====
+# 获取位置：Supabase Dashboard → Settings → API
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+```
+
+### 如何生成 JWT_SECRET
+
+```bash
+# macOS / Linux
+openssl rand -base64 32
+
+# Windows（PowerShell）
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
+
+# 或使用 Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+### 如何获取 Supabase 连接信息
+
+1. 登录 [Supabase Dashboard](https://app.supabase.com/)
+2. 选择你的项目
+3. 点击左侧 **Settings** → **API**
+4. 复制 **Project URL** → 填入 `NEXT_PUBLIC_SUPABASE_URL`
+5. 复制 **anon public** key → 填入 `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### 环境变量说明
+
+| 变量名 | 必需 | 说明 |
+|--------|------|------|
+| `JWT_SECRET` | 是 | JWT 签名密钥，用于用户认证。可用 `openssl rand -base64 32` 生成 |
+| `NEXT_PUBLIC_SUPABASE_URL` | 是 | Supabase 项目 URL（如 `https://xxx.supabase.co`） |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 是 | Supabase 匿名 Key（在 Supabase Dashboard → Settings → API 获取） |
+
+---
+
+## 5. 启动项目
 
 ### 开发模式
 
@@ -356,14 +532,34 @@ pnpm dev
 
 默认监听 `http://localhost:5000`（由 `DEPLOY_RUN_PORT` 环境变量控制，默认 5000）。
 
+启动成功后，终端会显示：
+```
+✓ Ready in Xs
+○ Local: http://localhost:5000
+```
+
+在浏览器中访问 `http://localhost:5000` 即可使用。
+
 ### 生产构建与启动
 
 ```bash
+# 构建生产版本
 pnpm build
+
+# 启动生产服务
 pnpm start
 ```
 
-## 7. 默认账号
+生产模式默认监听 `http://localhost:5000`。
+
+> **如需修改监听端口**，设置环境变量 `DEPLOY_RUN_PORT`：
+> ```bash
+> DEPLOY_RUN_PORT=3000 pnpm start
+> ```
+
+---
+
+## 6. 默认账号
 
 | 角色 | 用户名 | 默认密码 | 说明 |
 |------|--------|---------|------|
@@ -371,7 +567,7 @@ pnpm start
 
 > 超管拥有所有菜单权限，无需手动分配。
 
-## 8. 数据导入
+## 7. 数据导入
 
 项目支持通过 Excel 导入流程清单数据：
 
@@ -380,7 +576,7 @@ pnpm start
 3. 点击「数据初始化」按钮上传 Excel 文件
 4. 系统自动解析 L1-L4 流程清单 Sheet 并写入数据库
 
-## 9. 自定义配置
+## 8. 自定义配置
 
 ### 修改监听端口
 
