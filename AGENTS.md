@@ -12,7 +12,7 @@
 - **Styling**: Tailwind CSS 4
 - **Charts**: Recharts
 - **Database**: Supabase PostgreSQL (Drizzle ORM)
-- **认证**: 自建 JWT + bcrypt 会话认证（Session Cookie + 1小时超时）
+- **认证**: 自建 JWT + bcrypt 会话认证（Session Cookie + Bearer Token 双重认证 + 1小时超时）
 
 ## 导航与功能模块
 
@@ -22,11 +22,11 @@
 | 统计概览 | - | `/` | 流程数据统计看板 |
 | 职能流程 | 流程清单 | `/functional/list` | 筛选+分页+导出Excel+树形视图架构CRUD |
 | | 修订记录 | `/functional/revision` | 历史修订记录查询+导出 |
-| | 修订计划 | `/functional/plan` | 修订计划列表+详情管理 |
+| | 修订计划 | `/functional/plan` | 修订计划表格+排序+创建+查看+删除 |
 | 端到端流程 | 流程概览 | `/e2e/overview` | 端到端流程统计看板 |
 | | 流程管理 | `/e2e/list` | 端到端流程CRUD |
 | | 梳理计划 | `/e2e/plan` | 梳理计划管理 |
-| 评价体系 | 成熟度自评 | `/assessment/maturity` | 自评表查看+填写+实时计分+对比历史+对比报告+导出 |
+| 评价体系 | 成熟度自评 | `/assessment/maturity` | 自评表查看+填写+实时计分+行内编辑+排序+对比+对比报告+导出 |
 | 系统管理 | 用户管理 | `/system/users` | 用户CRUD+权限分配 |
 | | 菜单管理 | `/system/menus` | 菜单树CRUD+排序 |
 
@@ -52,7 +52,7 @@
 │   │   │   ├── list/page.tsx          # 端到端流程管理 (CRUD)
 │   │   │   └── plan/page.tsx          # 梳理计划管理
 │   │   ├── assessment/
-│   │   │   ├── maturity/page.tsx      # 成熟度自评 (填写+实时计分+对比+导出+列表导出)
+│   │   │   ├── maturity/page.tsx      # 成熟度自评 (填写+实时计分+行内编辑+排序+对比+对比报告+导出+列表导出)
 │   │   ├── system/
 │   │   │   ├── users/page.tsx         # 用户管理
 │   │   │   └── menus/page.tsx         # 菜单管理
@@ -78,7 +78,7 @@
 │   ├── lib/
 │   │   ├── flow-data.ts              # 流程数据类型+统计计算
 │   │   ├── e2e-store.ts              # 端到端流程数据存储(Supabase数据库)
-│   │   ├── auth.ts                   # JWT认证工具(环境变量密钥+Session Cookie+1h超时)
+│   │   ├── auth.ts                   # JWT认证工具(环境变量密钥+Session Cookie+Bearer Token+1h超时)
 │   │   ├── api-auth.ts               # API统一鉴权(requireAuth中间件)
 │   │   ├── sys-data.ts               # 系统管理数据访问
 │   │   ├── supabase.ts               # Supabase客户端
@@ -309,16 +309,20 @@
 5. **提交自评**：草稿→已提交，不可再编辑
 6. **删除自评**：支持删除任何状态的自评（含已提交），均需二次确认
 7. **复制自评**：从历史自评复制为新草稿，包含所有评分明细，可直接在之前版本上修改
-8. **对比历史**：选择两次自评 → 生成对比报告（各板块差异+明细项得分率变化+待改进方向）
-9. **自评列表导出**：导出所有自评记录为Excel，包含名称/周期/状态/各板块得分/创建人等
-10. **导出Excel**：按模板格式导出自评为Excel文件，包含评价标准+现状情况+自评分值+汇总行
-11. **创建人显示**：自评列表中created_by显示用户display_name而非username
+8. **编辑名称/周期**：列表视图支持行内编辑自评名称和评价周期（不限状态），Enter保存/Escape取消
+9. **列表排序**：评价周期、创建时间支持升序/降序/无排序三态切换
+10. **自评对比**：列表页选择两次自评 → 生成对比报告（各板块差异+明细项得分率变化+待改进方向）
+11. **对比报告导出**：对比报告支持导出Excel
+12. **自评列表导出**：导出所有自评记录为Excel，包含名称/周期/状态/各板块得分/创建人等
+13. **导出Excel**：按模板格式导出自评为Excel文件，包含评价标准+现状情况+自评分值+汇总行
+14. **创建人显示**：自评列表中created_by显示用户display_name而非username
 
 ### 认证与权限
-- 登录：bcrypt验证 → JWT token存入Session Cookie（浏览器关闭即失效）
+- 登录：bcrypt验证 → JWT token存入Session Cookie（浏览器关闭即失效），同时返回 token 供 Bearer 认证
+- 双重认证：Cookie + Authorization Bearer Token，前端 fetch 拦截器自动注入 Authorization 头（解决 iframe 第三方 Cookie 限制）
 - 密钥：JWT_SECRET 从环境变量读取，缺失时拒绝启动
 - 超时：JWT Token有效期1小时，过期需重新登录
-- 会话：Cookie中的token → 验证用户（getSession）
+- 会话：Cookie中的token → 验证用户（getSession）；也支持 Authorization Bearer 头
 - 权限：用户关联菜单权限，导航栏动态渲染有权限的菜单
 - 超管：拥有所有菜单权限
 - API鉴权：所有业务API通过 `requireAuth()` 中间件校验登录态，未登录返回401
@@ -361,8 +365,9 @@
 | beijingNow() | lib/utils.ts | 返回北京时间字符串 |
 | escapeIlike() | lib/utils.ts | 转义ilike通配符，防搜索注入 |
 | requireAuth() | lib/api-auth.ts | API鉴权中间件，校验登录态并返回用户信息 |
-| getSession() | lib/auth.ts | 解析JWT token获取会话信息 |
-| createSession() | lib/auth.ts | 创建JWT token并设置Session Cookie |
+| getSession() | lib/auth.ts | 解析JWT token获取会话信息（优先Authorization头，回退Cookie） |
+| createSession() | lib/auth.ts | 创建JWT token并设置Session Cookie，同时返回token |
+| getTokenFromRequest() | lib/auth.ts | 从请求中提取token（优先Authorization Bearer头，回退Cookie） |
 | assessment-data.ts | lib/assessment-data.ts | 自评数据访问层 (CRUD+计分+对比报告) |
 | assessment-standards-data.ts | lib/assessment-standards-data.ts | 自评标准项嵌入数据 (178条) |
 | assessment-template.ts | lib/assessment-template.ts | 自评导出模板Excel (base64编码，导出时基于此模板填充数据) |
