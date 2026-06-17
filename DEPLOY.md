@@ -468,25 +468,104 @@ END $$;
 
 ## 4. 配置环境变量
 
-在项目根目录创建 `.env.local` 文件：
+在项目根目录创建 `.env.local` 文件并填入配置。
+
+### macOS / Linux
 
 ```bash
-# 方式一：从示例文件复制（如果存在）
-cp .env.example .env.local
+# 进入项目目录
+cd /path/to/your/project
 
-# 方式二：直接创建
+# 创建 .env.local 文件
 touch .env.local
+
+# 使用编辑器打开
+nano .env.local       # 或 vim .env.local / code .env.local
 ```
+
+也可以一步完成创建和写入：
+
+```bash
+cat > .env.local << 'EOF'
+JWT_SECRET=your_jwt_secret_here
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+EOF
+```
+
+验证文件内容：
+
+```bash
+cat .env.local
+```
+
+### Windows
+
+**方式一：使用 PowerShell**
+
+```powershell
+# 进入项目目录
+cd C:\path\to\your\project
+
+# 创建 .env.local 文件
+New-Item -Path .env.local -ItemType File -Force
+
+# 使用记事本打开编辑
+notepad .env.local
+```
+
+也可以一步写入：
+
+```powershell
+@"
+JWT_SECRET=your_jwt_secret_here
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+"@ | Out-File -Encoding utf8 -FilePath .env.local
+```
+
+**方式二：使用 CMD**
+
+```cmd
+cd C:\path\to\your\project
+
+:: 创建空文件
+type nul > .env.local
+
+:: 使用记事本打开编辑
+notepad .env.local
+```
+
+**方式三：使用 VS Code**
+
+```powershell
+code .env.local
+```
+
+> **注意**：Windows 下文件名以 `.` 开头可能被资源管理器拒绝，请使用 PowerShell/CMD/VS Code 创建。
+
+### WSL2 (Windows Subsystem for Linux)
+
+```bash
+# 进入项目目录（Windows 盘符挂载在 /mnt/ 下）
+cd /mnt/c/path/to/your/project
+
+# 创建并编辑
+touch .env.local
+nano .env.local
+```
+
+> **提示**：建议将项目放在 WSL2 本地文件系统（`~/projects/`）而非 `/mnt/c/`，以获得更好的文件读写性能。
+
+### 环境变量模板
 
 编辑 `.env.local`，填入以下必填项：
 
 ```env
 # ===== JWT 签名密钥（必填，缺失时服务拒绝启动）=====
-# 生成方式：在终端执行 openssl rand -base64 32
 JWT_SECRET=your_jwt_secret_here
 
 # ===== Supabase 配置（必填）=====
-# 获取位置：Supabase Dashboard → Settings → API
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 ```
@@ -494,31 +573,54 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 ### 如何生成 JWT_SECRET
 
 ```bash
-# macOS / Linux
+# macOS / Linux / WSL2
 openssl rand -base64 32
 
 # Windows（PowerShell）
 [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
 
-# 或使用 Node.js
+# 任意平台（需要已安装 Node.js）
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
+
+生成后将输出结果复制，替换 `your_jwt_secret_here`。
 
 ### 如何获取 Supabase 连接信息
 
 1. 登录 [Supabase Dashboard](https://app.supabase.com/)
-2. 选择你的项目
-3. 点击左侧 **Settings** → **API**
-4. 复制 **Project URL** → 填入 `NEXT_PUBLIC_SUPABASE_URL`
-5. 复制 **anon public** key → 填入 `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+2. 选择你的项目（如未创建，参考第 3 步「创建 Supabase 项目」）
+3. 点击左侧 **Settings**（齿轮图标）→ **API**
+4. 找到 **Project URL** → 复制 → 填入 `NEXT_PUBLIC_SUPABASE_URL`
+5. 找到 **Project API keys** 下的 **anon public** → 复制 → 填入 `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-### 环境变量说明
+> **安全提醒**：`anon key` 是公开密钥，可暴露在前端代码中；`service_role key` 是特权密钥，**绝对不能**写入 `.env.local` 或前端代码。
 
-| 变量名 | 必需 | 说明 |
-|--------|------|------|
-| `JWT_SECRET` | 是 | JWT 签名密钥，用于用户认证。可用 `openssl rand -base64 32` 生成 |
-| `NEXT_PUBLIC_SUPABASE_URL` | 是 | Supabase 项目 URL（如 `https://xxx.supabase.co`） |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 是 | Supabase 匿名 Key（在 Supabase Dashboard → Settings → API 获取） |
+### 环境变量完整说明
+
+| 变量名 | 必需 | 说明 | 示例值 |
+|--------|------|------|--------|
+| `JWT_SECRET` | 是 | JWT 签名密钥，用于用户认证 | `a1b2c3d4e5f6...`（32字节 base64） |
+| `NEXT_PUBLIC_SUPABASE_URL` | 是 | Supabase 项目 URL | `https://abcdef.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 是 | Supabase 匿名 Key | `eyJhbGciOiJIUzI1NiIs...` |
+| `DEPLOY_RUN_PORT` | 否 | 服务监听端口，默认 `5000` | `3000` |
+| `COZE_PROJECT_ENV` | 否 | 运行环境标识，`DEV` 或 `PROD` | `PROD` |
+
+### 配置验证
+
+完成配置后，可通过以下命令验证环境变量是否生效：
+
+```bash
+# macOS / Linux / WSL2
+grep -c "JWT_SECRET" .env.local && echo "✓ JWT_SECRET 已配置" || echo "✗ JWT_SECRET 缺失"
+grep -c "SUPABASE_URL" .env.local && echo "✓ SUPABASE_URL 已配置" || echo "✗ SUPABASE_URL 缺失"
+grep -c "SUPABASE_ANON_KEY" .env.local && echo "✓ SUPABASE_ANON_KEY 已配置" || echo "✗ SUPABASE_ANON_KEY 缺失"
+
+# Windows（PowerShell）
+$vars = Get-Content .env.local
+if ($vars -match "JWT_SECRET=") { "✓ JWT_SECRET 已配置" } else { "✗ JWT_SECRET 缺失" }
+if ($vars -match "SUPABASE_URL=") { "✓ SUPABASE_URL 已配置" } else { "✗ SUPABASE_URL 缺失" }
+if ($vars -match "SUPABASE_ANON_KEY=") { "✓ SUPABASE_ANON_KEY 已配置" } else { "✗ SUPABASE_ANON_KEY 缺失" }
+```
 
 ---
 
