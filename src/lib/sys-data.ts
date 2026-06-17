@@ -54,7 +54,7 @@ export async function seedInitialData(): Promise<void> {
   const { data: existingAdmin } = await client
     .from('sys_users')
     .select('id')
-    .eq('username', '10020580')
+    .eq('username', '18692602217')
     .maybeSingle();
 
   if (!existingAdmin) {
@@ -62,7 +62,7 @@ export async function seedInitialData(): Promise<void> {
     const { error: userError } = await client
       .from('sys_users')
       .insert({
-        username: '10020580',
+        username: '18692602217',
         password_hash: passwordHash,
         display_name: '超级管理员',
         is_super_admin: true,
