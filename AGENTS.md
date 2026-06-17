@@ -349,6 +349,8 @@
 | NEXT_PUBLIC_SUPABASE_URL | 是 | Supabase项目URL |
 | NEXT_PUBLIC_SUPABASE_ANON_KEY | 是 | Supabase匿名Key |
 
+> 本地部署详细指南见 [DEPLOY.md](./DEPLOY.md)，包含环境准备、数据库初始化、配置说明等完整步骤。
+
 ## 共享组件
 
 | 组件 | 路径 | 说明 |
