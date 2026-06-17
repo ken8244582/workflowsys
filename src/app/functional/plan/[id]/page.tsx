@@ -73,6 +73,8 @@ export default function PlanDetailPage() {
   const [filterType, setFilterType] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [searchDept, setSearchDept] = useState('');
+  const [searchOwner, setSearchOwner] = useState('');
 
   // Dialogs
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -119,6 +121,8 @@ export default function PlanDetailPage() {
       if (filterType.length > 0) params.set('taskType', filterType.join(','));
       if (filterStatus.length > 0) params.set('status', filterStatus.join(','));
       if (searchText) params.set('search', searchText);
+      if (searchDept) params.set('department', searchDept);
+      if (searchOwner) params.set('owner', searchOwner);
 
       const res = await fetch(`/api/revision-plans/${planId}/tasks?${params}`);
       const data = await res.json();
@@ -129,7 +133,7 @@ export default function PlanDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [planId, page, pageSize, filterType, filterStatus, searchText]);
+  }, [planId, page, pageSize, filterType, filterStatus, searchText, searchDept, searchOwner]);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
@@ -515,7 +519,7 @@ export default function PlanDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b bg-gray-50">
                     <th className="text-left py-2 px-3 font-medium sticky left-0 bg-gray-50 z-[1]">部门</th>
@@ -560,7 +564,7 @@ export default function PlanDetailPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-3 pb-3">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
             <MultiSelectFilter
               label="任务类型"
               options={typeOptions}
@@ -582,6 +586,18 @@ export default function PlanDetailPage() {
                 className="h-7 text-xs pl-7"
               />
             </div>
+            <Input
+              placeholder="流程所属部门"
+              value={searchDept}
+              onChange={e => setSearchDept(e.target.value)}
+              className="h-7 text-xs"
+            />
+            <Input
+              placeholder="L4流程所有者"
+              value={searchOwner}
+              onChange={e => setSearchOwner(e.target.value)}
+              className="h-7 text-xs"
+            />
           </div>
         </CardContent>
       </Card>
@@ -589,7 +605,7 @@ export default function PlanDetailPage() {
       {/* Batch Actions */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-          <span className="text-sm text-blue-700 font-medium">已选择 {selectedIds.size} 项</span>
+          <span className="text-xs text-blue-700 font-medium">已选择 {selectedIds.size} 项</span>
           {canEdit() && (
             <Button variant="outline" size="sm" onClick={handleCompleteTasks} className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
               <CheckCircle2 className="h-3.5 w-3.5" /> 批量标记完成
@@ -673,9 +689,9 @@ export default function PlanDetailPage() {
                       <TableCell><TruncateDiv content={task.owner || ''} maxWidth="80px" /></TableCell>
                       <TableCell><TruncateDiv content={task.department || ''} maxWidth="100px" /></TableCell>
                       <TableCell>
-                        {task.format === '集团模板' ? <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
-                         task.format === '旧格式' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
-                         task.format ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
+                        {task.format === '集团模板' ? <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs px-1.5 py-0">{task.format}</Badge> :
+                         task.format === '旧格式' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-1.5 py-0">{task.format}</Badge> :
+                         task.format ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{task.format}</Badge> :
                          <span className="text-muted-foreground">--</span>}
                       </TableCell>
                       <TableCell>
@@ -916,20 +932,20 @@ export default function PlanDetailPage() {
                         </TableCell>
                         <TableCell className="font-mono text-xs">{flow.processCode || '--'}</TableCell>
                         <TableCell className="font-medium">{flow.l4Process || '--'}</TableCell>
-                        <TableCell className="text-sm">{flow.version || '--'}</TableCell>
-                        <TableCell className="text-sm">{flow.l4Owner || '--'}</TableCell>
-                        <TableCell className="text-sm">{flow.department || '--'}</TableCell>
-                        <TableCell className="text-sm">
-                          {flow.format === '集团模板' ? <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] px-1.5 py-0">{flow.format}</Badge> :
-                           flow.format === '旧格式' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">{flow.format}</Badge> :
-                           flow.format ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{flow.format}</Badge> :
+                        <TableCell className="text-xs">{flow.version || '--'}</TableCell>
+                        <TableCell className="text-xs">{flow.l4Owner || '--'}</TableCell>
+                        <TableCell className="text-xs">{flow.department || '--'}</TableCell>
+                        <TableCell className="text-xs">
+                          {flow.format === '集团模板' ? <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs px-1.5 py-0">{flow.format}</Badge> :
+                           flow.format === '旧格式' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-1.5 py-0">{flow.format}</Badge> :
+                           flow.format ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{flow.format}</Badge> :
                            <span className="text-muted-foreground">--</span>}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {flow.category === '流程' ? <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-[10px] px-1.5 py-0">{flow.category}</Badge> :
-                           flow.category === '办法' ? <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] px-1.5 py-0">{flow.category}</Badge> :
-                           flow.category === '其它' ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{flow.category}</Badge> :
-                           flow.category ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{flow.category}</Badge> :
+                        <TableCell className="text-xs">
+                          {flow.category === '流程' ? <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-xs px-1.5 py-0">{flow.category}</Badge> :
+                           flow.category === '办法' ? <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0">{flow.category}</Badge> :
+                           flow.category === '其它' ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{flow.category}</Badge> :
+                           flow.category ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{flow.category}</Badge> :
                            <span className="text-muted-foreground">--</span>}
                         </TableCell>
                       </TableRow>
@@ -944,13 +960,13 @@ export default function PlanDetailPage() {
               <div className="bg-blue-50 rounded-md p-2 max-h-24 overflow-y-auto">
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-xs text-blue-700 font-medium">已选 {selectedFlowIds.size} 个流程</p>
-                  <button className="text-[10px] text-blue-500 hover:text-red-500" onClick={() => setSelectedFlowIds(new Set())}>清空</button>
+                  <button className="text-xs text-blue-500 hover:text-red-500" onClick={() => setSelectedFlowIds(new Set())}>清空</button>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {Array.from(selectedFlowIds).map(fid => {
                     const f = flowItems.find(fl => fl.id === fid);
                     return f ? (
-                      <Badge key={fid} variant="secondary" className="text-[10px] max-w-[120px] truncate">
+                      <Badge key={fid} variant="secondary" className="text-xs max-w-[120px] truncate">
                         <span className="truncate">{f.l4Process || f.processCode}</span>
                         <button className="ml-1 hover:text-red-500 flex-shrink-0" onClick={() => {
                           const next = new Set(selectedFlowIds);

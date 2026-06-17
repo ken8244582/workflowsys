@@ -61,9 +61,8 @@ export async function GET(
   const supabase = getSupabaseClient();
   const { searchParams } = new URL(request.url);
   const department = searchParams.get('department');
-  // Support multiple values for owner (comma-separated)
+  // Support fuzzy search for owner
   const ownerParam = searchParams.get('owner');
-  const owners = ownerParam ? ownerParam.split(',').filter(Boolean) : [];
   // Support multiple values for taskType and status (comma-separated)
   const taskTypeParam = searchParams.get('taskType');
   const statusParam = searchParams.get('status');
@@ -78,13 +77,13 @@ export async function GET(
     .select('*', { count: 'exact' })
     .eq('plan_id', id);
 
-  if (department) query = query.eq('department', department);
-  if (owners.length > 0) query = query.in('owner', owners);
+  if (department) query = query.ilike('department', `%${escapeIlike(department)}%`);
+  if (ownerParam) query = query.ilike('owner', `%${escapeIlike(ownerParam)}%`);
   if (taskTypes.length > 0) query = query.in('task_type', taskTypes);
   if (statuses.length > 0) query = query.in('status', statuses);
   if (search) {
     const escaped = escapeIlike(search);
-    query = query.or(`process_code.ilike.%${escaped}%,process_name.ilike.%${escaped}%,description.ilike.%${escaped}%`);
+    query = query.or(`process_code.ilike.%${escaped}%,process_name.ilike.%${escaped}%,description.ilike.%${escaped}%,department.ilike.%${escaped}%,owner.ilike.%${escaped}%`);
   }
 
   const from = (page - 1) * pageSize;
