@@ -1146,8 +1146,8 @@ export default function MaturityAssessmentPage() {
               <div className="flex items-center gap-2">
                 <Input value={detailEditName} onChange={e => setDetailEditName(e.target.value)} className="h-7 text-xs w-48" onKeyDown={e => { if (e.key === 'Enter') saveDetailEdit(); if (e.key === 'Escape') setDetailEditing(false); }} />
                 <Input value={detailEditPeriod} onChange={e => setDetailEditPeriod(e.target.value)} className="h-7 text-xs w-32" onKeyDown={e => { if (e.key === 'Enter') saveDetailEdit(); if (e.key === 'Escape') setDetailEditing(false); }} />
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700" onClick={saveDetailEdit}><Check className="h-3.5 w-3.5" /></Button>
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-500" onClick={() => setDetailEditing(false)}><X className="h-3.5 w-3.5" /></Button>
+                <Button size="sm" variant="ghost" title="保存" className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700" onClick={saveDetailEdit}><Check className="h-3.5 w-3.5" /></Button>
+                <Button size="sm" variant="ghost" title="取消" className="h-7 w-7 p-0 text-gray-500" onClick={() => setDetailEditing(false)}><X className="h-3.5 w-3.5" /></Button>
               </div>
             ) : (
               <div className="flex items-center gap-2">

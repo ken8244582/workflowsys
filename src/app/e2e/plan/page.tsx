@@ -376,7 +376,7 @@ export default function E2EPlanPage() {
                         <span className="rounded bg-[#1e3a5f] px-1 py-0.5 text-[9px] font-medium text-white">对比中</span>
                       )}
                     </div>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleAddPlan(period)}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="添加计划" onClick={() => handleAddPlan(period)}>
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
                   </CardHeader>

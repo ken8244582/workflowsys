@@ -730,7 +730,7 @@ export default function PlanDetailPage() {
                             ><RotateCcw className="h-3.5 w-3.5 mr-0.5" />撤回</Button>
                           )}
                           {canDelete() && isDraft && (
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50" title="删除"
                               onClick={() => {
                                 setDeleteTaskName(task.processName);
                                 setPendingDeleteId(task.id);

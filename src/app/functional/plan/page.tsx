@@ -282,7 +282,7 @@ export default function RevisionPlanPage() {
                           <TableCell className="sticky right-0 bg-white z-10">
                             <div className="flex items-center justify-center gap-0.5">
                               <Link href={`/functional/plan/${plan.id}`}>
-                                <Button variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted">
+                                <Button variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted" title="查看">
                                   <Eye className="h-3.5 w-3.5" />
                                 </Button>
                               </Link>
@@ -290,6 +290,7 @@ export default function RevisionPlanPage() {
                                 <Button
                                   variant="ghost"
                                   className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  title="删除"
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
