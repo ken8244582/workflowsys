@@ -323,9 +323,9 @@ export default function E2EListPage() {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b bg-muted/30 text-left">
+                <tr className="border-b bg-gray-50/80 text-left">
                   <th className="w-[40px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">#</th>
                   <th className="w-[160px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">流程名称</th>
                   <th className="w-[90px] whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground">流程所有者</th>
@@ -347,7 +347,7 @@ export default function E2EListPage() {
                   filtered.map((p, idx) => {
                     const badge = STATUS_BADGE[p.status] || STATUS_BADGE.not_started;
                     return (
-                      <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
+                      <tr key={p.id} className="border-b last:border-0 hover:bg-blue-50/50">
                         <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-muted-foreground">{idx + 1}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-xs font-medium">{p.name}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{p.owner}</td>

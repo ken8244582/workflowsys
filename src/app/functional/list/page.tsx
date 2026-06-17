@@ -601,7 +601,7 @@ export default function FunctionalListPage() {
             )}
           </div>
           <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'table' | 'tree')}>
-            <TabsList className="h-8">
+            <TabsList className="h-7">
               <TabsTrigger value="table" className="text-xs px-3 h-6">表格视图</TabsTrigger>
               <TabsTrigger value="tree" className="text-xs px-3 h-6">树形视图</TabsTrigger>
             </TabsList>

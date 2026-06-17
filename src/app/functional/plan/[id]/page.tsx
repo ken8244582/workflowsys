@@ -670,23 +670,23 @@ export default function PlanDetailPage() {
                       <TableCell>
                         <TruncateDiv content={task.processName || ''} maxWidth="240px" className="font-medium" />
                       </TableCell>
-                      <TableCell className="text-sm"><TruncateDiv content={task.owner || ''} maxWidth="80px" /></TableCell>
-                      <TableCell className="text-sm"><TruncateDiv content={task.department || ''} maxWidth="100px" /></TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell><TruncateDiv content={task.owner || ''} maxWidth="80px" /></TableCell>
+                      <TableCell><TruncateDiv content={task.department || ''} maxWidth="100px" /></TableCell>
+                      <TableCell>
                         {task.format === '集团模板' ? <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
                          task.format === '旧格式' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
                          task.format ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
                          <span className="text-muted-foreground">--</span>}
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {task.category === '流程' ? <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-[10px] px-1.5 py-0">{task.category}</Badge> :
-                         task.category === '办法' ? <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] px-1.5 py-0">{task.category}</Badge> :
-                         task.category === '其它' ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{task.category}</Badge> :
-                         task.category ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{task.category}</Badge> :
+                      <TableCell>
+                        {task.category === '流程' ? <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-xs px-1.5 py-0">{task.category}</Badge> :
+                         task.category === '办法' ? <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0">{task.category}</Badge> :
+                         task.category === '其它' ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{task.category}</Badge> :
+                         task.category ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{task.category}</Badge> :
                          <span className="text-muted-foreground">--</span>}
                       </TableCell>
                       <TableCell>{taskTypeBadge(task.taskType)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground"><TruncateDiv content={task.description || ''} maxWidth="200px" /></TableCell>
+                      <TableCell className="text-muted-foreground"><TruncateDiv content={task.description || ''} maxWidth="200px" /></TableCell>
                       <TableCell>{statusBadge(task.status)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{task.completedAt || '--'}</TableCell>
                       {(canEdit() || canDelete()) && <TableCell className={`sticky right-0 ${stickyBg} z-10 shadow-[-2px_0_0_0_rgba(0,0,0,0.04)]`}>
@@ -892,7 +892,7 @@ export default function PlanDetailPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredFlows.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-4 text-sm text-muted-foreground">无匹配流程</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-4 text-muted-foreground">无匹配流程</TableCell></TableRow>
                   ) : (
                     filteredFlows.slice(0, 100).map(flow => (
                       <TableRow
@@ -915,7 +915,7 @@ export default function PlanDetailPage() {
                           />
                         </TableCell>
                         <TableCell className="font-mono text-xs">{flow.processCode || '--'}</TableCell>
-                        <TableCell className="font-medium text-sm">{flow.l4Process || '--'}</TableCell>
+                        <TableCell className="font-medium">{flow.l4Process || '--'}</TableCell>
                         <TableCell className="text-sm">{flow.version || '--'}</TableCell>
                         <TableCell className="text-sm">{flow.l4Owner || '--'}</TableCell>
                         <TableCell className="text-sm">{flow.department || '--'}</TableCell>
