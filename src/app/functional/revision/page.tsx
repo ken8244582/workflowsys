@@ -130,15 +130,12 @@ export default function FunctionalRevisionPage() {
 
   return (
     <div className="space-y-4">
-      {/* 页面标题 */}
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
-        <h2 className="text-xl font-semibold text-[#1e3a5f]">修订记录</h2>
-      </div>
-
-      {/* Toolbar */}
+      {/* 页面标题 + 操作按钮 */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500">共 {filteredData.length} 条修订记录</div>
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+          <h2 className="text-xl font-semibold text-[#1e3a5f]">修订记录</h2>
+        </div>
         <div className="flex items-center gap-2">
           {canExport() && (
             <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">

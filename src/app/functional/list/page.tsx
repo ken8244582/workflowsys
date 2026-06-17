@@ -583,7 +583,6 @@ export default function FunctionalListPage() {
               <TabsTrigger value="tree" className="text-xs px-3 h-6">树形视图</TabsTrigger>
             </TabsList>
           </Tabs>
-          <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
         </div>
         <div className="flex items-center gap-2">
           {/* 编辑开关 */}

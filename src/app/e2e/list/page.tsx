@@ -242,7 +242,7 @@ export default function E2EListPage() {
       {/* 筛选栏 */}
       <Card>
         <CardContent className="pt-3 pb-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
             <Select value={filterDept} onValueChange={setFilterDept}>
               <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="责任部门" /></SelectTrigger>
               <SelectContent>
@@ -273,7 +273,6 @@ export default function E2EListPage() {
                 className="h-7 text-xs pl-7"
               />
             </div>
-            <span className="flex items-center text-xs text-muted-foreground lg:col-span-1">共 {filtered.length} 条</span>
           </div>
         </CardContent>
       </Card>
