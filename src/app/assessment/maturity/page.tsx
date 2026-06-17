@@ -722,7 +722,6 @@ export default function MaturityAssessmentPage() {
           page={page} totalPages={totalPages} total={filteredData.length}
           pageSize={pageSize} pageSizeOptions={PAGE_SIZE_OPTIONS}
           onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
-          showTotal={false}
         />
       )}
 

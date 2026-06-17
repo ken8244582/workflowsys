@@ -7,13 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export function PaginationBar({
   page, totalPages, total, pageSize, pageSizeOptions,
-  onPageChange, onPageSizeChange, showTotal = true
+  onPageChange, onPageSizeChange
 }: {
   page: number; totalPages: number; total: number;
   pageSize: number; pageSizeOptions: number[];
   onPageChange: (p: number) => void;
   onPageSizeChange: (s: number) => void;
-  showTotal?: boolean;
 }) {
   const [inputPage, setInputPage] = useState(String(page));
   useEffect(() => { setInputPage(String(page)); }, [page]);
@@ -47,7 +46,7 @@ export function PaginationBar({
   return (
     <div className="flex items-center justify-between py-1">
       <div className="flex items-center gap-3">
-        {showTotal && <span className="text-sm text-gray-500">共 {total} 条</span>}
+        <span className="text-sm text-gray-500">共 {total} 条</span>
         <div className="flex items-center gap-1.5">
           <span className="text-sm text-gray-500">每页</span>
           <Select value={String(pageSize)} onValueChange={v => onPageSizeChange(Number(v))}>

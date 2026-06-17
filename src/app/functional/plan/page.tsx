@@ -252,7 +252,6 @@ export default function RevisionPlanPage() {
               pageSizeOptions={[5, 10, 20, 50]}
               onPageChange={setPlanPage}
               onPageSizeChange={(s) => { setPlanPageSize(s); setPlanPage(1); }}
-              showTotal={false}
             />
           )}
           {loading ? (
