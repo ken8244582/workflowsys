@@ -666,7 +666,7 @@ export default function PlanDetailPage() {
             </>
           )}
           {canDelete() && (
-            <Button variant="outline" onClick={() => setShowBatchDeleteDialog(true)} className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50">
+            <Button variant="outline" size="sm" onClick={() => setShowBatchDeleteDialog(true)} className="gap-1 text-red-600 border-red-200 hover:bg-red-50">
               <Trash2 className="h-3.5 w-3.5" /> 批量删除
             </Button>
           )}
