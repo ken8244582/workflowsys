@@ -2,14 +2,15 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, ClipboardList, CheckCircle2, Clock, Plus, ArrowRight, ChevronRight, BarChart3, Target, TrendingUp, Trash2 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ClipboardList, Clock, CheckCircle2, Plus, Trash2, Pencil, TrendingUp, Send, RotateCcw, Eye } from 'lucide-react';
 import type { RevisionPlan, OwnerProgress } from '@/lib/flow-data';
 import { PaginationBar } from '@/components/pagination-bar';
 import { usePermission } from '@/lib/use-permission';
@@ -19,7 +20,7 @@ interface PlanWithProgress extends RevisionPlan {
 }
 
 export default function RevisionPlanPage() {
-  const { canAdd, canDelete } = usePermission('/functional/plan');
+  const { canAdd, canDelete, canEdit } = usePermission('/functional/plan');
   const [plans, setPlans] = useState<PlanWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -119,207 +120,179 @@ export default function RevisionPlanPage() {
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(plans.length / planPageSize));
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 页面标题 */}
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
-        <h2 className="text-xl font-semibold text-[#1e3a5f]">修订计划</h2>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">本月任务总数</p>
-              <p className="text-3xl font-extrabold text-[#1e3a5f] mt-1">{currentStats.total}</p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-[#1e3a5f]/10 flex items-center justify-center">
-              <ClipboardList className="h-6 w-6 text-[#1e3a5f]" />
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1e3a5f] to-[#3b82f6]" />
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">待完成</p>
-              <p className="text-3xl font-extrabold text-amber-600 mt-1">{currentStats.pending}</p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center">
-              <Clock className="h-6 w-6 text-amber-600" />
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-amber-600" />
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">已完成</p>
-              <p className="text-3xl font-extrabold text-emerald-600 mt-1">{currentStats.completed}</p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">完成率</p>
-              <p className="text-3xl font-extrabold text-[#1e3a5f] mt-1">{currentStats.completionRate}<span className="text-lg">%</span></p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-[#1e3a5f]/10 flex items-center justify-center">
-              <TrendingUp className="h-6 w-6 text-[#1e3a5f]" />
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1e3a5f] to-[#3b82f6]" />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Owner Progress */}
-      {currentPlan && currentPlan.ownerProgress && currentPlan.ownerProgress.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-[#1e3a5f]" />
-              L4所有者完成情况
-              <span className="text-xs text-muted-foreground font-normal ml-2">
-                {currentPlan.planMonth} 已下发计划
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {currentPlan.ownerProgress.map((ow) => (
-              <div key={ow.owner} className="flex items-center gap-3 group">
-                <div className="w-44 shrink-0 text-sm font-medium truncate">{ow.owner}</div>
-                <div className="flex-1 relative h-7 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#1e3a5f] to-[#3b82f6] rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                    style={{ width: `${ow.completionRate}%` }}
-                  >
-                    {ow.completionRate >= 15 && (
-                      <span className="text-[11px] font-semibold text-white">{ow.completed}/{ow.total}</span>
-                    )}
-                  </div>
-                  {ow.completionRate < 15 && (
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-muted-foreground">
-                      {ow.completed}/{ow.total}
-                    </span>
-                  )}
-                </div>
-                <div className="w-14 text-sm font-semibold text-right tabular-nums">
-                  <span className={ow.completionRate >= 80 ? 'text-emerald-600' : ow.completionRate >= 50 ? 'text-amber-600' : 'text-red-500'}>
-                    {ow.completionRate}%
-                  </span>
-                </div>
-                <Link
-                  href={`/functional/plan/${currentPlan.id}?owner=${encodeURIComponent(ow.owner)}`}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-[#1e3a5f]">
-                    详情 <ChevronRight className="h-3 w-3" />
-                  </Button>
-                </Link>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Plan List */}
-      <Card>
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-[#1e3a5f]" />
-            修订计划列表
-          </CardTitle>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+          <h2 className="text-xl font-semibold text-[#1e3a5f]">修订计划</h2>
+        </div>
+        <div className="flex items-center gap-2">
           {canAdd() && (
-            <Button size="sm" onClick={() => setShowCreateDialog(true)} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+            <Button size="sm" onClick={() => setShowCreateDialog(true)} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
               <Plus className="h-3.5 w-3.5 mr-1" /> 新增计划
             </Button>
           )}
-        </CardHeader>
-        <CardContent>
-          {plans.length > 0 && (
-            <PaginationBar
-              page={planPage}
-              totalPages={Math.max(1, Math.ceil(plans.length / planPageSize))}
-              total={plans.length}
-              pageSize={planPageSize}
-              pageSizeOptions={[5, 10, 20, 50]}
-              onPageChange={setPlanPage}
-              onPageSizeChange={(s) => { setPlanPageSize(s); setPlanPage(1); }}
-            />
-          )}
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">加载中...</div>
-          ) : plans.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Target className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              暂无修订计划，点击右上角创建
+        </div>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="relative overflow-hidden">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">本月任务总数</p>
+              <p className="text-2xl font-extrabold text-[#1e3a5f]">{currentStats.total}</p>
             </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                {plans.slice((planPage - 1) * planPageSize, planPage * planPageSize).map((plan) => (
-                <div
-                  key={plan.id}
-                  className="border rounded-lg p-4 hover:shadow-md hover:border-[#1e3a5f]/30 transition-all group"
-                >
-                  <div className="flex items-center justify-between">
-                    <Link href={`/functional/plan/${plan.id}`} className="flex items-center gap-3 flex-1">
-                      <div className="text-sm font-semibold text-[#1e3a5f]">{plan.planName}</div>
-                      <Badge className={`text-[10px] px-1.5 py-0 ${statusColor(plan.status)}`}>{plan.status}</Badge>
-                    </Link>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>任务 <strong className="text-foreground">{plan.taskCount}</strong></span>
-                      <span>已完成 <strong className="text-emerald-600">{plan.completedCount}</strong></span>
-                      {plan.taskCount > 0 && (
-                        <span>完成率 <strong className={plan.completedCount / plan.taskCount >= 0.8 ? 'text-emerald-600' : 'text-amber-600'}>
-                          {Math.round(plan.completedCount / plan.taskCount * 100)}%
-                        </strong></span>
-                      )}
-                      {plan.status === '草稿' && canDelete() && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setDeletePlanId(plan.id);
-                            setDeletePlanName(plan.planName);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      <Link href={`/functional/plan/${plan.id}`}>
-                        <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-[#1e3a5f]" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-                ))}
-              </div>
-              {plans.length > 0 && (
-                <PaginationBar
-                  page={planPage}
-                  totalPages={Math.max(1, Math.ceil(plans.length / planPageSize))}
-                  total={plans.length}
-                  pageSize={planPageSize}
-                  pageSizeOptions={[5, 10, 20, 50]}
-                  onPageChange={setPlanPage}
-                  onPageSizeChange={(s) => { setPlanPageSize(s); setPlanPage(1); }}
-                />
-              )}
-            </>
-          )}
+            <ClipboardList className="h-8 w-8 text-[#1e3a5f]/15" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1e3a5f]/30" />
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">待完成</p>
+              <p className="text-2xl font-extrabold text-amber-600">{currentStats.pending}</p>
+            </div>
+            <Clock className="h-8 w-8 text-amber-200" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400/40" />
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">已完成</p>
+              <p className="text-2xl font-extrabold text-emerald-600">{currentStats.completed}</p>
+            </div>
+            <CheckCircle2 className="h-8 w-8 text-emerald-200" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400/40" />
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">完成率</p>
+              <p className="text-2xl font-extrabold text-[#1e3a5f]">{currentStats.completionRate}<span className="text-sm">%</span></p>
+            </div>
+            <TrendingUp className="h-8 w-8 text-[#1e3a5f]/15" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1e3a5f]/30" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 顶部分页 */}
+      {plans.length > 0 && (
+        <PaginationBar
+          page={planPage}
+          totalPages={totalPages}
+          total={plans.length}
+          pageSize={planPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          onPageChange={setPlanPage}
+          onPageSizeChange={(s) => { setPlanPageSize(s); setPlanPage(1); }}
+        />
+      )}
+
+      {/* Plan Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-auto max-h-[70vh]">
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow className="bg-gray-50/80">
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap w-10 text-center">序号</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[180px]">计划名称</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[100px]">计划月份</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[70px]">状态</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[70px] text-center">任务总数</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[70px] text-center">已完成</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[70px] text-center">完成率</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[120px]">创建时间</TableHead>
+                  {(canEdit() || canDelete()) && <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap w-20 text-center sticky right-0 bg-gray-50 z-10">操作</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={canEdit() || canDelete() ? 9 : 8} className="text-center py-12 text-gray-400">加载中...</TableCell>
+                  </TableRow>
+                ) : plans.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={canEdit() || canDelete() ? 9 : 8} className="text-center py-12 text-gray-400">暂无修订计划</TableCell>
+                  </TableRow>
+                ) : (
+                  plans.slice((planPage - 1) * planPageSize, planPage * planPageSize).map((plan, idx) => {
+                    const rate = plan.taskCount > 0 ? Math.round(plan.completedCount / plan.taskCount * 100) : 0;
+                    return (
+                      <TableRow key={plan.id} className="hover:bg-blue-50/50">
+                        <TableCell className="text-gray-400 text-center">{(planPage - 1) * planPageSize + idx + 1}</TableCell>
+                        <TableCell>
+                          <Link href={`/functional/plan/${plan.id}`} className="text-[#1e3a5f] hover:underline font-medium">
+                            {plan.planName}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{plan.planMonth}</TableCell>
+                        <TableCell>
+                          <Badge className={`text-[10px] px-1.5 py-0 ${statusColor(plan.status)}`}>{plan.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">{plan.taskCount}</TableCell>
+                        <TableCell className="text-center text-emerald-600 font-medium">{plan.completedCount}</TableCell>
+                        <TableCell className="text-center">
+                          <span className={rate >= 80 ? 'text-emerald-600 font-medium' : rate >= 50 ? 'text-amber-600 font-medium' : 'text-red-500 font-medium'}>
+                            {rate}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{plan.createdAt || '--'}</TableCell>
+                        {(canEdit() || canDelete()) && (
+                          <TableCell className="sticky right-0 bg-white z-10">
+                            <div className="flex items-center justify-center gap-0.5">
+                              <Link href={`/functional/plan/${plan.id}`}>
+                                <Button variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted">
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </Link>
+                              {plan.status === '草稿' && canDelete() && (
+                                <Button
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDeletePlanId(plan.id);
+                                    setDeletePlanName(plan.planName);
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
+      {/* 底部分页 */}
+      {plans.length > 0 && (
+        <PaginationBar
+          page={planPage}
+          totalPages={totalPages}
+          total={plans.length}
+          pageSize={planPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          onPageChange={setPlanPage}
+          onPageSizeChange={(s) => { setPlanPageSize(s); setPlanPage(1); }}
+        />
+      )}
 
       {/* Create Plan Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -347,35 +320,32 @@ export default function RevisionPlanPage() {
               <Input
                 value={newPlanName}
                 onChange={(e) => setNewPlanName(e.target.value)}
-                placeholder="默认根据月份自动生成"
+                placeholder="不填则自动生成"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>取消</Button>
-            <Button onClick={handleCreatePlan} disabled={!newPlanMonth || creating} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="h-7 text-xs">取消</Button>
+            <Button onClick={handleCreatePlan} disabled={!newPlanMonth || creating} className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
               {creating ? '创建中...' : '创建'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Plan Confirmation Dialog */}
-      <Dialog open={deletePlanId !== null} onOpenChange={(open) => { if (!open) { setDeletePlanId(null); setDeletePlanName(''); } }}>
-        <DialogContent className="sm:max-w-md">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletePlanId} onOpenChange={() => { setDeletePlanId(null); setDeletePlanName(''); }}>
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-red-600">确认删除计划</DialogTitle>
-            <DialogDescription>此操作不可撤销，删除后计划及所有任务将永久移除</DialogDescription>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              确定要删除修订计划「{deletePlanName}」吗？此操作不可撤销。
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            <p className="text-sm text-muted-foreground">
-              确定要删除计划 <strong className="text-foreground">「{deletePlanName}」</strong> 吗？
-            </p>
-          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDeletePlanId(null); setDeletePlanName(''); }}>取消</Button>
-            <Button variant="destructive" onClick={handleDeletePlan} disabled={deleting}>
-              {deleting ? '删除中...' : '确认删除'}
+            <Button variant="outline" onClick={() => { setDeletePlanId(null); setDeletePlanName(''); }} className="h-7 text-xs">取消</Button>
+            <Button variant="destructive" onClick={handleDeletePlan} disabled={deleting} className="h-7 text-xs">
+              {deleting ? '删除中...' : '删除'}
             </Button>
           </DialogFooter>
         </DialogContent>

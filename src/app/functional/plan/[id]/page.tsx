@@ -560,7 +560,7 @@ export default function PlanDetailPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-3 pb-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2">
             <MultiSelectFilter
               label="任务类型"
               options={typeOptions}
@@ -573,7 +573,7 @@ export default function PlanDetailPage() {
               selected={filterStatus}
               onChange={setFilterStatus}
             />
-            <div className="col-span-2 md:col-span-3 lg:col-span-5 relative">
+            <div className="relative">
               <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
               <Input
                 placeholder="搜索流程名/编码/修订要求"
