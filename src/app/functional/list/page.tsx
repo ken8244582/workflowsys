@@ -568,14 +568,12 @@ export default function FunctionalListPage() {
   return (
     <TooltipProvider>
     <div className="space-y-4">
-      {/* 页面标题 */}
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
-        <h2 className="text-xl font-semibold text-[#1e3a5f]">流程清单</h2>
-      </div>
-
-      {/* Toolbar */}
+      {/* 页面标题 + 工具栏 */}
       <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-1.5 rounded-full bg-[#1e3a5f]" />
+          <h2 className="text-xl font-semibold text-[#1e3a5f]">流程清单</h2>
+        </div>
         <div className="flex items-center gap-3">
           <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'table' | 'tree')}>
             <TabsList className="h-8">
@@ -583,31 +581,31 @@ export default function FunctionalListPage() {
               <TabsTrigger value="tree" className="text-xs px-3 h-6">树形视图</TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* 编辑开关 */}
-          {can('edit_toggle') && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border bg-gray-50">
-              {editMode ? <LockOpen className="h-3.5 w-3.5 text-green-600" /> : <Lock className="h-3.5 w-3.5 text-gray-400" />}
-              <span className="text-xs text-gray-600">编辑</span>
-              <Switch checked={editMode} onCheckedChange={setEditMode} className="h-4 w-7 data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300" />
-            </div>
-          )}
-          {can('export') && (
-            <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
-              <Download className="h-3.5 w-3.5 mr-1" /> 导出
-            </Button>
-          )}
-          {can('init') && (
-            <Button onClick={() => setShowReinitDialog(true)} variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
-              <RotateCcw className="h-3.5 w-3.5 mr-1" /> 数据初始化
-            </Button>
-          )}
-          {can('add') && editMode && (
-            <Button onClick={handleCreate} size="sm" className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
-              <Plus className="h-3.5 w-3.5 mr-1" /> 新增
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* 编辑开关 */}
+            {can('edit_toggle') && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border bg-gray-50">
+                {editMode ? <LockOpen className="h-3.5 w-3.5 text-green-600" /> : <Lock className="h-3.5 w-3.5 text-gray-400" />}
+                <span className="text-xs text-gray-600">编辑</span>
+                <Switch checked={editMode} onCheckedChange={setEditMode} className="h-4 w-7 data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300" />
+              </div>
+            )}
+            {can('export') && (
+              <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
+                <Download className="h-3.5 w-3.5 mr-1" /> 导出
+              </Button>
+            )}
+            {can('init') && (
+              <Button onClick={() => setShowReinitDialog(true)} variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> 数据初始化
+              </Button>
+            )}
+            {can('add') && editMode && (
+              <Button onClick={handleCreate} size="sm" className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#2d4f7a]">
+                <Plus className="h-3.5 w-3.5 mr-1" /> 新增
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
