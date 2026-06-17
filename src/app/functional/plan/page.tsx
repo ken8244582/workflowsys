@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ClipboardList, Clock, CheckCircle2, Plus, Trash2, Pencil, TrendingUp, Send, RotateCcw, Eye } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle2, Plus, Trash2, Pencil, TrendingUp, Send, RotateCcw, Eye, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import type { RevisionPlan, OwnerProgress } from '@/lib/flow-data';
 import { PaginationBar } from '@/components/pagination-bar';
 import { usePermission } from '@/lib/use-permission';
@@ -32,6 +32,34 @@ export default function RevisionPlanPage() {
   const [deleting, setDeleting] = useState(false);
   const [planPage, setPlanPage] = useState(1);
   const [planPageSize, setPlanPageSize] = useState(10);
+  const [sortField, setSortField] = useState<'planMonth' | 'createdAt' | ''>('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  // Sort toggle
+  const toggleSort = (field: 'planMonth' | 'createdAt') => {
+    if (sortField === field) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else { setSortField(''); setSortDir('desc'); }
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: 'planMonth' | 'createdAt' }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 text-gray-400 cursor-pointer" />;
+    return sortDir === 'asc'
+      ? <ArrowUp className="h-3 w-3 ml-1 text-[#1e3a5f] cursor-pointer" />
+      : <ArrowDown className="h-3 w-3 ml-1 text-[#1e3a5f] cursor-pointer" />;
+  };
+
+  // Apply sorting
+  const sortedPlans = [...plans].sort((a, b) => {
+    if (!sortField) return 0;
+    const va = (sortField === 'planMonth' ? a.planMonth : a.createdAt) || '';
+    const vb = (sortField === 'planMonth' ? b.planMonth : b.createdAt) || '';
+    return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -120,7 +148,7 @@ export default function RevisionPlanPage() {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(plans.length / planPageSize));
+  const totalPages = Math.max(1, Math.ceil(sortedPlans.length / planPageSize));
 
   return (
     <div className="space-y-4">
@@ -184,11 +212,11 @@ export default function RevisionPlanPage() {
       </div>
 
       {/* 顶部分页 */}
-      {plans.length > 0 && (
+      {sortedPlans.length > 0 && (
         <PaginationBar
           page={planPage}
-          totalPages={totalPages}
-          total={plans.length}
+          totalPages={Math.ceil(sortedPlans.length / planPageSize)}
+          total={sortedPlans.length}
           pageSize={planPageSize}
           pageSizeOptions={[5, 10, 20, 50]}
           onPageChange={setPlanPage}
@@ -205,12 +233,16 @@ export default function RevisionPlanPage() {
                 <TableRow className="bg-gray-50/80">
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap w-10 text-center">序号</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[180px]">计划名称</TableHead>
-                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[100px]">计划月份</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[100px] cursor-pointer select-none" onClick={() => toggleSort('planMonth')}>
+                    <span className="inline-flex items-center">计划月份<SortIcon field="planMonth" /></span>
+                  </TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[70px]">状态</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[70px] text-center">任务总数</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[70px] text-center">已完成</TableHead>
                   <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[70px] text-center">完成率</TableHead>
-                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[120px]">创建时间</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[120px] cursor-pointer select-none" onClick={() => toggleSort('createdAt')}>
+                    <span className="inline-flex items-center">创建时间<SortIcon field="createdAt" /></span>
+                  </TableHead>
                   {(canEdit() || canDelete()) && <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap w-20 text-center sticky right-0 bg-gray-50 z-10">操作</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -219,12 +251,12 @@ export default function RevisionPlanPage() {
                   <TableRow>
                     <TableCell colSpan={canEdit() || canDelete() ? 9 : 8} className="text-center py-12 text-gray-400">加载中...</TableCell>
                   </TableRow>
-                ) : plans.length === 0 ? (
+                ) : sortedPlans.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={canEdit() || canDelete() ? 9 : 8} className="text-center py-12 text-gray-400">暂无修订计划</TableCell>
                   </TableRow>
                 ) : (
-                  plans.slice((planPage - 1) * planPageSize, planPage * planPageSize).map((plan, idx) => {
+                  sortedPlans.slice((planPage - 1) * planPageSize, planPage * planPageSize).map((plan, idx) => {
                     const rate = plan.taskCount > 0 ? Math.round(plan.completedCount / plan.taskCount * 100) : 0;
                     return (
                       <TableRow key={plan.id} className="hover:bg-blue-50/50">
@@ -282,11 +314,11 @@ export default function RevisionPlanPage() {
       </Card>
 
       {/* 底部分页 */}
-      {plans.length > 0 && (
+      {sortedPlans.length > 0 && (
         <PaginationBar
           page={planPage}
-          totalPages={totalPages}
-          total={plans.length}
+          totalPages={Math.ceil(sortedPlans.length / planPageSize)}
+          total={sortedPlans.length}
           pageSize={planPageSize}
           pageSizeOptions={[5, 10, 20, 50]}
           onPageChange={setPlanPage}
