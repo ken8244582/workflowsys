@@ -268,6 +268,29 @@ export default function PlanDetailPage() {
     }
   };
 
+  const handleStartTasks = async () => {
+    if (selectedIds.size === 0) return;
+    setOperating(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/plan-tasks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ _action: 'start' }),
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      fetchPlan();
+      fetchTasks();
+    } catch (err) {
+      console.error('Failed to start tasks:', err);
+    } finally {
+      setOperating(false);
+    }
+  };
+
   const handleCompleteTasks = async () => {
     if (selectedIds.size === 0) return;
     setOperating(true);
@@ -286,6 +309,29 @@ export default function PlanDetailPage() {
       fetchTasks();
     } catch (err) {
       console.error('Failed to complete tasks:', err);
+    } finally {
+      setOperating(false);
+    }
+  };
+
+  const handleWithdrawTasks = async () => {
+    if (selectedIds.size === 0) return;
+    setOperating(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/plan-tasks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ _action: 'withdraw' }),
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      fetchPlan();
+      fetchTasks();
+    } catch (err) {
+      console.error('Failed to withdraw tasks:', err);
     } finally {
       setOperating(false);
     }
@@ -607,9 +653,17 @@ export default function PlanDetailPage() {
         <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
           <span className="text-xs text-blue-700 font-medium">已选择 {selectedIds.size} 项</span>
           {canEdit() && (
-            <Button variant="outline" size="sm" onClick={handleCompleteTasks} className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-              <CheckCircle2 className="h-3.5 w-3.5" /> 批量标记完成
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={handleStartTasks} className="gap-1 text-blue-700 border-blue-300 hover:bg-blue-50">
+                <Play className="h-3.5 w-3.5" /> 批量开始
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleCompleteTasks} className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                <CheckCircle2 className="h-3.5 w-3.5" /> 批量标记完成
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleWithdrawTasks} className="gap-1 text-amber-700 border-amber-300 hover:bg-amber-50">
+                <RotateCcw className="h-3.5 w-3.5" /> 批量撤回
+              </Button>
+            </>
           )}
           {canDelete() && (
             <Button variant="outline" onClick={() => setShowBatchDeleteDialog(true)} className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50">
