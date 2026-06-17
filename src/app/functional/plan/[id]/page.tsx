@@ -374,20 +374,20 @@ export default function PlanDetailPage() {
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case '待执行': return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100">{status}</Badge>;
-      case '进行中': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">{status}</Badge>;
-      case '已完成': return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{status}</Badge>;
-      case '已顺延': return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">{status}</Badge>;
-      default: return <Badge>{status}</Badge>;
+      case '待执行': return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 text-[10px] px-1.5 py-0">{status}</Badge>;
+      case '进行中': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] px-1.5 py-0">{status}</Badge>;
+      case '已完成': return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px] px-1.5 py-0">{status}</Badge>;
+      case '已顺延': return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px] px-1.5 py-0">{status}</Badge>;
+      default: return <Badge className="text-[10px] px-1.5 py-0">{status}</Badge>;
     }
   };
 
   const taskTypeBadge = (type: string) => {
     switch (type) {
-      case '新增流程': return <Badge variant="outline" className="text-purple-700 border-purple-200 bg-purple-50">{type}</Badge>;
-      case '内容修订': return <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">{type}</Badge>;
-      case '格式修订': return <Badge variant="outline" className="text-teal-700 border-teal-200 bg-teal-50">{type}</Badge>;
-      default: return <Badge variant="outline">{type}</Badge>;
+      case '新增流程': return <Badge variant="outline" className="text-purple-700 border-purple-200 bg-purple-50 text-[10px] px-1.5 py-0">{type}</Badge>;
+      case '内容修订': return <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50 text-[10px] px-1.5 py-0">{type}</Badge>;
+      case '格式修订': return <Badge variant="outline" className="text-teal-700 border-teal-200 bg-teal-50 text-[10px] px-1.5 py-0">{type}</Badge>;
+      default: return <Badge variant="outline" className="text-[10px] px-1.5 py-0">{type}</Badge>;
     }
   };
 
@@ -564,7 +564,7 @@ export default function PlanDetailPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-3 pb-3">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 items-center">
             <MultiSelectFilter
               label="任务类型"
               options={typeOptions}
@@ -577,6 +577,18 @@ export default function PlanDetailPage() {
               selected={filterStatus}
               onChange={setFilterStatus}
             />
+            <Input
+              placeholder="L4所有者"
+              value={searchOwner}
+              onChange={e => setSearchOwner(e.target.value)}
+              className="h-7 text-xs"
+            />
+            <Input
+              placeholder="流程所属部门"
+              value={searchDept}
+              onChange={e => setSearchDept(e.target.value)}
+              className="h-7 text-xs"
+            />
             <div className="relative">
               <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
               <Input
@@ -586,18 +598,6 @@ export default function PlanDetailPage() {
                 className="h-7 text-xs pl-7"
               />
             </div>
-            <Input
-              placeholder="流程所属部门"
-              value={searchDept}
-              onChange={e => setSearchDept(e.target.value)}
-              className="h-7 text-xs"
-            />
-            <Input
-              placeholder="L4流程所有者"
-              value={searchOwner}
-              onChange={e => setSearchOwner(e.target.value)}
-              className="h-7 text-xs"
-            />
           </div>
         </CardContent>
       </Card>
@@ -641,27 +641,27 @@ export default function PlanDetailPage() {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-auto max-h-[60vh]">
-            <Table>
+            <Table className="text-xs">
               <TableHeader>
-                <TableRow className="bg-gray-50 sticky top-0 z-20">
-                  <TableHead className="w-10 sticky left-0 bg-gray-50 z-30">
+                <TableRow className="bg-gray-50/80">
+                  <TableHead className="w-10 sticky left-0 bg-gray-50/80 z-30">
                     <Checkbox
                       checked={tasks.length > 0 && selectedIds.size === tasks.length}
                       onCheckedChange={toggleAll}
                     />
                   </TableHead>
-                  <TableHead className="w-10 text-center">序号</TableHead>
-                  <TableHead className="min-w-[140px]">流程编码</TableHead>
-                  <TableHead className="min-w-[180px]">流程名称</TableHead>
-                  <TableHead className="min-w-[80px]">L4所有者</TableHead>
-                  <TableHead className="min-w-[70px]">流程所属部门</TableHead>
-                  <TableHead className="min-w-[60px]">格式</TableHead>
-                  <TableHead className="min-w-[60px]">分类</TableHead>
-                  <TableHead className="min-w-[80px]">任务类型</TableHead>
-                  <TableHead className="min-w-[120px]">修订要求</TableHead>
-                  <TableHead className="min-w-[70px]">状态</TableHead>
-                  <TableHead className="min-w-[100px]">完成时间</TableHead>
-                  {(canEdit() || canDelete()) && <TableHead className="w-28 text-center sticky right-0 bg-gray-50 z-30">操作</TableHead>}
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">序号</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">流程编码</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">流程名称</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">L4所有者</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">流程所属部门</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">格式</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">分类</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">任务类型</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">修订要求</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center">状态</TableHead>
+                  <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap">完成时间</TableHead>
+                  {(canEdit() || canDelete()) && <TableHead className="text-xs font-medium text-gray-600 whitespace-nowrap text-center sticky right-0 bg-gray-50/80 z-30">操作</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -671,7 +671,7 @@ export default function PlanDetailPage() {
                   <TableRow><TableCell colSpan={canEdit() || canDelete() ? 13 : 12} className="text-center py-8 text-muted-foreground">暂无任务</TableCell></TableRow>
                 ) : (
                   tasks.map((task, idx) => {
-                    const rowBg = task.status === '已完成' ? 'bg-emerald-50/30' : '';
+                    const rowBg = task.status === '已完成' ? 'bg-emerald-50/30 hover:bg-emerald-50/50' : 'hover:bg-blue-50/50';
                     const stickyBg = task.status === '已完成' ? 'bg-emerald-50' : 'bg-white';
                     return (
                     <TableRow key={task.id} className={rowBg}>
@@ -682,29 +682,29 @@ export default function PlanDetailPage() {
                         />
                       </TableCell>
                       <TableCell className="text-center text-muted-foreground">{(page - 1) * pageSize + idx + 1}</TableCell>
-                      <TableCell className="font-mono text-xs">{task.processCode || <span className="text-muted-foreground">--</span>}</TableCell>
+                      <TableCell className="font-mono">{task.processCode || <span className="text-muted-foreground">--</span>}</TableCell>
                       <TableCell>
                         <TruncateDiv content={task.processName || ''} maxWidth="240px" className="font-medium" />
                       </TableCell>
                       <TableCell><TruncateDiv content={task.owner || ''} maxWidth="80px" /></TableCell>
                       <TableCell><TruncateDiv content={task.department || ''} maxWidth="100px" /></TableCell>
                       <TableCell>
-                        {task.format === '集团模板' ? <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs px-1.5 py-0">{task.format}</Badge> :
-                         task.format === '旧格式' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-1.5 py-0">{task.format}</Badge> :
-                         task.format ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{task.format}</Badge> :
+                        {task.format === '集团模板' ? <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
+                         task.format === '旧格式' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
+                         task.format ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{task.format}</Badge> :
                          <span className="text-muted-foreground">--</span>}
                       </TableCell>
                       <TableCell>
-                        {task.category === '流程' ? <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-xs px-1.5 py-0">{task.category}</Badge> :
-                         task.category === '办法' ? <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0">{task.category}</Badge> :
-                         task.category === '其它' ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{task.category}</Badge> :
-                         task.category ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0">{task.category}</Badge> :
+                        {task.category === '流程' ? <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-[10px] px-1.5 py-0">{task.category}</Badge> :
+                         task.category === '办法' ? <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] px-1.5 py-0">{task.category}</Badge> :
+                         task.category === '其它' ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{task.category}</Badge> :
+                         task.category ? <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-[10px] px-1.5 py-0">{task.category}</Badge> :
                          <span className="text-muted-foreground">--</span>}
                       </TableCell>
                       <TableCell>{taskTypeBadge(task.taskType)}</TableCell>
                       <TableCell className="text-muted-foreground"><TruncateDiv content={task.description || ''} maxWidth="200px" /></TableCell>
                       <TableCell>{statusBadge(task.status)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{task.completedAt || '--'}</TableCell>
+                      <TableCell className="text-muted-foreground">{task.completedAt || '--'}</TableCell>
                       {(canEdit() || canDelete()) && <TableCell className={`sticky right-0 ${stickyBg} z-10 shadow-[-2px_0_0_0_rgba(0,0,0,0.04)]`}>
                         <div className="flex items-center justify-center gap-1">
                           {canEdit() && task.status === '待执行' && (
