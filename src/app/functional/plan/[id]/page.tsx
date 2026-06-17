@@ -618,6 +618,7 @@ export default function PlanDetailPage() {
           pageSizeOptions={[10, 20, 50, 100]}
           onPageChange={setPage}
           onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+          showTotal={false}
         />
       )}
 

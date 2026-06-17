@@ -138,7 +138,7 @@ export default function FunctionalRevisionPage() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500">共 {filteredData.length} 条修订记录</div>
+        <div />
         <div className="flex items-center gap-2">
           {canExport() && (
             <Button onClick={handleExport} variant="outline" size="sm" className="h-7 text-xs">
@@ -178,6 +178,7 @@ export default function FunctionalRevisionPage() {
           page={page} totalPages={totalPages} total={filteredData.length}
           pageSize={pageSize} pageSizeOptions={pageSizeOptions}
           onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+          showTotal={false}
         />
       )}
 

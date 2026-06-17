@@ -583,7 +583,6 @@ export default function FunctionalListPage() {
               <TabsTrigger value="tree" className="text-xs px-3 h-6">树形视图</TabsTrigger>
             </TabsList>
           </Tabs>
-          <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
         </div>
         <div className="flex items-center gap-2">
           {/* 编辑开关 */}
@@ -636,6 +635,7 @@ export default function FunctionalListPage() {
           page={page} totalPages={totalPages} total={filteredData.length}
           pageSize={pageSize} pageSizeOptions={pageSizeOptions}
           onPageChange={setPage} onPageSizeChange={s => { setPageSize(s); setPage(1); }}
+          showTotal={false}
         />
       )}
 
