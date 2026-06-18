@@ -41,6 +41,9 @@ export async function POST(request: Request) {
         mustChangePassword: false,
       });
       await setSessionCookie(newToken);
+      // Return the new token so the frontend can update localStorage
+      // (needed for iframe/preview where Authorization Bearer header is used instead of cookies)
+      return NextResponse.json({ success: true, token: newToken });
     }
     return NextResponse.json({ success: true });
   } catch (error) {

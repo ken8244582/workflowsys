@@ -34,6 +34,10 @@ export function ChangePasswordDialog() {
       });
       const data = await res.json();
       if (data.success) {
+        // Update token in localStorage if a new token was returned (must_change_password case)
+        if (data.token) {
+          localStorage.setItem('auth_token', data.token);
+        }
         await refreshSession();
         router.push('/');
       } else {
