@@ -76,6 +76,9 @@
 - 导出：Download + `variant="outline"`
 - 删除：Trash2 + `text-red-500 hover:text-red-600 hover:bg-red-50`
 - 编辑：Pencil + `text-muted-foreground hover:text-[#1e3a5f]`
+- 开始：Play + `text-blue-500 hover:text-blue-600 hover:bg-blue-50`
+- 完成：CheckCircle2 + `text-green-600 hover:text-green-700 hover:bg-green-50`
+- 撤回：RotateCcw + `text-gray-500 hover:text-gray-600 hover:bg-gray-50`
 - 初始化：RotateCcw + `text-red-600 border-red-200`
 
 ## 列表页标准样式规范
@@ -113,7 +116,16 @@
 | 删除 | - | Trash2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50` |
 | 编辑 | - | Pencil h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted` |
 | 恢复 | - | Undo2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50` |
+| 开始 | - | Play h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-blue-500 hover:text-blue-600 hover:bg-blue-50` |
+| 完成 | - | CheckCircle2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50` |
+| 撤回 | - | RotateCcw h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-gray-500 hover:text-gray-600 hover:bg-gray-50` |
 | 初始化 | "数据初始化" | RotateCcw h-3.5 w-3.5 | - | `variant="outline" h-7 text-xs text-red-600 border-red-200 hover:bg-red-50` |
+
+**批量操作按钮**：
+- 批量开始：`size="sm" h-7 text-xs` + Play 图标 + 蓝色 `text-blue-600 hover:bg-blue-50`
+- 批量标记完成：`size="sm" h-7 text-xs` + CheckCircle2 图标 + 绿色 `text-green-600 hover:bg-green-50`
+- 批量撤回：`size="sm" h-7 text-xs` + RotateCcw 图标 + 琥珀色 `text-amber-600 hover:bg-amber-50`
+- 批量删除：`size="sm" h-7 text-xs` + Trash2 图标 + 红色 `text-red-500 hover:bg-red-50`
 
 **规则**：
 - 按钮高度统一 `h-7`，字号统一 `text-xs`
@@ -202,6 +214,7 @@
 - 居中列：`text-center`
 - 长文本截断：使用 `<TruncateDiv>` 组件，指定 `maxWidth`
 - 操作列：sticky 定位 `sticky right-0 bg-white z-10`，内含图标按钮组 `flex items-center justify-center gap-0.5`
+- Badge标签：`text-[10px] px-1.5 py-0`（格式/分类/任务类型/状态等标签，与 `text-xs` 表格正文区分层次）
 
 ### 5. 分页组件规范
 

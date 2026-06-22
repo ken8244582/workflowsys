@@ -23,6 +23,7 @@
 | 职能流程 | 流程清单 | `/functional/list` | 筛选+分页+导出Excel+树形视图架构CRUD |
 | | 修订记录 | `/functional/revision` | 历史修订记录查询+导出 |
 | | 修订计划 | `/functional/plan` | 修订计划表格+排序+创建+查看+删除 |
+| | 修订计划详情 | `/functional/plan/[id]` | 任务CRUD+筛选(类型/状态/所有者/部门)+批量操作(开始/完成/撤回/删除)+导出+部门统计 |
 | 端到端流程 | 流程概览 | `/e2e/overview` | 端到端流程统计看板 |
 | | 流程管理 | `/e2e/list` | 端到端流程CRUD |
 | | 梳理计划 | `/e2e/plan` | 梳理计划管理 |
@@ -46,7 +47,7 @@
 │   │   │   ├── revision/page.tsx      # 修订记录页 (筛选+表格+导出)
 │   │   │   └── plan/
 │   │   │       ├── page.tsx           # 修订计划列表 (分页+创建+下发)
-│   │   │       └── [id]/page.tsx      # 修订计划详情 (任务CRUD+导出+部门统计)
+│   │   │       └── [id]/page.tsx      # 修订计划详情 (任务CRUD+筛选+批量操作+导出+部门统计)
 │   │   ├── e2e/
 │   │   │   ├── overview/page.tsx      # 端到端概览 (统计图表)
 │   │   │   ├── list/page.tsx          # 端到端流程管理 (CRUD)
@@ -298,6 +299,9 @@
 5. **撤回任务**：已完成→待执行(清除完成时间)
 6. **顺延任务**：校验下月计划是否已存在→创建或追加+复制任务，原任务标记"已顺延"
 7. **导出Excel**：Sheet1任务明细 + Sheet2部门完成进度统计
+8. **搜索筛选**：任务类型+任务状态+L4所有者+流程所属部门+关键词搜索（流程名/编码/修订要求）
+9. **批量操作**：批量开始(待执行→进行中)、批量标记完成(进行中→已完成)、批量撤回(已完成→待执行)、批量删除
+10. **操作列图标**：开始(Play)、完成(CheckCircle2)、撤回(RotateCcw)、删除(Trash2)，纯图标按钮+title悬浮提示
 
 ### 评价体系完整链路
 1. **自评标准初始化**：从嵌入的Excel解析数据初始化assessment_standards表（178条标准项）
@@ -391,6 +395,9 @@
 | 删除 | - | Trash2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50` |
 | 编辑 | - | Pencil h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-muted-foreground hover:text-[#1e3a5f] hover:bg-muted` |
 | 恢复 | - | Undo2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50` |
+| 开始 | - | Play h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-blue-500 hover:text-blue-600 hover:bg-blue-50` |
+| 完成 | - | CheckCircle2 h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50` |
+| 撤回 | - | RotateCcw h-3.5 w-3.5 | - | `h-7 w-7 p-0 text-gray-500 hover:text-gray-600 hover:bg-gray-50` |
 | 初始化 | "数据初始化" | RotateCcw h-3.5 w-3.5 | - | `variant="outline" h-7 text-xs text-red-600 border-red-200 hover:bg-red-50` |
 
 ### 筛选栏
@@ -405,6 +412,7 @@
 - 表头：`bg-gray-50/80`，单元格 `text-xs font-medium text-gray-600 whitespace-nowrap`
 - 表体：`text-xs`，行 hover `hover:bg-blue-50/50`
 - 操作列：sticky `right-0 bg-white z-10`，图标按钮组 `gap-0.5`
+- Badge标签：`text-[10px] px-1.5 py-0`（格式/分类/任务类型/状态等标签）
 
 ### 分页组件
 - 统一使用 `<PaginationBar>`，**表格上下各放一个**
