@@ -31,4 +31,7 @@ echo "Clearing port ${DEPLOY_RUN_PORT} before start."
 kill_port_if_listening
 echo "Starting HTTP service on port ${DEPLOY_RUN_PORT} for dev..."
 
-PORT=${DEPLOY_RUN_PORT} pnpm tsx watch src/server.ts
+# Use next dev directly instead of custom server.ts, because Turbopack has a bug
+# with custom servers on Windows (causes infinite panic-restart loop).
+# Production still uses server.ts via scripts/start.sh.
+PORT=${DEPLOY_RUN_PORT} pnpm next dev -p ${DEPLOY_RUN_PORT}
