@@ -72,6 +72,25 @@ export async function seedInitialData(): Promise<void> {
     if (userError) throw new Error(`创建超级管理员失败: ${userError.message}`);
   }
 
+  // Define expected menu configurations with supported actions
+  const expectedMenus: Array<{ name: string; path: string | null; supported_actions: string }> = [
+    { name: '统计概览', path: '/', supported_actions: '["view"]' },
+    { name: '职能流程', path: null, supported_actions: '[]' },
+    { name: '流程架构', path: '/functional/architecture', supported_actions: '["view","add","edit","delete"]' },
+    { name: '流程清单', path: '/functional/list', supported_actions: '["view","add","edit","delete","export","init","edit_toggle"]' },
+    { name: '修订记录', path: '/functional/revision', supported_actions: '["view","export"]' },
+    { name: '修订计划', path: '/functional/plan', supported_actions: '["view","add","edit","delete","export"]' },
+    { name: '端到端流程', path: null, supported_actions: '[]' },
+    { name: '流程概览', path: '/e2e/overview', supported_actions: '["view"]' },
+    { name: '流程管理', path: '/e2e/list', supported_actions: '["view","add","edit","delete"]' },
+    { name: '梳理计划', path: '/e2e/plan', supported_actions: '["view","add","edit","delete"]' },
+    { name: '评价体系', path: null, supported_actions: '[]' },
+    { name: '成熟度自评', path: '/assessment/maturity', supported_actions: '["view","add","edit","delete","export"]' },
+    { name: '系统管理', path: null, supported_actions: '[]' },
+    { name: '用户管理', path: '/system/users', supported_actions: '["view","add","edit","delete","reset_password"]' },
+    { name: '菜单管理', path: '/system/menus', supported_actions: '["view","add","edit","delete"]' },
+  ];
+
   // Check if menus exist
   const { data: existingMenus } = await client
     .from('sys_menus')
@@ -79,23 +98,17 @@ export async function seedInitialData(): Promise<void> {
     .limit(1);
 
   if (!existingMenus || existingMenus.length === 0) {
-    const defaultMenus = [
-      { name: '统计概览', path: '/', icon: 'LayoutDashboard', parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view"]' },
-      { name: '职能流程', path: null, icon: 'GitBranch', parent_id: null, sort_order: 2, is_visible: true, supported_actions: '[]' },
-      { name: '流程架构', path: '/functional/architecture', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
-      { name: '流程清单', path: '/functional/list', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view","add","edit","delete","export","import"]' },
-      { name: '修订记录', path: '/functional/revision', icon: null, parent_id: null, sort_order: 3, is_visible: true, supported_actions: '["view","export"]' },
-      { name: '修订计划', path: '/functional/plan', icon: null, parent_id: null, sort_order: 4, is_visible: true, supported_actions: '["view","add","edit","delete","export"]' },
-      { name: '端到端流程', path: null, icon: 'Workflow', parent_id: null, sort_order: 3, is_visible: true, supported_actions: '[]' },
-      { name: '流程概览', path: '/e2e/overview', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view"]' },
-      { name: '流程管理', path: '/e2e/list', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
-      { name: '梳理计划', path: '/e2e/plan', icon: null, parent_id: null, sort_order: 3, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
-      { name: '评价体系', path: null, icon: 'Award', parent_id: null, sort_order: 4, is_visible: true, supported_actions: '[]' },
-      { name: '成熟度自评', path: '/assessment/maturity', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view","add","edit","delete","export"]' },
-      { name: '系统管理', path: null, icon: 'Settings', parent_id: null, sort_order: 5, is_visible: true, supported_actions: '[]' },
-      { name: '用户管理', path: '/system/users', icon: null, parent_id: null, sort_order: 1, is_visible: true, supported_actions: '["view","add","edit","delete","reset_password"]' },
-      { name: '菜单管理', path: '/system/menus', icon: null, parent_id: null, sort_order: 2, is_visible: true, supported_actions: '["view","add","edit","delete"]' },
-    ];
+    // Insert new menus
+    const defaultMenus = expectedMenus.map(m => ({
+      name: m.name,
+      path: m.path,
+      icon: m.path === '/' ? 'LayoutDashboard' : 
+            m.path === null ? (m.name === '职能流程' ? 'GitBranch' : m.name === '端到端流程' ? 'Workflow' : m.name === '评价体系' ? 'Award' : 'Settings') : null,
+      parent_id: null,
+      sort_order: expectedMenus.indexOf(m) + 1,
+      is_visible: true,
+      supported_actions: m.supported_actions,
+    }));
 
     const { data: insertedMenus, error: menuError } = await client
       .from('sys_menus')
@@ -128,6 +141,22 @@ export async function seedInitialData(): Promise<void> {
           .eq('name', update.name)
           .is('parent_id', null);
         if (error) throw new Error(`更新菜单父级失败: ${error.message}`);
+      }
+    }
+  } else {
+    // Update existing menus' supported_actions to match expected configuration
+    for (const expected of expectedMenus) {
+      const { data: existing, error } = await client
+        .from('sys_menus')
+        .select('supported_actions')
+        .eq('name', expected.name)
+        .maybeSingle();
+
+      if (!error && existing && existing.supported_actions !== expected.supported_actions) {
+        await client
+          .from('sys_menus')
+          .update({ supported_actions: expected.supported_actions })
+          .eq('name', expected.name);
       }
     }
   }
@@ -315,34 +344,35 @@ export async function updateMenu(menuId: number, updates: Partial<Omit<SysMenu, 
 export async function deleteMenu(menuId: number): Promise<void> {
   const client = getSupabaseClient();
 
-  // Delete child menus first
-  const { error: childError } = await client
-    .from('sys_user_menus')
-    .delete()
-    .eq('menu_id', menuId);
-  if (childError) throw new Error(`删除菜单权限关联失败: ${childError.message}`);
-
-  // Delete child menu user associations
-  const { data: childMenus } = await client
-    .from('sys_menus')
-    .select('id')
-    .eq('parent_id', menuId);
-
-  if (childMenus && childMenus.length > 0) {
-    const childIds = childMenus.map((m: { id: number }) => m.id);
-    // Delete user_menu associations for child menus
-    for (const cid of childIds) {
-      await client.from('sys_user_menus').delete().eq('menu_id', cid);
+  // Get all menu IDs to delete (current menu + all children recursively)
+  const getAllMenuIds = async (parentId: number): Promise<number[]> => {
+    const { data: children } = await client
+      .from('sys_menus')
+      .select('id')
+      .eq('parent_id', parentId);
+    
+    let ids: number[] = [parentId];
+    if (children && children.length > 0) {
+      for (const child of children) {
+        ids = [...ids, ...await getAllMenuIds(child.id)];
+      }
     }
-    // Delete child menus
-    await client.from('sys_menus').delete().in('id', childIds);
-  }
+    return ids;
+  };
 
-  // Delete menu itself
-  const { error } = await client
-    .from('sys_menus')
-    .delete()
-    .eq('id', menuId);
+  const allMenuIds = await getAllMenuIds(menuId);
+
+  // Delete from sys_user_menu_functions
+  await client.from('sys_user_menu_functions').delete().in('menu_id', allMenuIds);
+
+  // Delete from sys_menu_functions
+  await client.from('sys_menu_functions').delete().in('menu_id', allMenuIds);
+
+  // Delete from sys_user_menus
+  await client.from('sys_user_menus').delete().in('menu_id', allMenuIds);
+
+  // Delete from sys_menus
+  const { error } = await client.from('sys_menus').delete().in('id', allMenuIds);
   if (error) throw new Error(`删除菜单失败: ${error.message}`);
 }
 

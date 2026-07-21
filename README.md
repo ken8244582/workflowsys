@@ -26,14 +26,14 @@
 JWT_SECRET=your-random-secret-key
 
 # 必需 - Supabase连接信息
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+COZE_SUPABASE_URL=https://your-project.supabase.co
+COZE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 ### 启动开发服务器
 
 ```bash
-coze dev
+pnpm dev
 ```
 
 启动后，在浏览器中打开 [http://localhost:5000](http://localhost:5000) 查看应用。
@@ -43,13 +43,13 @@ coze dev
 ### 构建生产版本
 
 ```bash
-coze build
+pnpm build
 ```
 
 ### 启动生产服务器
 
 ```bash
-coze start
+pnpm start
 ```
 
 ## 技术栈
@@ -126,5 +126,5 @@ src/
 ## 相关文档
 
 - [AGENTS.md](./AGENTS.md) — 项目架构与开发规范
-- [DESIGN.md](./DESIGN.md) — 设计规范
-- [REQUIREMENTS.md](./REQUIREMENTS.md) — 需求与Bug跟踪
+- [docs/DESIGN.md](./docs/DESIGN.md) — 设计规范
+- [docs/DEPLOY.md](./docs/DEPLOY.md) — 部署指南

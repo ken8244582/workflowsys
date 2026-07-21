@@ -90,9 +90,10 @@
 │   └── storage/database/
 │       └── shared/schema.ts          # Drizzle ORM 表定义
 ├── .env.local                        # 环境变量(JWT_SECRET等)
-├── DESIGN.md                         # 设计规范
+├── docs/                             # 文档目录
+│   ├── DESIGN.md                     # 设计规范
+│   └── DEPLOY.md                     # 部署指南
 ├── AGENTS.md                         # 本文件
-└── REQUIREMENTS.md                   # 需求与Bug跟踪文档
 ```
 
 ## 数据库表结构 (Supabase PostgreSQL)
@@ -350,10 +351,10 @@
 | 变量名 | 必需 | 说明 |
 |--------|------|------|
 | JWT_SECRET | 是 | JWT签名密钥，缺失时服务拒绝启动 |
-| NEXT_PUBLIC_SUPABASE_URL | 是 | Supabase项目URL |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | 是 | Supabase匿名Key |
+| COZE_SUPABASE_URL | 是 | Supabase项目URL |
+| COZE_SUPABASE_ANON_KEY | 是 | Supabase匿名Key |
 
-> 本地部署详细指南见 [DEPLOY.md](./DEPLOY.md)，包含环境准备、数据库初始化、配置说明等完整步骤。
+> 本地部署详细指南见 [DEPLOY.md](./docs/DEPLOY.md)，包含环境准备、数据库初始化、配置说明等完整步骤。
 
 ## 共享组件
 
@@ -380,7 +381,7 @@
 
 ## 列表页标准样式（基准页：流程清单 `/functional/list`）
 
-详细设计规范见 `DESIGN.md` →「列表页标准样式规范」章节。以下为快速参考：
+详细设计规范见 `docs/DESIGN.md` →「列表页标准样式规范」章节。以下为快速参考：
 
 ### 页面标题
 - 左侧竖线：`h-8 w-1.5 rounded-full bg-[#1e3a5f]`

@@ -488,8 +488,8 @@ nano .env.local       # 或 vim .env.local / code .env.local
 ```bash
 cat > .env.local << 'EOF'
 JWT_SECRET=your_jwt_secret_here
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+COZE_SUPABASE_URL=https://your-project.supabase.co
+COZE_SUPABASE_ANON_KEY=your_anon_key_here
 EOF
 ```
 
@@ -519,8 +519,8 @@ notepad .env.local
 ```powershell
 @"
 JWT_SECRET=your_jwt_secret_here
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+COZE_SUPABASE_URL=https://your-project.supabase.co
+COZE_SUPABASE_ANON_KEY=your_anon_key_here
 "@ | Out-File -Encoding utf8 -FilePath .env.local
 ```
 
@@ -566,8 +566,8 @@ nano .env.local
 JWT_SECRET=your_jwt_secret_here
 
 # ===== Supabase 配置（必填）=====
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+COZE_SUPABASE_URL=https://your-project.supabase.co
+COZE_SUPABASE_ANON_KEY=your_anon_key_here
 ```
 
 ### 如何生成 JWT_SECRET
@@ -590,8 +590,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 1. 登录 [Supabase Dashboard](https://app.supabase.com/)
 2. 选择你的项目（如未创建，参考第 3 步「创建 Supabase 项目」）
 3. 点击左侧 **Settings**（齿轮图标）→ **API**
-4. 找到 **Project URL** → 复制 → 填入 `NEXT_PUBLIC_SUPABASE_URL`
-5. 找到 **Project API keys** 下的 **anon public** → 复制 → 填入 `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. 找到 **Project URL** → 复制 → 填入 `COZE_SUPABASE_URL`
+5. 找到 **Project API keys** 下的 **anon public** → 复制 → 填入 `COZE_SUPABASE_ANON_KEY`
 
 > **安全提醒**：`anon key` 是公开密钥，可暴露在前端代码中；`service_role key` 是特权密钥，**绝对不能**写入 `.env.local` 或前端代码。
 
@@ -600,10 +600,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 | 变量名 | 必需 | 说明 | 示例值 |
 |--------|------|------|--------|
 | `JWT_SECRET` | 是 | JWT 签名密钥，用于用户认证 | `a1b2c3d4e5f6...`（32字节 base64） |
-| `NEXT_PUBLIC_SUPABASE_URL` | 是 | Supabase 项目 URL | `https://abcdef.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 是 | Supabase 匿名 Key | `eyJhbGciOiJIUzI1NiIs...` |
+| `COZE_SUPABASE_URL` | 是 | Supabase 项目 URL | `https://abcdef.supabase.co` |
+| `COZE_SUPABASE_ANON_KEY` | 是 | Supabase 匿名 Key | `eyJhbGciOiJIUzI1NiIs...` |
 | `DEPLOY_RUN_PORT` | 否 | 服务监听端口，默认 `5000` | `3000` |
-| `COZE_PROJECT_ENV` | 否 | 运行环境标识，`DEV` 或 `PROD` | `PROD` |
 
 ### 配置验证
 
@@ -690,7 +689,7 @@ DEPLOY_RUN_PORT=3000 pnpm dev
 
 ### 关闭 HTTPS Cookie（本地开发）
 
-本地开发时 Cookie 的 `secure` 属性自动关闭（通过 `COZE_PROJECT_ENV` 判断，非 `PROD` 时不启用 secure）。
+本地开发时 Cookie 的 `secure` 属性自动关闭（通过环境自动判断，非生产环境时不启用 secure）。
 
 ## 常见问题
 
@@ -701,8 +700,8 @@ A: 检查 `.env.local` 文件是否存在且包含 `JWT_SECRET` 配置。
 ### Q: 登录后页面空白/401
 
 A: 检查 Supabase 连接配置是否正确：
-- `NEXT_PUBLIC_SUPABASE_URL` 是否可访问
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` 是否匹配
+- `COZE_SUPABASE_URL` 是否可访问
+- `COZE_SUPABASE_ANON_KEY` 是否匹配
 - 数据库表是否已创建
 
 ### Q: iframe 中无法登录

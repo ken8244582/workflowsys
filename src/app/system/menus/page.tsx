@@ -55,7 +55,9 @@ export default function MenusPage() {
   // Add/Edit dialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState<SysMenu | null>(null);
+  const [menuToDelete, setMenuToDelete] = useState<{ id: number; name: string; hasChildren: boolean } | null>(null);
   const [formName, setFormName] = useState('');
   const [formPath, setFormPath] = useState('');
   const [formIcon, setFormIcon] = useState('');
@@ -109,12 +111,18 @@ export default function MenusPage() {
   // Fetch menu functions
   const fetchMenuFunctions = async (menuId: number) => {
     setFuncLoading(true);
+    setError('');
     try {
       const res = await fetch(`/api/sys/menu-functions?menu_id=${menuId}`);
       const data = await res.json();
-      setMenuFunctions(data.functions || []);
+      if (data.error) {
+        setError(data.error + (res.status >= 500 ? '（数据库表可能未初始化）' : ''));
+        setMenuFunctions([]);
+      } else {
+        setMenuFunctions(data.functions || []);
+      }
     } catch {
-      console.error('获取菜单功能失败');
+      setError('获取菜单功能失败，请检查数据库表是否已创建');
       setMenuFunctions([]);
     } finally {
       setFuncLoading(false);
@@ -125,6 +133,7 @@ export default function MenusPage() {
   const openFuncDialog = (menu: SysMenu) => {
     setFuncMenuId(menu.id);
     setFuncMenuName(menu.name);
+    setError('');
     fetchMenuFunctions(menu.id);
     setShowFuncDialog(true);
   };
@@ -132,11 +141,11 @@ export default function MenusPage() {
   // Add function to menu
   const handleAddFunction = async (template: { code: string; name: string; order: number }) => {
     if (!funcMenuId) return;
-    // Check if already exists
     if (menuFunctions.some(f => f.function_code === template.code)) {
       return;
     }
     try {
+      setError('');
       const res = await fetch('/api/sys/menu-functions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,24 +157,33 @@ export default function MenusPage() {
         })
       });
       const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
       if (data.function) {
         setMenuFunctions([...menuFunctions, data.function].sort((a, b) => a.sort_order - b.sort_order));
       }
     } catch {
-      console.error('添加功能失败');
+      setError('添加功能失败');
     }
   };
 
   // Remove function from menu
   const handleRemoveFunction = async (funcId: number) => {
     try {
+      setError('');
       const res = await fetch(`/api/sys/menu-functions/${funcId}`, { method: 'DELETE' });
       const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
       if (data.success) {
         setMenuFunctions(menuFunctions.filter(f => f.id !== funcId));
       }
     } catch {
-      console.error('删除功能失败');
+      setError('删除功能失败');
     }
   };
 
@@ -239,14 +257,18 @@ export default function MenusPage() {
     }
   };
 
-  // Delete menu
-  const handleDeleteMenu = async (menuId: number, hasChildren: boolean) => {
-    const msg = hasChildren
-      ? '该菜单下有子菜单，删除后会一并删除所有子菜单。确定要删除吗？'
-      : '确定要删除该菜单吗？';
-    if (!confirm(msg)) return;
+  // Delete menu - open confirm dialog
+  const handleDeleteMenu = (menuId: number, menuName: string, hasChildren: boolean) => {
+    setMenuToDelete({ id: menuId, name: menuName, hasChildren });
+    setShowDeleteDialog(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    if (!menuToDelete) return;
+    setShowDeleteDialog(false);
     try {
-      const res = await fetch(`/api/sys/menus/${menuId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/sys/menus/${menuToDelete.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         fetchMenus();
@@ -256,6 +278,7 @@ export default function MenusPage() {
     } catch {
       alert('网络错误');
     }
+    setMenuToDelete(null);
   };
 
   const resetForm = () => {
@@ -385,10 +408,11 @@ export default function MenusPage() {
                                 新增子菜单
                               </Button>
                               <Button
+                                type="button"
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => handleDeleteMenu(top.id, subMenus.length > 0)}
+                                onClick={() => handleDeleteMenu(top.id, top.name, subMenus.length > 0)}
                               >
                                 <Trash2 className="h-3.5 w-3.5 mr-1" />
                                 删除
@@ -448,14 +472,15 @@ export default function MenusPage() {
                                   </Button>
                                 )}
                                 <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                  onClick={() => handleDeleteMenu(sub.id, false)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                  删除
-                                </Button>
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => handleDeleteMenu(sub.id, sub.name, false)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                删除
+                              </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -632,6 +657,7 @@ export default function MenusPage() {
           <DialogHeader>
             <DialogTitle>功能配置 - {funcMenuName}</DialogTitle>
           </DialogHeader>
+          {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
           <div className="py-4">
             <p className="text-sm text-muted-foreground mb-4">配置该菜单支持的功能操作，用户权限配置时可勾选开通。</p>
 
@@ -691,6 +717,32 @@ export default function MenusPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      {showDeleteDialog && menuToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowDeleteDialog(false)} />
+          <div className="relative bg-white rounded-lg border p-6 shadow-lg max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-8 w-1.5 rounded-full bg-red-500" />
+              <h3 className="text-lg font-semibold text-red-600">确认删除</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-6">
+              {menuToDelete.hasChildren
+                ? `确定要删除菜单「${menuToDelete.name}」及其所有子菜单吗？此操作不可撤销。`
+                : `确定要删除菜单「${menuToDelete.name}」吗？此操作不可撤销。`}
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowDeleteDialog(false)} className="h-7 text-xs">
+                取消
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmDelete} className="h-7 text-xs bg-red-500 hover:bg-red-600">
+                确认删除
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
