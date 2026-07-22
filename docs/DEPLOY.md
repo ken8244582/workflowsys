@@ -109,50 +109,74 @@ git --version
 
 ### 1.5 准备 Supabase 数据库
 
-本项目使用 Supabase 提供的 PostgreSQL 数据库服务。有两种方式：
+本项目数据库统一使用 Supabase，连接完全由环境变量驱动（见「4. 配置环境变量」），**切换方式只需改环境变量，无需改动代码**。代码层已**彻底移除对原 Coze 云平台的耦合**（不再依赖 `coze-coding-dev-sdk` 上报、也不再使用 `coze_workload_identity` Python 取环境变量逻辑），`src/storage/database/supabase-client.ts` 现在纯靠 `COZE_SUPABASE_URL` / `COZE_SUPABASE_ANON_KEY` / `COZE_SUPABASE_SERVICE_ROLE_KEY` 三个环境变量直连任意 Supabase 实例。
 
-#### 方式 A：使用 Supabase 云服务（推荐，开箱即用）
+> 注：环境变量名仍沿用 `COZE_` 前缀（历史命名），仅为变量名，与任何云端平台无关，本地/自托管部署照常使用。
 
-1. 前往 [Supabase 官网](https://supabase.com/) 注册账号
-2. 点击 **New Project** 创建新项目
-   - 填写项目名称（如 `flow-management`）
-   - 设置数据库密码（请妥善保存）
-   - 选择离你最近的区域（如 Northeast Asia → Tokyo）
-3. 等待项目初始化完成（约 1-2 分钟）
-4. 进入项目后，记录以下信息（在 **Settings → API** 中）：
-   - **Project URL**：形如 `https://xxxxx.supabase.co`
-   - **anon public key**：形如 `eyJhbGciOiJIUzI1NiIs...`
-5. 在 **SQL Editor** 中执行建表 SQL（见下方「3. 数据库初始化」章节）
+按部署场景选择：
 
-#### 方式 B：使用本地 Supabase（适合离线/内网部署）
+- **本地开发** → 云端 Supabase（注册即用，无需 Docker，最快跑通）
+- **服务器正式环境** → 本地 Supabase（在服务器上用 Docker 自托管，数据不出内网）
 
-需要先安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)：
+#### A. 本地开发：云端 Supabase（默认，推荐）
+
+1. 前往 [Supabase 官网](https://supabase.com/) 注册账号并 **New Project**（等待初始化完成）
+2. **Settings → API** 获取 **Project URL** 与 **anon public key**
+3. 在 **SQL Editor** 中执行 `supabase/migrations/0001_init.sql` 建表（创建全部业务表、系统表及 RLS 策略）
+4. 将 `.env.local` 中的 `COZE_SUPABASE_URL` / `COZE_SUPABASE_ANON_KEY` 填为云端值（当前 `.env.local` 默认即为云端值，开箱即用）
+
+#### B. 服务器正式环境：本地 Supabase（Docker 自托管）
+
+在服务器（Linux）上安装 Docker 与 Supabase CLI，于项目目录执行 `supabase start` 即可自动建表，再把环境变量指向服务器的本地 Supabase 端点：
 
 ```bash
-# 安装 Supabase CLI
+# 服务器上
 npm install -g supabase
-
-# 在项目根目录初始化
-supabase init
-
-# 启动本地 Supabase（需要 Docker）
-supabase start
-
-# 启动成功后会输出连接信息：
-# API URL: http://localhost:54321
-# anon key: eyJ...（自动生成）
-# DB URL: postgresql://postgres:postgres@localhost:54322/postgres
+supabase start   # 自动应用 supabase/migrations/0001_init.sql 建表
 ```
 
-> **注意**：本地 Supabase 依赖 Docker，请确保 Docker Desktop 已启动并正常运行。
+启动成功后拿到本地连接信息，在**服务器环境变量**（不要写进 `.env.local` 提交）中设置：
 
-#### 方式 C：自建 PostgreSQL（高级）
+```
+COZE_SUPABASE_URL=http://127.0.0.1:54321
+COZE_SUPABASE_ANON_KEY=<supabase start 输出的本地 anon key>
+COZE_SUPABASE_SERVICE_ROLE_KEY=<supabase start 输出的本地 service_role key>
+COZE_PROJECT_ENV=PROD
+PORT=5000
+```
 
-如果不想使用 Supabase 服务，可以自行搭建兼容的 PostgreSQL 数据库：
+> - 若 Supabase 与前端应用不在同一台主机，将 `COZE_SUPABASE_URL` 改为服务器局域网 IP（如 `http://10.x.x.x:54321`），并放行防火墙 54321 端口。
+> - 本地 anon / service_role key 为 Supabase 演示用固定值，仅限**服务器可信内网**使用，切勿暴露在公网。
+> - 常用命令：`supabase status` 查看状态、`supabase db reset` 重置、`supabase stop` 停止。
 
-1. 安装 PostgreSQL 14+ 并创建数据库
-2. 使用 [PostgREST](https://postgrest.org/) 提供 REST API（兼容 Supabase 客户端）
-3. 此方式配置较复杂，需要自行处理认证和 API 兼容层，仅推荐有经验的运维人员使用
+##### B.1 从云端 Supabase 迁移现有数据
+
+若云端已有业务数据（流程清单/修订/自评等），无需从头录入，使用配套脚本 `supabase/migrate-from-cloud.sh` 一键迁移：
+
+```bash
+# 1) 在云端 Supabase 控制台 → Project Settings → Database → Connection string
+#    复制 Direct connection 串，形如：
+#    postgresql://postgres:<云端密码>@db.<ref>.supabase.co:5432/postgres
+
+# 2) 在服务器上设置该串并执行迁移脚本（假设已在服务器拉取本项目代码）
+export CLOUD_DB_URL='postgresql://postgres:xxxx@db.xxxx.supabase.co:5432/postgres'
+bash supabase/migrate-from-cloud.sh
+```
+
+脚本会：
+1. `pg_dump` 云端 `public` schema 的**全部 15 张表**数据（`--data-only --no-owner --no-privileges`，禁用触发器避免外键/RLS 拦截）；
+2. 通过本地 Postgres 直连端口 `54322` 以 `postgres` 超级用户导入（绕过 RLS）；
+3. **自动重置所有 serial 序列**到 `MAX(id)+1`，避免新插入因 id 冲突失败。
+
+迁移后注意事项：
+- 应用的 `seedInitialData()` / `seedStandardsIfNeeded()` 均为**幂等**（先查后插），云端数据已含超管/菜单/评价标准项，首次启动不会重复插入，直接沿用云端原账号密码登录即可。
+- 若云端子用户密码由 bcrypt 加密存储，迁移后密码 hash 一并带入，可原密码登录；如需重置可用默认超管 `18692602217 / 123456`（首次登录建议修改）。
+- 迁移的表：flows、revision_records、revision_plans、plan_tasks、e2e_processes、e2e_plans、sys_users、sys_menus、sys_user_menus、sys_menu_functions、sys_user_menu_functions、assessment_standards、assessments、assessment_details、health_check。
+- 若只想全新开始（不迁移），跳过本步骤，应用首次访问时自动 seed 默认超管与菜单，业务数据后续从 Excel 重新导入（见「7. 数据导入」）。
+
+#### C. 自建 PostgreSQL（高级，不推荐）
+
+仅当不能使用 Supabase 客户端时考虑。需自行搭建 PostgreSQL 14+ 并用 [PostgREST](https://postgrest.org/) 暴露兼容 API，配置复杂，不在本文档展开。
 
 ### 1.6 环境准备检查清单
 
@@ -163,8 +187,8 @@ supabase start
 | Node.js 已安装 | `node -v` | v20.x+ |
 | pnpm 已安装 | `pnpm -v` | 9.x+ |
 | Git 已安装 | `git --version` | git version 2.x |
-| Supabase 已创建 | 访问 Supabase Dashboard | 项目可见且状态为 Active |
-| 数据库表已创建 | 在 SQL Editor 中查询 `SELECT tablename FROM pg_tables WHERE schemaname='public'` | 返回 12 张表名 |
+| Supabase 可用 | 本地开发访问 Dashboard / 服务器执行 `supabase status` | 能获取到 Project URL 与 anon key |
+| 数据库表已创建 | 查询 `SELECT tablename FROM pg_tables WHERE schemaname='public'` | 返回 15 张表名 |
 
 ---
 
@@ -190,270 +214,18 @@ pnpm install
 
 ## 3. 数据库初始化
 
-> 在执行以下步骤前，请确保 Supabase 项目已创建并处于 Active 状态。
+> **本地部署（默认）**：`supabase start` 会自动应用 `supabase/migrations/0001_init.sql` 建表，**无需手动执行 SQL**，直接跳到「4. 配置环境变量」。
+>
+> 本步骤仅在**云端 Supabase** 部署时需要：将 `supabase/migrations/0001_init.sql` 的完整内容复制到 Supabase Dashboard → **SQL Editor** 中执行一次即可创建全部表与 RLS 策略。
 
-### 建表 SQL
-
-进入 Supabase Dashboard → **SQL Editor**，点击 **New Query**，粘贴以下 SQL 并点击 **Run** 执行：
 
 <details>
-<summary>点击展开完整建表 SQL</summary>
+<summary>建表 SQL 已迁移至迁移文件</summary>
 
-```sql
--- ============================================
--- 流程清单表
--- ============================================
-CREATE TABLE IF NOT EXISTS flows (
-  id SERIAL PRIMARY KEY,
-  l1_domain TEXT,
-  l1_owner TEXT,
-  l2_group TEXT,
-  l2_owner TEXT,
-  l3_segment TEXT,
-  l3_owner TEXT,
-  process_code TEXT,
-  l4_process TEXT,
-  version TEXT,
-  department TEXT,
-  l4_owner TEXT,
-  format TEXT,
-  category TEXT,
-  it_coverage TEXT,
-  it_sub_category TEXT,
-  it_score INTEGER,
-  status TEXT,
-  created_by TEXT,
-  created_at_ts TEXT,
-  updated_by TEXT,
-  updated_at_ts TEXT
-);
-
--- ============================================
--- 修订记录表
--- ============================================
-CREATE TABLE IF NOT EXISTS revision_records (
-  id SERIAL PRIMARY KEY,
-  revision_date TEXT,
-  process_code TEXT,
-  l4_process TEXT,
-  version TEXT,
-  l1_domain TEXT,
-  l2_group TEXT,
-  l3_segment TEXT,
-  revision_type TEXT,
-  description TEXT,
-  operator TEXT,
-  created_by TEXT,
-  created_at_ts TEXT,
-  updated_by TEXT,
-  updated_at_ts TEXT
-);
-
--- ============================================
--- 修订计划表
--- ============================================
-CREATE TABLE IF NOT EXISTS revision_plans (
-  id SERIAL PRIMARY KEY,
-  plan_month TEXT UNIQUE,
-  plan_name TEXT,
-  status TEXT DEFAULT '草稿',
-  task_count INTEGER DEFAULT 0,
-  completed_count INTEGER DEFAULT 0,
-  created_at TEXT,
-  updated_at TEXT,
-  created_by TEXT,
-  updated_by TEXT
-);
-
--- ============================================
--- 修订计划任务表
--- ============================================
-CREATE TABLE IF NOT EXISTS plan_tasks (
-  id SERIAL PRIMARY KEY,
-  plan_id INTEGER REFERENCES revision_plans(id),
-  flow_item_id INTEGER,
-  process_code TEXT,
-  process_name TEXT,
-  owner TEXT,
-  department TEXT,
-  version TEXT,
-  format TEXT,
-  category TEXT,
-  task_type TEXT,
-  description TEXT,
-  status TEXT DEFAULT '待执行',
-  completed_at TEXT,
-  carried_from_plan_id INTEGER,
-  carried_to_plan_id INTEGER,
-  sort_order INTEGER DEFAULT 0,
-  remarks TEXT,
-  created_at TEXT,
-  created_by TEXT,
-  updated_by TEXT,
-  updated_at_ts TEXT
-);
-
--- ============================================
--- 端到端流程表
--- ============================================
-CREATE TABLE IF NOT EXISTS e2e_processes (
-  id TEXT PRIMARY KEY,
-  name TEXT,
-  owner TEXT,
-  department TEXT,
-  responsible_person TEXT,
-  current_progress INTEGER DEFAULT 0,
-  target_progress INTEGER DEFAULT 100,
-  status TEXT DEFAULT 'not_started',
-  start_date TEXT,
-  completed_date TEXT,
-  description TEXT,
-  created_by TEXT,
-  created_at_ts TEXT,
-  updated_by TEXT,
-  updated_at_ts TEXT
-);
-
--- ============================================
--- 端到端梳理计划表
--- ============================================
-CREATE TABLE IF NOT EXISTS e2e_plans (
-  id TEXT PRIMARY KEY,
-  process_id TEXT REFERENCES e2e_processes(id),
-  plan_type TEXT,
-  year INTEGER,
-  period INTEGER,
-  plan_content TEXT,
-  plan_progress INTEGER DEFAULT 0,
-  actual_progress INTEGER DEFAULT 0,
-  status TEXT DEFAULT 'planned',
-  notes TEXT,
-  created_by TEXT,
-  created_at_ts TEXT,
-  updated_by TEXT,
-  updated_at_ts TEXT
-);
-
--- ============================================
--- 系统用户表
--- ============================================
-CREATE TABLE IF NOT EXISTS sys_users (
-  id SERIAL PRIMARY KEY,
-  username VARCHAR(50) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  display_name VARCHAR(100),
-  is_super_admin BOOLEAN DEFAULT FALSE,
-  must_change_password BOOLEAN DEFAULT TRUE,
-  is_active BOOLEAN DEFAULT TRUE
-);
-
--- ============================================
--- 系统菜单表
--- ============================================
-CREATE TABLE IF NOT EXISTS sys_menus (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  path VARCHAR(255),
-  icon VARCHAR(100),
-  parent_id INTEGER,
-  sort_order INTEGER DEFAULT 0,
-  is_visible BOOLEAN DEFAULT TRUE,
-  supported_actions TEXT DEFAULT '[]'
-);
-
--- ============================================
--- 用户菜单权限表
--- ============================================
-CREATE TABLE IF NOT EXISTS sys_user_menus (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES sys_users(id) ON DELETE CASCADE,
-  menu_id INTEGER REFERENCES sys_menus(id) ON DELETE CASCADE
-);
-
--- ============================================
--- 评价标准项表
--- ============================================
-CREATE TABLE IF NOT EXISTS assessment_standards (
-  id SERIAL PRIMARY KEY,
-  row_index INTEGER,
-  section_type TEXT,
-  layer1 TEXT,
-  layer1_score NUMERIC,
-  layer2 TEXT,
-  layer3 TEXT,
-  layer4 TEXT,
-  layer5 TEXT,
-  criteria_desc TEXT,
-  standard_score NUMERIC,
-  is_scoring_row BOOLEAN DEFAULT FALSE,
-  score_group_key TEXT,
-  sort_order INTEGER DEFAULT 0
-);
-
--- ============================================
--- 自评主表
--- ============================================
-CREATE TABLE IF NOT EXISTS assessments (
-  id SERIAL PRIMARY KEY,
-  name TEXT,
-  period TEXT,
-  status TEXT DEFAULT '草稿',
-  total_score TEXT,
-  mechanism_score TEXT,
-  operation_score TEXT,
-  it_score TEXT,
-  remarks TEXT,
-  created_by TEXT,
-  created_at_ts TEXT,
-  updated_by TEXT,
-  updated_at_ts TEXT
-);
-
--- ============================================
--- 自评明细表
--- ============================================
-CREATE TABLE IF NOT EXISTS assessment_details (
-  id SERIAL PRIMARY KEY,
-  assessment_id INTEGER REFERENCES assessments(id) ON DELETE CASCADE,
-  standard_id INTEGER REFERENCES assessment_standards(id),
-  current_status TEXT,
-  self_score TEXT,
-  score_group_key TEXT
-);
-
--- ============================================
--- 关闭 RLS（自部署场景）
--- 如需开启 RLS 请自行配置策略
--- ============================================
-ALTER TABLE flows ENABLE ROW LEVEL SECURITY;
-ALTER TABLE revision_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE revision_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE plan_tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE e2e_processes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE e2e_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sys_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sys_menus ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sys_user_menus ENABLE ROW LEVEL SECURITY;
-ALTER TABLE assessment_standards ENABLE ROW LEVEL SECURITY;
-ALTER TABLE assessments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE assessment_details ENABLE ROW LEVEL SECURITY;
-
--- 为所有表创建允许 anon 访问的策略（自部署场景）
--- 注意：生产环境请根据实际需求调整策略
-DO $$
-DECLARE
-  tbl TEXT;
-BEGIN
-  FOR tbl IN 
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public'
-  LOOP
-    EXECUTE format('CREATE POLICY "Allow all for anon" ON %I FOR ALL TO anon USING (true) WITH CHECK (true)', tbl);
-    EXECUTE format('CREATE POLICY "Allow all for authenticated" ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)', tbl);
-  END LOOP;
-END $$;
-```
+本地部署无需手动建表；云端部署请将 supabase/migrations/0001_init.sql 的完整内容复制到 Supabase SQL Editor 执行即可。
 
 </details>
+
 
 ### 种子数据自动初始化
 
@@ -468,7 +240,14 @@ END $$;
 
 ## 4. 配置环境变量
 
-在项目根目录创建 `.env.local` 文件并填入配置。
+在项目根目录创建 `.env.local` 文件并填入配置。仓库已提供模板 **`.env.example`**（仅含本地 Supabase 配置、不含任何云端值），服务器部署时可直接复制使用：
+
+```bash
+# 服务器上：复制模板为 .env.local，再按需用 supabase status 输出的 key 覆盖
+cp .env.example .env.local
+```
+
+> `.env.example` 与 `.env.local` 的区别：`.env.example` 可提交共享、作为配置范本；`.env.local` 含实际密钥、已被 `.gitignore` 忽略，切勿提交。
 
 ### macOS / Linux
 
@@ -565,9 +344,17 @@ nano .env.local
 # ===== JWT 签名密钥（必填，缺失时服务拒绝启动）=====
 JWT_SECRET=your_jwt_secret_here
 
-# ===== Supabase 配置（必填）=====
+# ===== 本地开发：云端 Supabase（默认，开箱即用）=====
 COZE_SUPABASE_URL=https://your-project.supabase.co
 COZE_SUPABASE_ANON_KEY=your_anon_key_here
+# 云端 service_role key（可选，缺失时系统表回退 anon）
+COZE_SUPABASE_SERVICE_ROLE_KEY=
+
+# ===== 服务器正式环境：本地 Supabase（见 1.5-B，填服务器环境变量，勿提交）=====
+# COZE_SUPABASE_URL=http://127.0.0.1:54321
+# COZE_SUPABASE_ANON_KEY=本地 anon key
+# COZE_SUPABASE_SERVICE_ROLE_KEY=本地 service_role key
+# COZE_PROJECT_ENV=PROD
 ```
 
 ### 如何生成 JWT_SECRET
@@ -587,21 +374,27 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ### 如何获取 Supabase 连接信息
 
-1. 登录 [Supabase Dashboard](https://app.supabase.com/)
-2. 选择你的项目（如未创建，参考第 3 步「创建 Supabase 项目」）
-3. 点击左侧 **Settings**（齿轮图标）→ **API**
-4. 找到 **Project URL** → 复制 → 填入 `COZE_SUPABASE_URL`
-5. 找到 **Project API keys** 下的 **anon public** → 复制 → 填入 `COZE_SUPABASE_ANON_KEY`
+**本地开发（云端 Supabase）**：
 
-> **安全提醒**：`anon key` 是公开密钥，可暴露在前端代码中；`service_role key` 是特权密钥，**绝对不能**写入 `.env.local` 或前端代码。
+1. 登录 [Supabase Dashboard](https://app.supabase.com/)
+2. 选择你的项目
+3. 点击左侧 **Settings**（齿轮图标）→ **API**
+4. 复制 **Project URL** → 填入 `COZE_SUPABASE_URL`
+5. 复制 **anon public** key → 填入 `COZE_SUPABASE_ANON_KEY`
+6. 复制 **service_role** key → 填入 `COZE_SUPABASE_SERVICE_ROLE_KEY`（可选）
+
+**服务器正式环境（本地 Supabase）**：执行 `supabase start`（或 `supabase status`），终端输出的 `API URL`、`anon key`、`service_role key` 即为所需值，填入服务器环境变量（见 1.5-B）。
+
+> **安全提醒**：`anon key` 是公开密钥，可暴露在前端代码中；`service_role key` 是特权密钥，可绕过 RLS，**切勿**提交到代码仓库或写入前端代码（`.env.local` 已被 git 忽略）。
 
 ### 环境变量完整说明
 
 | 变量名 | 必需 | 说明 | 示例值 |
 |--------|------|------|--------|
 | `JWT_SECRET` | 是 | JWT 签名密钥，用于用户认证 | `a1b2c3d4e5f6...`（32字节 base64） |
-| `COZE_SUPABASE_URL` | 是 | Supabase 项目 URL | `https://abcdef.supabase.co` |
+| `COZE_SUPABASE_URL` | 是 | Supabase 项目 URL（本地为 `http://127.0.0.1:54321`） | `https://abcdef.supabase.co` |
 | `COZE_SUPABASE_ANON_KEY` | 是 | Supabase 匿名 Key | `eyJhbGciOiJIUzI1NiIs...` |
+| `COZE_SUPABASE_SERVICE_ROLE_KEY` | 是 | 后端特权密钥（绕过 RLS，用于系统表读写） | `eyJhbGciOiJIUzI1NiIs...` |
 | `DEPLOY_RUN_PORT` | 否 | 服务监听端口，默认 `5000` | `3000` |
 
 ### 配置验证
@@ -690,6 +483,104 @@ DEPLOY_RUN_PORT=3000 pnpm dev
 ### 关闭 HTTPS Cookie（本地开发）
 
 本地开发时 Cookie 的 `secure` 属性自动关闭（通过环境自动判断，非生产环境时不启用 secure）。
+
+## 9. 离线自动化部署（推荐用于服务器正式环境）
+
+目标：**基础环境一次性搭建（允许公网）→ 之后日常部署只跑一条脚本，纯内网、零公网、不拉镜像、不装依赖、不碰 git**。
+
+整体模型：把「构建」与「运行」彻底分离。构建机（本机 WSL2）`pnpm build` 后打包成 tar（含 `dist/` `.next/` `node_modules/` `public/` `supabase/` 等），经内网 `scp` 传到服务器解包 + `pm2` 重启。服务器全程不触外网。
+
+配套脚本（仓库 `scripts/` 目录）：
+
+| 脚本 | 在哪运行 | 作用 |
+|------|---------|------|
+| `build-artifact.sh` | 构建机 WSL2/Linux | `pnpm build` → 打包 tar（排除 `.env.local`）到 drop 目录 |
+| `deploy.ps1` | 本机 Windows（你日常跑的**唯一脚本**） | WSL 构建 → scp 传包 → ssh 触发服务器部署 |
+| `deploy-on-server.sh` | 服务器 | 解包、保留 `.env.local`、清理陈旧文件、可选迁移、`pm2` 重启、健康检查 |
+| `deploy.config.example.ps1` | — | 配置模板，复制为 `deploy.config.ps1` 填写（已被 gitignore） |
+
+> 依赖说明：项目依赖均为纯 JS（`bcryptjs`/`pg`/`@supabase/supabase-js` 等，无原生模块），产物包跨 Windows/Linux 通用；但为避免 Windows tar 对符号链接/路径的处理差异，构建统一在 **WSL2/Linux** 内进行。
+
+### 9.1 Phase A — 基础环境一次性搭建（仅这一次允许公网）
+
+```bash
+# 1) 服务器装运行时与工具 (需联网)
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin postgresql-client rsync curl
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER            # 免 sudo 用 docker, 改完重登 SSH
+
+# Node 20 + pnpm 9 (package.json 强制 pnpm)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+source ~/.bashrc && nvm install 20 && nvm alias default 20
+npm install -g pnpm@9
+# pm2 (进程守护 + 开机自启) 与 Supabase CLI
+npm install -g pm2 supabase
+
+# 2) 拉起本地 Supabase (缓存 Docker 镜像 + 自动建 15 张表)
+cd ~/workflowsys            # 已 git clone 或传上来的源码
+supabase start
+supabase status             # 记下 API URL / anon key / service_role key
+
+# 3) 让 Supabase 容器开机自启 (服务器重启后自动恢复, 应用才能连上库)
+docker update --restart unless-stopped $(docker ps -q --filter name=supabase)
+
+# 4) 配置服务器环境变量
+cp .env.example .env.local
+nano .env.local             # 填入 supabase status 的 anon/service_role key, 确认 COZE_PROJECT_ENV=PROD PORT=5000
+
+# 5) 配置 pm2 开机自启 (生成 systemd 服务, 后续服务器重启自动拉起应用)
+pm2 startup                 # 按提示执行它打印的 sudo 命令
+```
+
+> ⚠️ 搭建完成后**严禁** `docker system prune` / `docker image prune`，否则已缓存的 Supabase 镜像被清掉，日后 `supabase start` 又需联网。
+> ⚠️ 首次真正部署用下面的 `deploy.ps1` 完成（它会把产物解包、首次 `pm2 start` 并 `pm2 save` 固化进程列表）。
+
+### 9.2 Phase B — 日常一键部署（纯内网，零公网）
+
+只需在本机（Windows）做两件事：
+
+**(1) 一次性：准备配置**
+
+```powershell
+# 复制模板并填写服务器信息
+Copy-Item scripts/deploy.config.example.ps1 scripts/deploy.config.ps1
+# 编辑 deploy.config.ps1: ServerIP / ServerUser / SshKey / DeployDir / RemoteDropDir
+```
+
+要求：本机已装 **WSL2 且其中装有 pnpm 9**；已对服务器配置 **SSH 免密**（`ssh-copy-id`）。
+
+**(2) 每次发版：跑一条脚本**
+
+```powershell
+.\scripts\deploy.ps1
+```
+
+脚本自动完成：
+
+1. WSL2 内 `pnpm install`(依赖未变则离线) + `pnpm build` → 打包 tar 到本机 drop 目录；
+2. `scp` 把 tar 和 `deploy-on-server.sh` 传到服务器；
+3. `ssh` 触发服务器 `deploy-on-server.sh`：备份并保留 `.env.local` → 解包 → `rsync` 同步部署目录(`--delete` 清理陈旧文件) → 若 `supabase/migrations` 有新增则离线 `supabase migration up` → `pm2 restart`(后台守护, 断连不停止) → `curl` 健康检查；
+4. 回显内网访问地址 `http://<ServerIP>:5000/`。
+
+服务器侧应用由 `pm2` 常驻，**SSH 断开、终端关闭都不影响运行**；因 `pm2 startup` + Docker restart 策略，服务器重启后会自动恢复 Supabase 与 app。
+
+### 9.3 回滚
+
+drop 目录保留历次 tar。异常时把旧包重跑一遍即可：
+
+```bash
+# 在服务器上
+bash /tmp/deploy-on-server.sh /tmp/deploy-drop/workflowsys-<旧版本>.tar.gz /opt/workflowsys
+```
+
+### 9.4 排错
+
+- **构建失败**：确认 WSL2 内 `pnpm -v` 为 9.x；依赖变更后首次需联网 `pnpm install`。
+- **scp/ssh 失败**：确认 `deploy.config.ps1` 的 IP/用户/密钥正确，且已 `ssh-copy-id` 免密。
+- **健康检查不过**：服务器上 `pm2 logs workflowsys` 看报错；多数是 `.env.local` 缺失或 Supabase 未起（`supabase status` 确认）。
+- **新表未生效**：确认 `supabase/migrations` 已新增对应 SQL，`deploy-on-server.sh` 会自动 `supabase migration up`（离线幂等）。
+- **服务器重启后服务没起来**：检查 `pm2 startup` 是否执行过（`pm2 status` 应显示 `workflowsys`）；`docker ps` 应看到 supabase 容器（restart 策略 unless-stopped）。
 
 ## 常见问题
 

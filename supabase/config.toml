@@ -1,0 +1,50 @@
+# 本地 Supabase 配置（supabase CLI 使用，需 Docker Desktop）
+# 启动命令：supabase start   停止：supabase stop   重置：supabase db reset
+project_id = "workflowsys"
+
+[api]
+enabled = true
+port = 54321
+# 自部署/本地场景：关闭 JWT 校验，业务侧用自建 token 鉴权
+jwt_secret = "super-secret-jwt-token-with-at-least-32-characters-long"
+# 允许客户端传入任意 JWT（与 anon key 解耦，符合本项目双重认证设计）
+max_rows = 1000
+
+[db]
+port = 54322
+# 关闭 shadow 库，本地单机更轻量
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000", "http://localhost:3000"]
+jwt_expiry = 3600
+# 业务自建账号体系，不需要 Supabase 邮箱/密码认证
+enable_signup = false
+# 允许使用 service_role（后端用 COZE_SUPABASE_SERVICE_ROLE_KEY 旁路 RLS）
+enable_service_role_key = true
+
+[auth.email]
+enable_signup = false
+double_confirm_changes = false
+enable_confirmations = false
+
+[analytics]
+enabled = false

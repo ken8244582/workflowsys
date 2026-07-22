@@ -127,7 +127,11 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .yarn/build-state.yml
 .yarn/install-state.gz
 node-compile-cache/
+# 部署配置 (含服务器 IP/密钥路径, 不入库)
+scripts/deploy.config.ps1
+
 # Editor directories and files
+.codebuddy/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
